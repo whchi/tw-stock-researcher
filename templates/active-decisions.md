@@ -31,6 +31,16 @@
 | Signal | Current Read | Why It Matters | Next Check |
 | --- | --- | --- | --- |
 
+## Expected Evidence Timeline
+
+| Evidence | Expected Timing | What Confirms | What Disconfirms | Source |
+| --- | --- | --- | --- | --- |
+
+## Thesis Kill Criteria
+
+| Kill Condition | Evidence Needed | Source | Tracking Impact |
+| --- | --- | --- | --- |
+
 ## Evidence Inputs Already Read
 
 | Source File | Last Read | Decision-Relevant Takeaway | Refresh Trigger |

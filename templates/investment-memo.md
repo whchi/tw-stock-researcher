@@ -25,6 +25,17 @@
 - What is confirmed:
 - What is still only narrative:
 
+## Expectation Gap Analysis
+
+| Market Belief | Evidence Status | Gap / Mispricing Risk | Verification Source |
+| --- | --- | --- | --- |
+
+- What the market appears to believe:
+- What verified evidence supports:
+- What remains only narrative:
+- Evidence that would close the gap:
+- Evidence that would invalidate the gap:
+
 ## Event And Narrative Audit
 
 ## Why This Stock

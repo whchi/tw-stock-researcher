@@ -31,7 +31,7 @@ Create one folder per stock under `companies/`, for example `companies/6706-hui-
 | `signal-log.md` | append-only event log with signal classification | `signal-update` |
 | `thesis-updates.md` | explicit thesis changes | `signal-update` |
 | `open-questions.md` | unresolved questions to carry forward | `case-revisit`, `session-wrap` |
-| `active-decisions.md` | explicit current calls and follow-ups | `session-wrap` |
+| `active-decisions.md` | current research stance, expected evidence timeline, thesis kill criteria, review triggers, and follow-ups | `session-wrap` |
 
 ## Validation Workflow
 

@@ -30,7 +30,7 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 | `raw-data.json` | `fetch_goodinfo.py` | Goodinfo scraped data (auto-detected by script). |
 | `research-questions.md` | `stock-case-init` | Core questions, facts to establish, disconfirming evidence to seek. |
 | `open-questions.md` | `case-revisit` / `session-wrap` | Unresolved items to carry forward; closed questions logged here. |
-| `active-decisions.md` | `session-wrap` | Current research stance, any user-provided position context, observation ranges, structure-break conditions, next review triggers. |
+| `active-decisions.md` | `session-wrap` | Current research stance, expected evidence timeline, thesis kill criteria, user-provided position context, observation ranges, structure-break conditions, next review triggers. |
 | `company-analysis.md` | `company-deep-dive` | Business model, product mix, revenue structure, margin analysis. |
 | `financial-analysis.md` | `financial-analysis` | 3D analysis: 經營分析 / 獲利分析 / 財務健全度. |
 | `industry-transmission.md` | `industry-transmission-analysis` | Industry chain, leading indicators, noise vs signal. |
@@ -151,6 +151,7 @@ companies/**/*.json
 - **Dual Framework:** Every memo must have **Business Thesis** (fundamentals / validation / cash) and **Pricing Thesis** (market re-rating / narrative expansion per `investment-reasoning-framework.md`).
 - **Quality Input:** Read `quality-and-valuation-check.md` before writing scenarios. Use it to separate good-business evidence from already-priced expectations.
 - **Evidence Summary Only:** Do not copy raw 6M revenue, market-action, macro, or quality tables into the memo. Summarize which evidence supports or weakens each scenario.
+- **Expectation Gap:** Separate market belief from verified evidence, narrative-only claims, and the evidence needed to close or invalidate the gap.
 - **Pricing Stages:** Stage 1 (narrative expansion) → Stage 2 (fundamentals catch up) → Stage 3 (growth slows / valuation contraction).
 - **Scenarios:** Always include Bull / Base / Bear with probability weights, EPS assumptions, and scenario-derived price ranges.
 - **No unsupported price targets.** Every price range must derive from an explicit scenario.
@@ -172,6 +173,7 @@ companies/**/*.json
 - Prefer neutral research language such as `scenario price range`, `observation range`, `thesis validation trigger`, `assumption failure signal`, and `structure-break condition`.
 - When recording an existing personal position from the user, label it clearly as **user-provided position context**, not as a model-generated recommendation.
 - `investment-memo.md` and `active-decisions.md` should include a short disclaimer note near the top linking to the project disclaimer when practical.
+- `active-decisions.md` should state expected evidence timelines and thesis kill criteria in neutral tracking language, not trade instructions.
 
 ## Red Lines
 - No fabricated data.

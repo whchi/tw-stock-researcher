@@ -24,9 +24,10 @@ This repository is a markdown-first workspace template for researching one stock
 6. Add the value-investor quality layer with `quality-and-valuation-check`.
 7. Write the current thesis with `investment-thesis`.
 8. Add the market-state layer with `market-action-read` after fetching FinMind market data.
-9. Use `signal-update` for new filings, revenue releases, or news.
-10. Use `case-revisit` when returning to the case later.
-11. Use `session-wrap` before ending a session.
+9. Record expected evidence, thesis kill criteria, and tracking triggers in `active-decisions.md`.
+10. Use `signal-update` for new filings, revenue releases, or news.
+11. Use `case-revisit` when returning to the case later.
+12. Use `session-wrap` before ending a session.
 
 ## Data Layout
 
@@ -43,7 +44,7 @@ The workspace keeps shared market context under `market/`, reusable templates un
 - `market-action-read`: summarize 1D/3D/5D price-volume action and institutional flow without trading instructions.
 - `signal-update`: append new events and decide whether the thesis changed.
 - `case-revisit`: re-enter an existing case with a file-grounded summary.
-- `session-wrap`: preserve unresolved questions, decisions, and next follow-ups.
+- `session-wrap`: preserve unresolved questions, expected evidence, thesis kill criteria, decisions, and next follow-ups.
 
 ## Getting Started
 
@@ -73,7 +74,8 @@ The workspace keeps shared market context under `market/`, reusable templates un
 11. Writes `investment-memo.md` with Bull/Base/Bear scenarios using the `investment-reasoning-framework.md` pricing framework
 12. Runs `scripts/fetch_finmind.py 3105` with `FIN_MIND_TOKEN` → saves `market-data.json` in the case directory
 13. Writes `market-action-read.md` with 1D/3D/5D price-volume and institutional flow evidence
-14. Updates `stock-meta.json` with all file references
+14. Records expected evidence timeline and thesis kill criteria in `active-decisions.md`
+15. Updates `stock-meta.json` with all file references
 
 **Files created:**
 ```
@@ -134,7 +136,9 @@ companies/3105-awsc/
 - **Financial data:** Primary source is Goodinfo.tw; always include MOPS links for cross-checking
 - **Macro data:** Taiwan-focused. Run `scripts/fetch_macro.py` to refresh `market/shared-macro-data.json` (TWSE Open API, Yahoo Finance, Taiwan official statistics); include only variables with a concrete company-level transmission path
 - **Quality and valuation:** Keep business-quality judgment and implied market expectations in `quality-and-valuation-check.md`; the investment memo should consume its conclusion, not duplicate its tables
+- **Expectation gap:** Use `investment-memo.md` to separate market belief, verified evidence, narrative-only claims, and the evidence needed to close or invalidate the gap
 - **Market action:** `market-action-read.md` summarizes evidence only; it must not output trade instructions
+- **Tracking discipline:** Use `active-decisions.md` for expected evidence timelines, thesis kill criteria, and review triggers so a case can be downgraded when evidence stops compounding
 - **Thesis format:** Dual framework (Business Thesis + Pricing Thesis per `investment-reasoning-framework.md`)
 - **Pricing stages:** Stage 1 (narrative expansion) → Stage 2 (fundamentals catch up) → Stage 3 (growth slows)
 - **No unsupported targets:** Never generate price targets without scenario analysis
