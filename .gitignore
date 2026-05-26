@@ -26,5 +26,6 @@ venv*/
 node_modules/
 companies/**/*.md
 companies/**/*.json
+companies/**/*.html
 market/*.json
 .opencode
