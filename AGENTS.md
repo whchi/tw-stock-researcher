@@ -97,6 +97,21 @@ companies/**/*.json
 ```
 **All case files are git-ignored by default.** This is intentional — case files are session artifacts, not repo source code. Only root-level docs, scripts, templates, and market context are version controlled.
 
+### 7. HTML Summary Output
+When the user explicitly asks for a comprehensive research result as HTML, use the `research-html-output` skill from `.agents/skills/research-html-output/SKILL.md` or `.claude/skills/research-html-output/SKILL.md`.
+
+- Keep markdown / JSON case files as the source of truth.
+- Use `templates/research-html-summary.html` as the shared template.
+- Build a JSON payload from the case files in the same company folder and render via string replacement:
+```bash
+.venv/bin/python scripts/render_research_html.py \
+  --data companies/<ticker-slug>/research-summary-data.json \
+  --output companies/<ticker-slug>/research-summary.html
+```
+- The output HTML must live in the company folder as `companies/<ticker-slug>/research-summary.html`.
+- HTML is a derived preview, not a replacement for `investment-memo.md`, `active-decisions.md`, or other case artifacts.
+- Preserve disclaimer discipline and never introduce buy/sell, entry/exit, stop-loss, or target-price language.
+
 ## Financial Analysis Conventions
 
 ### Data Source

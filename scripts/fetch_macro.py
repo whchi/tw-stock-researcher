@@ -8,14 +8,11 @@ Sources follow templates/shared-macro-view.md and templates/macro-map.md:
 """
 
 import argparse
-import csv
 import json
 import os
 import sys
 from datetime import datetime, timezone
-from io import StringIO
 from pathlib import Path
-
 
 TEMPLATE_SOURCES = (
     "TWSE Open API",
@@ -47,7 +44,9 @@ def request_json(url, method="GET", params=None, payload=None, headers=None):
         raise RuntimeError("requests is required. Use the repo-local .venv.") from exc
 
     if method == "POST":
-        response = requests.post(url, params=params, json=payload, headers=headers, timeout=30)
+        response = requests.post(
+            url, params=params, json=payload, headers=headers, timeout=30
+        )
     else:
         response = requests.get(url, params=params, headers=headers, timeout=30)
     response.raise_for_status()
@@ -88,7 +87,9 @@ def latest_read(rows):
         result["previous_date"] = previous["date"]
         result["previous_value"] = previous["value"]
         if previous["value"] not in (None, 0):
-            result["change_pct"] = round((latest["value"] - previous["value"]) / previous["value"] * 100, 4)
+            result["change_pct"] = round(
+                (latest["value"] - previous["value"]) / previous["value"] * 100, 4
+            )
 
     return result
 
@@ -97,7 +98,9 @@ def build_macro_data(records_by_source, warnings=None):
     sources = {source: records_by_source.get(source, []) for source in TEMPLATE_SOURCES}
     return {
         "metadata": {
-            "fetched_at": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
+            "fetched_at": datetime.now(timezone.utc)
+            .astimezone()
+            .isoformat(timespec="seconds"),
             "source_scope": list(TEMPLATE_SOURCES),
             "warnings": warnings or [],
         },
@@ -115,18 +118,24 @@ def fetch_yahoo_market():
         closes = result.get("indicators", {}).get("quote", [{}])[0].get("close") or []
         observations = []
         for ts, close in zip(timestamps, closes):
-            observations.append({
-                "date": datetime.fromtimestamp(ts, timezone.utc).date().isoformat(),
-                "value": to_float(close),
-            })
-        rows.append({
-            "indicator": item["indicator"],
-            "symbol": item["symbol"],
-            "unit": item["unit"],
-            "latest": latest_read(observations),
-            "observations": sorted(observations, key=lambda row: row.get("date") or ""),
-            "source_url": url,
-        })
+            observations.append(
+                {
+                    "date": datetime.fromtimestamp(ts, timezone.utc).date().isoformat(),
+                    "value": to_float(close),
+                }
+            )
+        rows.append(
+            {
+                "indicator": item["indicator"],
+                "symbol": item["symbol"],
+                "unit": item["unit"],
+                "latest": latest_read(observations),
+                "observations": sorted(
+                    observations, key=lambda row: row.get("date") or ""
+                ),
+                "source_url": url,
+            }
+        )
     return rows
 
 
@@ -138,40 +147,47 @@ def fetch_twse_market_stats():
         return []
     latest = payload[0]
     date_str = latest.get("Date", "")
-    date_fmt = f"{date_str[:3]}-{date_str[3:5]}-{date_str[5:]}" if len(date_str) == 7 else date_str
-    return [{
-        "indicator": "TAIEX",
-        "source": "TWSE FMTQIK (daily market summary)",
-        "unit": "index",
-        "latest": {
-            "date": date_fmt,
-            "taiex": to_float(latest.get("TAIEX")),
-            "change": to_float(latest.get("Change")),
-            "trade_volume_shares": to_float(latest.get("TradeVolume")),
-            "trade_value_twd": to_float(latest.get("TradeValue")),
-            "transaction_count": to_float(latest.get("Transaction")),
-        },
-        "source_url": url,
-    }]
-
-
-
+    date_fmt = (
+        f"{date_str[:3]}-{date_str[3:5]}-{date_str[5:]}"
+        if len(date_str) == 7
+        else date_str
+    )
+    return [
+        {
+            "indicator": "TAIEX",
+            "source": "TWSE FMTQIK (daily market summary)",
+            "unit": "index",
+            "latest": {
+                "date": date_fmt,
+                "taiex": to_float(latest.get("TAIEX")),
+                "change": to_float(latest.get("Change")),
+                "trade_volume_shares": to_float(latest.get("TradeVolume")),
+                "trade_value_twd": to_float(latest.get("TradeValue")),
+                "transaction_count": to_float(latest.get("Transaction")),
+            },
+            "source_url": url,
+        }
+    ]
 
 
 def fetch_taiwan_official(configured_url=None):
     if not configured_url:
-        return [{
-            "indicator": "Taiwan export orders / industrial production",
-            "latest": None,
-            "warning": "TAIWAN_MACRO_URL not set — configure a MOEA/DGBAS CSV/JSON endpoint to enable Taiwan export/orders data. See templates/shared-macro-view.md for source list.",
-        }]
+        return [
+            {
+                "indicator": "Taiwan export orders / industrial production",
+                "latest": None,
+                "warning": "TAIWAN_MACRO_URL not set — configure a MOEA/DGBAS CSV/JSON endpoint to enable Taiwan export/orders data. See templates/shared-macro-view.md for source list.",
+            }
+        ]
     text = request_text(configured_url)
-    return [{
-        "indicator": "Taiwan official macro endpoint",
-        "latest": None,
-        "raw_preview": text[:500],
-        "source_url": configured_url,
-    }]
+    return [
+        {
+            "indicator": "Taiwan official macro endpoint",
+            "latest": None,
+            "raw_preview": text[:500],
+            "source_url": configured_url,
+        }
+    ]
 
 
 def collect_all(args):
@@ -182,7 +198,10 @@ def collect_all(args):
     fetchers = (
         ("Yahoo Finance / public market data", fetch_yahoo_market),
         ("TWSE Open API", fetch_twse_market_stats),
-        ("Taiwan official statistics / MOPS context", lambda: fetch_taiwan_official(env.get("TAIWAN_MACRO_URL"))),
+        (
+            "Taiwan official statistics / MOPS context",
+            lambda: fetch_taiwan_official(env.get("TAIWAN_MACRO_URL")),
+        ),
     )
 
     for source, fetcher in fetchers:

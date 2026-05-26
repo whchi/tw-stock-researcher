@@ -33,6 +33,20 @@ This repository is a markdown-first workspace template for researching one stock
 
 The workspace keeps shared market context under `market/`, reusable templates under `templates/`, and per-stock cases under `companies/`. Create shared market files in `market/` by copying the corresponding templates from `templates/` when needed. See `docs/data-layout.md` for the full layout and file ownership rules.
 
+## HTML Summary Output
+
+Markdown and JSON files remain the source of truth. When the user explicitly asks for a comprehensive research result as HTML, use the `research-html-output` skill and render a derived preview from `templates/research-html-summary.html`.
+
+The HTML output is produced by string replacement, not by changing the canonical case files:
+
+```bash
+.venv/bin/python scripts/render_research_html.py \
+  --data companies/<ticker-slug>/research-summary-data.json \
+  --output companies/<ticker-slug>/research-summary.html
+```
+
+Build the JSON payload from the case files in the same company folder, then let `scripts/render_research_html.py` replace the template placeholders. The HTML output should stay in that company folder as `companies/<ticker-slug>/research-summary.html`. The 6706 惠特 and 6741 91APP preview layouts are represented by the shared template structure: research snapshot, expectation gap, expected evidence timeline, thesis kill criteria, scenario summary, watch items, source quality, and sources.
+
 ## The Skills
 
 - `stock-case-init`: create case metadata, core questions, and initial open questions.
@@ -42,6 +56,7 @@ The workspace keeps shared market context under `market/`, reusable templates un
 - `quality-and-valuation-check`: assess ROIC, owner earnings, working-capital quality, capital allocation, implied expectations, and margin of safety.
 - `investment-thesis`: produce the current memo with assumptions and disconfirming evidence.
 - `market-action-read`: summarize 1D/3D/5D price-volume action and institutional flow without trading instructions.
+- `research-html-output`: render an explicit HTML summary request from `templates/research-html-summary.html` using `scripts/render_research_html.py`.
 - `signal-update`: append new events and decide whether the thesis changed.
 - `case-revisit`: re-enter an existing case with a file-grounded summary.
 - `session-wrap`: preserve unresolved questions, expected evidence, thesis kill criteria, decisions, and next follow-ups.

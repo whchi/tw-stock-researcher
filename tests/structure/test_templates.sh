@@ -23,6 +23,10 @@ reject_line() {
 }
 
 require_line "README.md" "Fetch Yahoo profile + financials"
+require_line "README.md" "HTML Summary Output"
+require_line "README.md" "scripts/render_research_html.py"
+require_line "README.md" "templates/research-html-summary.html"
+require_line "README.md" "companies/<ticker-slug>/research-summary.html"
 require_line "DISCLAIMER.md" "Yahoo Finance Taiwan"
 require_line "DISCLAIMER.zh-tw.md" "Yahoo 股市"
 
@@ -76,8 +80,15 @@ reject_line "templates/market-action-read.md" "Avoid"
 require_line "templates/stock-meta.json" '"yahoo_data": null'
 require_line "templates/stock-meta.json" '"quality_and_valuation_check": null'
 require_line "templates/stock-meta.json" '"market_action_read": null'
+require_line "templates/research-html-summary.html" "{{TITLE}}"
+require_line "templates/research-html-summary.html" "{{EXPECTATION_GAP_ROWS}}"
+require_line "templates/research-html-summary.html" "{{EVIDENCE_TIMELINE_ROWS}}"
+require_line "templates/research-html-summary.html" "{{KILL_CRITERIA_ROWS}}"
 
 require_line "AGENTS.md" "→ quality-and-valuation-check"
+require_line "AGENTS.md" "research-html-output"
+require_line "AGENTS.md" "scripts/render_research_html.py"
+require_line "AGENTS.md" "companies/<ticker-slug>/research-summary.html"
 require_line "README.md" "quality-and-valuation-check"
 require_line "docs/data-layout.md" "quality-and-valuation-check"
 
@@ -116,5 +127,15 @@ if git check-ignore -q "$ROOT_DIR/docs/superpowers/plans/2026-05-11-template-fra
   printf 'Plan path is still ignored: %s\n' "docs/superpowers/plans/2026-05-11-template-framework-upgrade.md" >&2
   exit 1
 fi
+
+if git check-ignore -q "$ROOT_DIR/.claude/skills/research-html-output/SKILL.md"; then
+  printf 'Claude skill path is ignored: %s\n' ".claude/skills/research-html-output/SKILL.md" >&2
+  exit 1
+fi
+
+require_line ".agents/skills/research-html-output/SKILL.md" "name: research-html-output"
+require_line ".agents/skills/research-html-output/SKILL.md" "companies/<ticker-slug>/research-summary.html"
+require_line ".claude/skills/research-html-output/SKILL.md" "name: research-html-output"
+require_line ".claude/skills/research-html-output/SKILL.md" "companies/<ticker-slug>/research-summary.html"
 
 printf 'All template structure checks passed.\n'
