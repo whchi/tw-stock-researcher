@@ -1,0 +1,30 @@
+.DS_Store
+
+# Session artifacts
+task_plan.md
+progress.md
+findings.md
+
+# Personal tooling
+docs/superpowers/
+.claude/
+
+# Secrets & environment
+.env
+*.key
+credentials.json
+
+# Logs & temp
+*.log
+*.tmp
+
+# Python / Node artifacts (if added later)
+__pycache__/
+*.pyc
+.venv/
+venv*/
+*_raw_data.json
+node_modules/
+companies/**/*.md
+companies/**/*.json
+market/*.json

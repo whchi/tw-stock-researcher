@@ -1,0 +1,25 @@
+{
+  "ticker": "",
+  "company_name": "",
+  "market": "",
+  "currency": "",
+  "analysis_horizon": "hybrid",
+  "data_policy": "public-free-first",
+  "created_at": "YYYY-MM-DD",
+  "updated_at": "YYYY-MM-DD",
+  "current_status": "researching",
+  "file_references": {
+    "yahoo_data": null,
+    "research_questions": null,
+    "company_analysis": null,
+    "industry_transmission": null,
+    "macro_map": null,
+    "quality_and_valuation_check": null,
+    "investment_memo": null,
+    "market_action_read": null,
+    "signal_log": null,
+    "thesis_updates": null,
+    "open_questions": null,
+    "active_decisions": null
+  }
+}

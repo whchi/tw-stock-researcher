@@ -1,0 +1,58 @@
+# Active Decisions
+
+> 免責聲明：本文件僅供研究參考，不構成投資建議、買賣推薦或任何形式之邀約。以下決策為研究框架內之觀察立場與驗證計畫，非實際交易指令。
+
+## Current Research Stance
+
+## Current Decisions
+
+## Observation Range
+
+| Item | Current Read | Observation Range | Why It Matters |
+| --- | --- | --- | --- |
+
+## Three Numbers To Watch
+
+| Number / Signal | Current Read | Why It Matters | Next Check |
+| --- | --- | --- | --- |
+
+## Leading Signals
+
+| Signal | Current Read | Why It Matters | Next Check |
+| --- | --- | --- | --- |
+
+## Validation Signals
+
+| Signal | Current Read | Why It Matters | Next Check |
+| --- | --- | --- | --- |
+
+## Lagging Signals
+
+| Signal | Current Read | Why It Matters | Next Check |
+| --- | --- | --- | --- |
+
+## Evidence Inputs Already Read
+
+| Source File | Last Read | Decision-Relevant Takeaway | Refresh Trigger |
+| --- | --- | --- | --- |
+| `financial-analysis.md` |  |  |  |
+| `quality-and-valuation-check.md` |  |  |  |
+| `investment-memo.md` |  |  |  |
+| `market-action-read.md` |  |  |  |
+
+## Next Review Triggers
+
+| Trigger | Source To Refresh | Why It Matters | Planned Response |
+| --- | --- | --- | --- |
+| Monthly revenue release | `financial-analysis.md`, `investment-memo.md` | Revenue validation for current case probabilities |  |
+| Quarterly earnings | `financial-analysis.md`, `quality-and-valuation-check.md`, `investment-memo.md` | Margin, cash conversion, and scenario update |  |
+| Material event / filing | `signal-log.md`, relevant analysis file | Thesis change or disconfirming evidence |  |
+| Abnormal price-volume move | `market-action-read.md` | Market confirmation, divergence, or overextension |  |
+
+| Date | Decision | Why This Stands | Review Trigger | Status |
+| --- | --- | --- | --- | --- |
+
+## Decision History
+
+| Date | Change | Why It Changed |
+| --- | --- | --- |
