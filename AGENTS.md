@@ -98,7 +98,7 @@ companies/**/*.json
 **All case files are git-ignored by default.** This is intentional — case files are session artifacts, not repo source code. Only root-level docs, scripts, templates, and market context are version controlled.
 
 ### 7. HTML Summary Output
-When the user explicitly asks for a comprehensive research result as HTML, use the `research-html-output` skill from `.agents/skills/research-html-output/SKILL.md` or `.claude/skills/research-html-output/SKILL.md`.
+When the user explicitly asks for a comprehensive research result as HTML, use the `research-html-output` skill from `.agents/skills/research-html-output/SKILL.md`.
 
 - Keep markdown / JSON case files as the source of truth.
 - Use `templates/research-html-summary.html` as the shared template.

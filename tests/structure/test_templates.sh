@@ -135,7 +135,5 @@ fi
 
 require_line ".agents/skills/research-html-output/SKILL.md" "name: research-html-output"
 require_line ".agents/skills/research-html-output/SKILL.md" "companies/<ticker-slug>/research-summary.html"
-require_line ".claude/skills/research-html-output/SKILL.md" "name: research-html-output"
-require_line ".claude/skills/research-html-output/SKILL.md" "companies/<ticker-slug>/research-summary.html"
 
 printf 'All template structure checks passed.\n'
