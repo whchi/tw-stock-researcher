@@ -39,11 +39,23 @@
 | Year | Current Ratio | Debt Ratio | Interest-Bearing Debt | Net Cash / Debt | Trend Assessment |
 | --- | --- | --- | --- | --- | --- |
 
+## Balance Sheet Demand Validation
+
+| Pattern | Evidence Combination | Current Read | Trend Assessment | Source / Missing Items |
+| --- | --- | --- | --- | --- |
+| Demand collection | Revenue growth + receivables growth + inventory growth + CFO direction |  |  |  |
+| Channel stuffing risk | Receivables growth > revenue growth + DSO deterioration + inventory build + CFO weakness |  |  |  |
+| Inventory cycle | Inventory / DIO trend + revenue trend + gross margin trend |  |  |  |
+| Supplier financing | Payables / DPO trend + CFO direction + revenue trend |  |  |  |
+| Capex productivity | Capex + fixed assets + revenue growth + depreciation / revenue + ROIC trend |  |  |  |
+| Contract / prepayment signal | Prepaid assets + contract liabilities / deferred revenue + revenue outlook |  |  |  |
+
 ## Data Sources And MOPS Cross-Check
 
 - Primary data source:
 - Cross-check source:
 - MOPS official filing URL:
+- Goodinfo three-statement coverage:
 
 ## Red Flags
 
@@ -52,6 +64,7 @@
 - Operating break-even assumptions:
 - Evidence that margins are improving:
 - Evidence that working capital is healthy:
+- Evidence that demand is collected in cash rather than pushed into receivables / inventory:
 - What would falsify the turnaround or expansion story:
 
 ## Open Verification Items

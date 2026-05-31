@@ -78,6 +78,21 @@
 - Related-party transactions:
 - Capitalized expenses or unusual accounting items:
 
+## Three-Statement Pattern Read
+
+| Pattern | Evidence Combination | Current Read | Scenario Impact | Missing / Better Source |
+| --- | --- | --- | --- | --- |
+| Demand validated | Revenue growth + CFO / FCF improvement + receivables and inventory not outpacing sales |  |  |  |
+| Stuffing risk | Revenue growth + receivables growth + inventory growth + CFO deterioration |  |  |  |
+| Capex productivity | Capex / revenue + fixed assets + depreciation / revenue + ROIC trend |  |  |  |
+| Liquidity pressure | Cash + current liabilities + interest coverage + FCF vs debt maturity |  |  |  |
+| Shareholder value accrual | Equity growth + ROIC + dilution / buyback / dividend record |  |  |  |
+
+- Demand validated / stuffing risk / capex productivity / liquidity pressure / shareholder value accrual:
+- Which pattern has the strongest evidence:
+- Which pattern is still only a hypothesis:
+- What data would change the pattern read:
+
 ## Better Source Checklist
 
 | Evidence Need | Preferred Source | Fallback Source | Status |

@@ -19,15 +19,16 @@ This repository is a markdown-first workspace template for researching one stock
 1. Start a case with `stock-case-init`.
 2. Fetch Yahoo profile + financials with `scripts/fetch_yahoo.py`.
 3. Build the company view with `company-deep-dive`.
-4. Map industry drivers with `industry-transmission-analysis`.
-5. Filter macro variables with `macro-impact-analysis`.
-6. Add the value-investor quality layer with `quality-and-valuation-check`.
-7. Write the current thesis with `investment-thesis`.
-8. Add the market-state layer with `market-action-read` after fetching FinMind market data.
-9. Record expected evidence, thesis kill criteria, and tracking triggers in `active-decisions.md`.
-10. Use `signal-update` for new filings, revenue releases, or news.
-11. Use `case-revisit` when returning to the case later.
-12. Use `session-wrap` before ending a session.
+4. Run financial analysis with Goodinfo via `scripts/fetch_goodinfo.py`, then write `financial-analysis.md`.
+5. Map industry drivers with `industry-transmission-analysis`.
+6. Filter macro variables with `macro-impact-analysis`.
+7. Add the value-investor quality layer with `quality-and-valuation-check`.
+8. Write the current thesis with `investment-thesis`.
+9. Add the market-state layer with `market-action-read` after fetching FinMind market data.
+10. Record expected evidence, thesis kill criteria, and tracking triggers in `active-decisions.md`.
+11. Use `signal-update` for new filings, revenue releases, or news.
+12. Use `case-revisit` when returning to the case later.
+13. Use `session-wrap` before ending a session.
 
 ## Data Layout
 

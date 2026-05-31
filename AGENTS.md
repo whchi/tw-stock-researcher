@@ -27,7 +27,7 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 |------|-------|---------|
 | `stock-meta.json` | `stock-case-init` | Case index + status. All `file_references` values are `null` or repo-relative paths rooted in the case dir. |
 | `yahoo-data.json` | `fetch_yahoo.py` | Yahoo Finance Taiwan company profile, revenue, income statement, cash flow, and derived summary. |
-| `raw-data.json` | `fetch_goodinfo.py` | Goodinfo scraped data (auto-detected by script). |
+| `raw-data.json` | `fetch_goodinfo.py` | Goodinfo scraped data plus three-statement coverage check (auto-detected by script). |
 | `research-questions.md` | `stock-case-init` | Core questions, facts to establish, disconfirming evidence to seek. |
 | `open-questions.md` | `case-revisit` / `session-wrap` | Unresolved items to carry forward; closed questions logged here. |
 | `active-decisions.md` | `session-wrap` | Current research stance, expected evidence timeline, thesis kill criteria, user-provided position context, observation ranges, structure-break conditions, next review triggers. |
@@ -62,6 +62,7 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 ```
 - **Auto-detection:** The script looks for exactly one `companies/<stock_id>-*/` directory. If found, writes `raw-data.json` there. If zero or multiple matches, falls back to repo root (`<stock_id>_raw_data.json`) — **avoid this.**
 - **Provenance:** `raw-data.json` includes `metadata` with `fetched_at`, Goodinfo URLs, and MOPS links.
+- **Coverage checks:** `raw-data.json` includes `three_statement_coverage` to show whether Goodinfo annual IS / BS / CF fields are sufficient for balance-sheet demand validation and three-statement pattern reads.
 - **Sanity checks:** The script flags gross margin >100%, current ratio <0, debt ratio >100%, ROE >100%, and adjacent-year net margin swings >30pp.
 - **Cross-check:** Always include the MOPS official filing URL in `financial-analysis.md`.
 
@@ -122,9 +123,9 @@ When the user explicitly asks for a comprehensive research result as HTML, use t
 ### Key Fields
 | Statement | Critical Fields |
 |-----------|----------------|
-| Income | 營業收入, 營業毛利(淨額), 推銷費用, 管理費用, 研究發展費用, 營業利益, 稅後淨利, 每股稅後盈餘(元) |
-| Balance | 現金及約當現金, 存貨, 流動資產合計, 流動負債合計, 負債總額, 股東權益總額, 資產總額 |
-| Cash Flow | 營業活動之淨現金流入(出), 投資活動之淨現金流入(出), 融資活動之淨現金流入(出), 固定資產(增加)減少, 發放現金股利 |
+| Income | 營業收入, 營業毛利(淨額), 推銷費用, 管理費用, 研究發展費用, 營業利益, 利息費用, 稅後淨利, 每股稅後盈餘(元) |
+| Balance | 現金及約當現金, 應收帳款, 存貨, 應付帳款, 預付款項, 合約負債 / 遞延收入 / 預收款項（若有）, 流動資產合計, 流動負債合計, 短期借款, 長期借款, 負債總額, 商譽 / 無形資產（若有）, 股東權益總額, 資產總額 |
+| Cash Flow | 營業活動之淨現金流入(出), 投資活動之淨現金流入(出), 融資活動之淨現金流入(出), 固定資產(增加)減少, 折舊及攤銷, 發放現金股利 |
 
 ### Derived Metrics
 - Gross margin = 營業毛利 / 營業收入
@@ -139,11 +140,21 @@ When the user explicitly asks for a comprehensive research result as HTML, use t
 - Owner earnings = operating cash flow - maintenance capex estimate
 - Cash conversion = free cash flow / net income
 - Working capital quality = receivable days, inventory days, payable days, and cash conversion cycle trend
+- Three-statement demand validation = revenue growth, receivables growth, inventory growth, and CFO / FCF direction read together
+- Capex productivity = capex / revenue, fixed assets, depreciation / revenue, and ROIC trend read together
+
+### Data Sufficiency For Three-Statement Pattern Reads
+- `fetch_goodinfo.py` writes `three_statement_coverage.baseline_supported=true` only when the annual Goodinfo income statement, balance sheet, and cash-flow statement include the required raw fields for a baseline three-statement read.
+- Goodinfo annual data is generally sufficient for baseline checks: cash collection vs revenue, receivables / inventory build, CFO / FCF conversion, liquidity, leverage, capex intensity, and shareholder equity growth.
+- Goodinfo annual data is not sufficient by itself for full NVDA-style depth when the thesis depends on quarter timing, debt maturity schedules, allowance for doubtful accounts, customer prepayments / contract liabilities detail, dilution notes, customer concentration, or management guidance. Use MOPS filings, quarterly reports, company reports, or official notes for those items.
+- If `required_missing` is not empty, do not force a conclusion. Put the missing fields in `financial-analysis.md` → `Open Verification Items`.
+- If only `supplemental_missing` is non-empty, the baseline annual read may proceed, but any conclusion depending on missing supplemental items must be labeled as lower-confidence.
 
 ### Output Format
 - Write `financial-analysis.md` as markdown, not HTML.
 - Include data tables with YoY changes and a "trend assessment" column (▲ up / ▼ down / ■ neutral).
 - Cover three dimensions: Operating Analysis, Profitability Analysis, Financial Health.
+- Include a balance-sheet demand validation table that connects revenue, receivables, inventory, payables, CFO, capex, and liquidity instead of judging each line item in isolation.
 
 ### Flow Boundary
 - `financial-analysis.md` is the financial fact layer: statements, calculated metrics, source checks, and red flags.

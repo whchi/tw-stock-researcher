@@ -108,6 +108,221 @@ def pick_key(table, exact_name, includes=None, excludes=None):
     return None
 
 
+THREE_STATEMENT_REQUIRED_ITEMS = {
+    "revenue": {
+        "statement": "income_statement",
+        "required_for": "revenue growth and demand validation",
+        "keys": [{"exact": "營業收入", "includes": ["營業收入"]}],
+    },
+    "operating_income": {
+        "statement": "income_statement",
+        "required_for": "operating leverage and interest coverage",
+        "keys": [{"exact": "營業利益", "includes": ["營業利益"]}],
+    },
+    "net_income": {
+        "statement": "income_statement",
+        "required_for": "cash conversion and ROE",
+        "keys": [{"exact": "稅後淨利", "includes": ["稅後淨利"], "excludes": ["合併"]}],
+    },
+    "cash": {
+        "statement": "balance_sheet",
+        "required_for": "liquidity and net cash / debt",
+        "keys": [{"exact": "現金及約當現金", "includes": ["現金", "約當現金"]}],
+    },
+    "accounts_receivable": {
+        "statement": "balance_sheet",
+        "required_for": "revenue quality, DSO, and stuffing risk",
+        "keys": [
+            {"exact": "應收帳款淨額", "includes": ["應收帳款"]},
+            {"exact": "應收帳款及票據", "includes": ["應收", "帳款"]},
+        ],
+    },
+    "inventory": {
+        "statement": "balance_sheet",
+        "required_for": "DIO and inventory build risk",
+        "keys": [{"exact": "存貨", "includes": ["存貨"]}],
+    },
+    "accounts_payable": {
+        "statement": "balance_sheet",
+        "required_for": "DPO and supplier financing read",
+        "keys": [
+            {"exact": "應付帳款", "includes": ["應付帳款"]},
+            {"exact": "應付帳款及票據", "includes": ["應付", "帳款"]},
+        ],
+    },
+    "current_assets": {
+        "statement": "balance_sheet",
+        "required_for": "current ratio and short-term resilience",
+        "keys": [{"exact": "流動資產合計", "includes": ["流動資產合計"]}],
+    },
+    "current_liabilities": {
+        "statement": "balance_sheet",
+        "required_for": "current ratio and short-term resilience",
+        "keys": [{"exact": "流動負債合計", "includes": ["流動負債合計"]}],
+    },
+    "total_liabilities": {
+        "statement": "balance_sheet",
+        "required_for": "debt ratio and leverage read",
+        "keys": [{"exact": "負債總額", "includes": ["負債總額"]}],
+    },
+    "shareholder_equity": {
+        "statement": "balance_sheet",
+        "required_for": "ROE and shareholder value accrual",
+        "keys": [{"exact": "股東權益總額", "includes": ["股東權益總額"]}],
+    },
+    "total_assets": {
+        "statement": "balance_sheet",
+        "required_for": "ROA and asset efficiency",
+        "keys": [{"exact": "資產總額", "includes": ["資產總額"]}],
+    },
+    "operating_cash_flow": {
+        "statement": "cash_flow",
+        "required_for": "earnings quality and cash collection",
+        "keys": [{"exact": "營業活動之淨現金流入(出)", "includes": ["營業活動"]}],
+    },
+    "investing_cash_flow": {
+        "statement": "cash_flow",
+        "required_for": "capital deployment read",
+        "keys": [{"exact": "投資活動之淨現金流入(出)", "includes": ["投資活動"]}],
+    },
+    "financing_cash_flow": {
+        "statement": "cash_flow",
+        "required_for": "external financing / shareholder return read",
+        "keys": [{"exact": "融資活動之淨現金流入(出)", "includes": ["融資活動"]}],
+    },
+    "capex": {
+        "statement": "cash_flow",
+        "required_for": "FCF, capital intensity, and capex productivity",
+        "keys": [
+            {"exact": "固定資產(增加)減少", "includes": ["固定資產", "增加"]},
+            {"exact": "取得不動產、廠房及設備", "includes": ["不動產", "廠房", "設備"]},
+        ],
+    },
+}
+
+
+THREE_STATEMENT_SUPPLEMENTAL_ITEMS = {
+    "depreciation_amortization": {
+        "statement": "cash_flow",
+        "required_for": "depreciation / revenue and fixed-cost pressure",
+        "keys": [{"exact": "折舊及攤銷", "includes": ["折舊"]}],
+    },
+    "interest_expense": {
+        "statement": "income_statement",
+        "required_for": "interest coverage",
+        "keys": [{"exact": "利息費用", "includes": ["利息費用"]}],
+    },
+    "short_term_debt": {
+        "statement": "balance_sheet",
+        "required_for": "near-term refinancing pressure",
+        "keys": [{"exact": "短期借款", "includes": ["短期借款"]}],
+    },
+    "long_term_debt": {
+        "statement": "balance_sheet",
+        "required_for": "leverage and debt runway",
+        "keys": [{"exact": "長期借款", "includes": ["長期借款"]}],
+    },
+    "prepaid_assets": {
+        "statement": "balance_sheet",
+        "required_for": "capacity prepayment and demand pull-forward",
+        "keys": [{"exact": "預付款項", "includes": ["預付款"]}],
+    },
+    "contract_liabilities": {
+        "statement": "balance_sheet",
+        "required_for": "customer prepayment / deferred revenue demand signal",
+        "keys": [
+            {"exact": "合約負債", "includes": ["合約負債"]},
+            {"exact": "遞延收入", "includes": ["遞延收入"]},
+            {"exact": "預收款項", "includes": ["預收"]},
+        ],
+    },
+    "goodwill": {
+        "statement": "balance_sheet",
+        "required_for": "M&A quality and impairment risk",
+        "keys": [{"exact": "商譽", "includes": ["商譽"]}],
+    },
+    "intangible_assets": {
+        "statement": "balance_sheet",
+        "required_for": "intangible moat or acquisition accounting read",
+        "keys": [{"exact": "無形資產", "includes": ["無形資產"]}],
+    },
+    "dividends": {
+        "statement": "cash_flow",
+        "required_for": "shareholder return and capital allocation",
+        "keys": [{"exact": "發放現金股利", "includes": ["現金股利"]}],
+    },
+    "diluted_share_count": {
+        "statement": "income_statement",
+        "required_for": "dilution and per-share value creation",
+        "keys": [{"exact": "稀釋加權平均股數", "includes": ["稀釋", "股數"]}],
+    },
+    "allowance_for_doubtful_accounts": {
+        "statement": "mops_notes",
+        "required_for": "receivable quality and bad-debt risk",
+        "keys": [],
+    },
+    "debt_maturity_schedule": {
+        "statement": "mops_notes",
+        "required_for": "refinancing wall and debt maturity risk",
+        "keys": [],
+    },
+}
+
+
+def _match_item_key(result, item):
+    table = result.get(item["statement"], {})
+    for spec in item["keys"]:
+        key = pick_key(
+            table,
+            spec["exact"],
+            includes=spec.get("includes"),
+            excludes=spec.get("excludes"),
+        )
+        if key:
+            return key
+    return None
+
+
+def build_three_statement_coverage(result):
+    required = {}
+    required_missing = []
+
+    for name, item in THREE_STATEMENT_REQUIRED_ITEMS.items():
+        matched_key = _match_item_key(result, item)
+        required[name] = {
+            "statement": item["statement"],
+            "matched_key": matched_key,
+            "required_for": item["required_for"],
+        }
+        if matched_key is None:
+            required_missing.append(name)
+
+    supplemental = {}
+    supplemental_missing = []
+    for name, item in THREE_STATEMENT_SUPPLEMENTAL_ITEMS.items():
+        matched_key = _match_item_key(result, item)
+        supplemental[name] = {
+            "statement": item["statement"],
+            "matched_key": matched_key,
+            "required_for": item["required_for"],
+        }
+        if matched_key is None:
+            supplemental_missing.append(name)
+
+    return {
+        "purpose": "coverage check for balance-sheet demand validation and three-statement pattern read",
+        "baseline_supported": not required_missing,
+        "required": required,
+        "required_missing": required_missing,
+        "supplemental": supplemental,
+        "supplemental_missing": supplemental_missing,
+        "notes": [
+            "Goodinfo IS_YEAR / BS_YEAR / CF_YEAR is enough for annual baseline pattern reads when required_missing is empty.",
+            "Quarterly timing, debt maturity schedules, bad-debt allowance, contract-liability detail, and dilution notes still require MOPS filings or company reports when material.",
+        ],
+    }
+
+
 # ─── 驗證層 A：資料來源標注 ────────────────────────────────
 
 
@@ -237,6 +452,7 @@ def fetch_all(stock_id):
     cf_soup = fetch_report(stock_id, "CF_YEAR", days_adjusted, client_key)
     cf_data, _ = parse_table(cf_soup)
     result["cash_flow"] = cf_data
+    result["three_statement_coverage"] = build_three_statement_coverage(result)
 
     # 驗證層 A：資料標注
     result["metadata"] = build_metadata(stock_id, years)
@@ -250,6 +466,30 @@ def run_verification(result, metrics_by_year):
 
     # 驗證層 B：合理性檢查
     warnings = sanity_check(metrics_by_year, years)
+    if not years:
+        warnings.append(
+            {
+                "level": "error",
+                "field": "Goodinfo 財報年度",
+                "msg": "未解析到任何年度，請重新抓取或改用 MOPS / 官方來源交叉確認",
+            }
+        )
+
+    required_tables = [
+        ("income_statement", "損益表"),
+        ("balance_sheet", "資產負債表"),
+        ("cash_flow", "現金流量表"),
+    ]
+    for key, label in required_tables:
+        if not result.get(key):
+            warnings.append(
+                {
+                    "level": "error",
+                    "field": f"Goodinfo {label}",
+                    "msg": f"未解析到{label}資料，不能作為 financial-analysis.md 主要證據",
+                }
+            )
+
     sanity_pass = all(w["level"] != "error" for w in warnings)
 
     result["verification"] = {
