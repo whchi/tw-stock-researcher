@@ -30,10 +30,10 @@ def get_client_key():
 def fetch_report(stock_id, rpt_cat, days_adjusted, client_key):
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        "Referer": f"https://goodinfo.tw/tw/StockFinDetail.asp?RPT_CAT={rpt_cat}&STOCK_ID={stock_id}",
+        "Referer": f"https://goodinfo.tw/tw/StockDetail.asp?STOCK_ID={stock_id}",
     }
     cookies = {"CLIENT_KEY": client_key}
-    url = f"https://goodinfo.tw/tw2/StockFinDetail.asp?STEP=DATA&STOCK_ID={stock_id}&RPT_CAT={rpt_cat}"
+    url = f"https://goodinfo.tw/tw/StockFinDetail.asp?STOCK_ID={stock_id}&RPT_CAT={rpt_cat}"
     r = requests.get(url, headers=headers, cookies=cookies, timeout=30)
     r.encoding = "utf-8"
     return BeautifulSoup(r.text, "html.parser")
