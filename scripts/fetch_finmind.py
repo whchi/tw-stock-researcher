@@ -12,7 +12,26 @@ BASE_URL = "https://api.finmindtrade.com/api/v4/data"
 DATASETS = (
     "TaiwanStockPrice",
     "TaiwanStockInstitutionalInvestorsBuySell",
+    "TaiwanStockMarginPurchaseShortSale",
+    "TaiwanStockShareholding",
+    "TaiwanStockDayTrading",
+    "TaiwanStockHoldingSharesPer",
 )
+
+RAW_DATASET_KEYS = {
+    "TaiwanStockPrice": "price",
+    "TaiwanStockInstitutionalInvestorsBuySell": "institutional_investors",
+    "TaiwanStockMarginPurchaseShortSale": "margin_purchase_short_sale",
+    "TaiwanStockShareholding": "shareholding",
+    "TaiwanStockDayTrading": "day_trading",
+    "TaiwanStockHoldingSharesPer": "holding_shares_per",
+}
+OPTIONAL_DATASETS = {
+    "TaiwanStockMarginPurchaseShortSale",
+    "TaiwanStockShareholding",
+    "TaiwanStockDayTrading",
+    "TaiwanStockHoldingSharesPer",
+}
 
 
 def parse_args(argv):
@@ -20,7 +39,7 @@ def parse_args(argv):
     parser.add_argument("stock_id")
     parser.add_argument("--start-date")
     parser.add_argument("--end-date")
-    parser.add_argument("--days", type=int, default=7)
+    parser.add_argument("--days", type=int, default=400)
     parser.add_argument("--token")
     parser.add_argument("--output")
     return parser.parse_args(argv)
@@ -90,6 +109,21 @@ def fetch_dataset(dataset, stock_id, start_date, end_date, token=None):
         )
 
     return payload.get("data", [])
+
+
+def fetch_dataset_safely(dataset, stock_id, start_date, end_date, token=None):
+    try:
+        return fetch_dataset(
+            dataset,
+            stock_id,
+            start_date,
+            end_date,
+            token=token,
+        ), None
+    except RuntimeError as exc:
+        if dataset not in OPTIONAL_DATASETS:
+            raise
+        return [], f"{dataset} unavailable: {exc}"
 
 
 def to_float(value):
@@ -264,9 +298,205 @@ def build_market_action_read(price_rows, institutional_rows):
     }
 
 
-def build_metadata(
-    stock_id, start_date, end_date, price_rows, institutional_rows, warnings
+EGG_WINDOWS = {
+    "1m": 60,
+    "3m": 120,
+    "6m": 180,
+}
+
+
+def average(values):
+    numeric_values = [value for value in values if value is not None]
+    if not numeric_values:
+        return None
+    return sum(numeric_values) / len(numeric_values)
+
+
+def turnover_value(row):
+    return to_float(row.get("Trading_turnover"))
+
+
+def latest_issued_shares(shareholding_rows):
+    dated_rows = [
+        row
+        for row in shareholding_rows
+        if row.get("date") and to_float(row.get("NumberOfSharesIssued"))
+    ]
+    if not dated_rows:
+        return None
+    latest = sorted(dated_rows, key=lambda row: row.get("date", ""))[-1]
+    return to_float(latest.get("NumberOfSharesIssued"))
+
+
+def turnover_pct(row, issued_shares=None):
+    volume = to_float(row.get("Trading_Volume"))
+    if volume is not None and issued_shares not in (None, 0):
+        return volume / issued_shares * 100
+    return turnover_value(row)
+
+
+def classify_turnover(avg_turnover):
+    if avg_turnover is None:
+        return "unknown"
+    if avg_turnover >= 0.8:
+        return "active"
+    if avg_turnover <= 0.3:
+        return "low"
+    return "normal"
+
+
+def holding_totals_by_date(rows):
+    totals = {}
+    for row in rows:
+        row_date = row.get("date")
+        if not row_date:
+            continue
+        totals[row_date] = totals.get(row_date, 0.0) + (to_float(row.get("people")) or 0.0)
+    return totals
+
+
+def holder_state_for_window(holding_shares_per_rows, start_date, end_date):
+    rows = [
+        row
+        for row in holding_shares_per_rows
+        if start_date <= row.get("date", "") <= end_date
+    ]
+    totals = holding_totals_by_date(rows)
+    dates = sorted(date_key for date_key, total in totals.items() if total > 0)
+
+    if len(dates) < 2:
+        return {
+            "holder_count_state": "unknown",
+            "holder_change_pct": None,
+            "has_holder_data": False,
+        }
+
+    first_total = totals[dates[0]]
+    latest_total = totals[dates[-1]]
+    holder_change_pct = pct_change(latest_total, first_total)
+
+    if holder_change_pct is None:
+        holder_count_state = "unknown"
+    elif holder_change_pct <= -5:
+        holder_count_state = "decreasing"
+    elif holder_change_pct >= 5:
+        holder_count_state = "increasing"
+    else:
+        holder_count_state = "flat"
+
+    return {
+        "holder_count_state": holder_count_state,
+        "holder_change_pct": round(holder_change_pct, 2)
+        if holder_change_pct is not None
+        else None,
+        "has_holder_data": True,
+    }
+
+
+def classify_egg_stage(price_change_pct, turnover_state, holder_count_state):
+    price_structure = "A" if (price_change_pct or 0) >= 0 else "B"
+
+    if price_structure == "A":
+        if turnover_state == "low" and holder_count_state == "decreasing":
+            return "A1", "supply_demand_favorable"
+        if turnover_state == "active" and holder_count_state == "increasing":
+            return "A3", "supply_demand_risk"
+        return "A2", "wait_for_confirmation"
+
+    if turnover_state == "low" and holder_count_state == "decreasing":
+        return "B1", "supply_demand_risk"
+    if turnover_state == "active" and holder_count_state == "decreasing":
+        return "B3", "supply_demand_favorable"
+    return "B2", "wait_for_confirmation"
+
+
+def build_egg_window_read(
+    label,
+    sorted_price,
+    holding_shares_per_rows=None,
+    shareholding_rows=None,
 ):
+    required_rows = EGG_WINDOWS[label]
+    if len(sorted_price) < required_rows:
+        return {
+            "window": label,
+            "status": "insufficient_data",
+            "stage": None,
+            "signal": "wait_for_confirmation",
+            "confidence": "low",
+            "warnings": [f"Need at least {required_rows} trading rows"],
+        }
+
+    window_price = sorted_price[-required_rows:]
+    latest = window_price[-1]
+    comparison = window_price[0]
+    latest_close = to_float(latest.get("close"))
+    comparison_close = to_float(comparison.get("close"))
+    price_change_pct = pct_change(latest_close, comparison_close)
+    issued_shares = latest_issued_shares(shareholding_rows or [])
+    avg_turnover = average(turnover_pct(row, issued_shares) for row in window_price)
+    turnover_state = classify_turnover(avg_turnover)
+    holder_read = holder_state_for_window(
+        holding_shares_per_rows or [],
+        comparison.get("date", ""),
+        latest.get("date", ""),
+    )
+    warnings = []
+
+    if holder_read["has_holder_data"]:
+        confidence = "high"
+    else:
+        confidence = "medium"
+        warnings.append("holder_data_missing")
+
+    stage, signal = classify_egg_stage(
+        price_change_pct,
+        turnover_state,
+        holder_read["holder_count_state"],
+    )
+
+    return {
+        "window": label,
+        "status": "ready",
+        "stage": stage,
+        "signal": signal,
+        "confidence": confidence,
+        "latest_date": latest.get("date"),
+        "comparison_date": comparison.get("date"),
+        "price_change_pct": round(price_change_pct, 2)
+        if price_change_pct is not None
+        else None,
+        "average_turnover": round(avg_turnover, 4)
+        if avg_turnover is not None
+        else None,
+        "turnover_state": turnover_state,
+        "holder_count_state": holder_read["holder_count_state"],
+        "holder_change_pct": holder_read["holder_change_pct"],
+        "warnings": warnings,
+    }
+
+
+def build_egg_theory_read(
+    price_rows,
+    holding_shares_per_rows=None,
+    shareholding_rows=None,
+):
+    sorted_price = sorted(price_rows, key=lambda row: row.get("date", ""))
+    return {
+        "method": "egg_theory_v1",
+        "windows": {
+            label: build_egg_window_read(
+                label,
+                sorted_price,
+                holding_shares_per_rows=holding_shares_per_rows,
+                shareholding_rows=shareholding_rows,
+            )
+            for label in ("1m", "3m", "6m")
+        },
+    }
+
+
+def build_metadata(stock_id, start_date, end_date, raw_rows_by_dataset, warnings):
     return {
         "fetched_at": datetime.now(timezone.utc)
         .astimezone()
@@ -282,37 +512,45 @@ def build_metadata(
         "datasets": list(DATASETS),
         "date_range": {"start_date": start_date, "end_date": end_date},
         "row_counts": {
-            "TaiwanStockPrice": len(price_rows),
-            "TaiwanStockInstitutionalInvestorsBuySell": len(institutional_rows),
+            dataset: len(raw_rows_by_dataset.get(dataset, []))
+            for dataset in DATASETS
         },
         "warnings": warnings,
     }
 
 
 def fetch_all(stock_id, start_date, end_date, token=None):
-    price_rows = fetch_dataset(
-        "TaiwanStockPrice",
-        stock_id,
-        start_date,
-        end_date,
-        token=token,
-    )
-    institutional_rows = fetch_dataset(
-        "TaiwanStockInstitutionalInvestorsBuySell",
-        stock_id,
-        start_date,
-        end_date,
-        token=token,
-    )
+    raw_rows_by_dataset = {}
     warnings = []
 
-    if not price_rows:
-        warnings.append("TaiwanStockPrice returned no rows")
-    if not institutional_rows:
-        warnings.append("TaiwanStockInstitutionalInvestorsBuySell returned no rows")
+    for dataset in DATASETS:
+        rows, warning = fetch_dataset_safely(
+            dataset,
+            stock_id,
+            start_date,
+            end_date,
+            token=token,
+        )
+        raw_rows_by_dataset[dataset] = rows
+        if warning:
+            warnings.append(warning)
 
-    derived = build_market_action_read(price_rows, institutional_rows)
-    warnings.extend(derived.get("warnings", []))
+    price_rows = raw_rows_by_dataset["TaiwanStockPrice"]
+    institutional_rows = raw_rows_by_dataset[
+        "TaiwanStockInstitutionalInvestorsBuySell"
+    ]
+
+    for dataset, rows in raw_rows_by_dataset.items():
+        if not rows:
+            warnings.append(f"{dataset} returned no rows")
+
+    market_action_read = build_market_action_read(price_rows, institutional_rows)
+    egg_theory_read = build_egg_theory_read(
+        price_rows,
+        holding_shares_per_rows=raw_rows_by_dataset["TaiwanStockHoldingSharesPer"],
+        shareholding_rows=raw_rows_by_dataset["TaiwanStockShareholding"],
+    )
+    warnings.extend(market_action_read.get("warnings", []))
 
     return {
         "stock_id": stock_id,
@@ -320,15 +558,17 @@ def fetch_all(stock_id, start_date, end_date, token=None):
             stock_id,
             start_date,
             end_date,
-            price_rows,
-            institutional_rows,
+            raw_rows_by_dataset,
             warnings,
         ),
         "raw": {
-            "price": price_rows,
-            "institutional_investors": institutional_rows,
+            raw_key: raw_rows_by_dataset[dataset]
+            for dataset, raw_key in RAW_DATASET_KEYS.items()
         },
-        "derived": {"market_action_read": derived},
+        "derived": {
+            "market_action_read": market_action_read,
+            "egg_theory_read": egg_theory_read,
+        },
     }
 
 

@@ -1,10 +1,14 @@
 import tempfile
 import unittest
+from datetime import date, timedelta
 from pathlib import Path
+from unittest.mock import patch
 
+import scripts.fetch_finmind as fetch_finmind
 from scripts.fetch_finmind import (
     build_market_action_read,
     default_output_path,
+    parse_args,
     resolve_token,
     summarize_institutional_flows,
 )
@@ -29,6 +33,41 @@ INSTITUTIONAL_ROWS = [
     {"date": "2026-05-05", "stock_id": "2330", "name": "Investment_Trust", "buy": 1000, "sell": 1200},
     {"date": "2026-05-05", "stock_id": "2330", "name": "Dealer", "buy": 700, "sell": 400},
 ]
+
+
+def make_price_rows(count, start_close=100.0, close_step=1.0, volume=1000):
+    start = date(2026, 1, 1)
+    return [
+        {
+            "date": (start + timedelta(days=index)).isoformat(),
+            "stock_id": "2330",
+            "Trading_Volume": volume,
+            "Trading_turnover": 1.0,
+            "close": start_close + index * close_step,
+        }
+        for index in range(count)
+    ]
+
+
+def make_holding_rows():
+    return [
+        {
+            "date": "2026-01-01",
+            "stock_id": "2330",
+            "HoldingSharesLevel": "1-999",
+            "people": 1000,
+            "percent": 40.0,
+            "unit": "股",
+        },
+        {
+            "date": "2026-06-29",
+            "stock_id": "2330",
+            "HoldingSharesLevel": "1-999",
+            "people": 700,
+            "percent": 25.0,
+            "unit": "股",
+        },
+    ]
 
 
 class OutputPathTests(unittest.TestCase):
@@ -69,6 +108,13 @@ class TokenTests(unittest.TestCase):
     def test_resolve_token_does_not_read_unconfigured_environment_name(self):
         with self.assertRaisesRegex(RuntimeError, 'export FIN_MIND_TOKEN="your_token_here"'):
             resolve_token(args_token=None, env={"FINMIND_TOKEN": "other-token"})
+
+
+class ArgsTests(unittest.TestCase):
+    def test_default_fetch_range_supports_swing_windows(self):
+        args = parse_args(["2330"])
+
+        self.assertEqual(args.days, 400)
 
 
 class MarketActionReadTests(unittest.TestCase):
@@ -118,6 +164,101 @@ class MarketActionReadTests(unittest.TestCase):
         self.assertEqual(result["by_name"]["Foreign_Investor"]["net_buy_sell"], 2350.0)
         self.assertEqual(result["by_name"]["Investment_Trust"]["net_buy_sell"], -225.0)
         self.assertEqual(result["total_net_buy_sell"], 2425.0)
+
+
+class EggTheoryReadTests(unittest.TestCase):
+    def test_fetch_all_marks_egg_theory_windows_insufficient_with_less_than_60_price_rows(self):
+        def fake_fetch_dataset(dataset, stock_id, start_date, end_date, token=None):
+            if dataset == "TaiwanStockPrice":
+                return PRICE_ROWS
+            if dataset == "TaiwanStockInstitutionalInvestorsBuySell":
+                return INSTITUTIONAL_ROWS
+            return []
+
+        with patch.object(fetch_finmind, "fetch_dataset", side_effect=fake_fetch_dataset):
+            result = fetch_finmind.fetch_all(
+                "2330",
+                "2026-04-01",
+                "2026-05-05",
+                token="token",
+            )
+
+        self.assertIn("egg_theory_read", result["derived"])
+        egg_read = result["derived"]["egg_theory_read"]
+
+        self.assertEqual(egg_read["windows"]["1m"]["status"], "insufficient_data")
+        self.assertIn("Need at least 60 trading rows", egg_read["windows"]["1m"]["warnings"])
+        self.assertEqual(egg_read["windows"]["1m"]["signal"], "wait_for_confirmation")
+        self.assertEqual(egg_read["windows"]["1m"]["confidence"], "low")
+
+    def test_fetch_all_stores_extended_chip_datasets(self):
+        requested = []
+
+        def fake_fetch_dataset(dataset, stock_id, start_date, end_date, token=None):
+            requested.append(dataset)
+            if dataset == "TaiwanStockPrice":
+                return PRICE_ROWS
+            if dataset == "TaiwanStockInstitutionalInvestorsBuySell":
+                return INSTITUTIONAL_ROWS
+            return [{"date": "2026-05-05", "stock_id": stock_id, "dataset": dataset}]
+
+        with patch.object(fetch_finmind, "fetch_dataset", side_effect=fake_fetch_dataset):
+            result = fetch_finmind.fetch_all(
+                "2330",
+                "2026-04-01",
+                "2026-05-05",
+                token="token",
+            )
+
+        self.assertIn("TaiwanStockMarginPurchaseShortSale", requested)
+        self.assertIn("TaiwanStockShareholding", requested)
+        self.assertIn("TaiwanStockDayTrading", requested)
+        self.assertIn("TaiwanStockHoldingSharesPer", requested)
+        self.assertEqual(result["raw"]["margin_purchase_short_sale"][0]["dataset"], "TaiwanStockMarginPurchaseShortSale")
+        self.assertEqual(result["raw"]["shareholding"][0]["dataset"], "TaiwanStockShareholding")
+        self.assertEqual(result["raw"]["day_trading"][0]["dataset"], "TaiwanStockDayTrading")
+        self.assertEqual(result["raw"]["holding_shares_per"][0]["dataset"], "TaiwanStockHoldingSharesPer")
+
+    def test_fetch_all_keeps_running_when_holding_shares_per_is_not_allowed(self):
+        def fake_fetch_dataset(dataset, stock_id, start_date, end_date, token=None):
+            if dataset == "TaiwanStockHoldingSharesPer":
+                raise RuntimeError("FinMind request failed for TaiwanStockHoldingSharesPer: HTTP 402")
+            if dataset == "TaiwanStockPrice":
+                return PRICE_ROWS
+            if dataset == "TaiwanStockInstitutionalInvestorsBuySell":
+                return INSTITUTIONAL_ROWS
+            return [{"date": "2026-05-05", "stock_id": stock_id}]
+
+        with patch.object(fetch_finmind, "fetch_dataset", side_effect=fake_fetch_dataset):
+            result = fetch_finmind.fetch_all(
+                "2330",
+                "2026-04-01",
+                "2026-05-05",
+                token="token",
+            )
+
+        self.assertEqual(result["raw"]["holding_shares_per"], [])
+        self.assertIn(
+            "TaiwanStockHoldingSharesPer unavailable",
+            " ".join(result["metadata"]["warnings"]),
+        )
+
+    def test_egg_theory_uses_holding_shares_when_available(self):
+        price_rows = make_price_rows(180, start_close=200.0, close_step=-0.5, volume=5000)
+
+        result = fetch_finmind.build_egg_theory_read(
+            price_rows,
+            holding_shares_per_rows=make_holding_rows(),
+        )
+
+        six_month = result["windows"]["6m"]
+
+        self.assertEqual(six_month["status"], "ready")
+        self.assertEqual(six_month["stage"], "B3")
+        self.assertEqual(six_month["signal"], "supply_demand_favorable")
+        self.assertEqual(six_month["confidence"], "high")
+        self.assertEqual(six_month["holder_count_state"], "decreasing")
+        self.assertNotIn("holder_data_missing", six_month["warnings"])
 
 
 if __name__ == "__main__":

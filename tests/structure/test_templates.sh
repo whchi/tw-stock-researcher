@@ -87,6 +87,7 @@ require_line "templates/stock-meta.json" '"quality_and_valuation_check": null'
 require_line "templates/stock-meta.json" '"market_action_read": null'
 require_line "templates/research-html-summary.html" "{{TITLE}}"
 require_line "templates/research-html-summary.html" "{{EXPECTATION_GAP_ROWS}}"
+require_line "templates/research-html-summary.html" "{{EGG_THEORY_ROWS}}"
 require_line "templates/research-html-summary.html" "{{EVIDENCE_TIMELINE_ROWS}}"
 require_line "templates/research-html-summary.html" "{{KILL_CRITERIA_ROWS}}"
 
