@@ -70,6 +70,38 @@ def make_holding_rows():
     ]
 
 
+def make_tdcc_holding_rows():
+    return [
+        {
+            "date": "2026-06-05",
+            "stock_id": "2330",
+            "HoldingSharesLevel": "1",
+            "people": 100,
+            "shares": 100000,
+            "percent": 1.0,
+            "unit": "股",
+        },
+        {
+            "date": "2026-06-05",
+            "stock_id": "2330",
+            "HoldingSharesLevel": "15",
+            "people": 10,
+            "shares": 7000000,
+            "percent": 70.0,
+            "unit": "股",
+        },
+        {
+            "date": "2026-06-05",
+            "stock_id": "2330",
+            "HoldingSharesLevel": "17",
+            "people": 1000,
+            "shares": 10000000,
+            "percent": 100.0,
+            "unit": "股",
+        },
+    ]
+
+
 class OutputPathTests(unittest.TestCase):
     def test_default_output_path_uses_unique_case_directory(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -219,6 +251,31 @@ class EggTheoryReadTests(unittest.TestCase):
         self.assertEqual(result["raw"]["day_trading"][0]["dataset"], "TaiwanStockDayTrading")
         self.assertEqual(result["raw"]["holding_shares_per"][0]["dataset"], "TaiwanStockHoldingSharesPer")
 
+    def test_fetch_all_uses_local_tdcc_snapshot_when_available(self):
+        def fake_fetch_dataset(dataset, stock_id, start_date, end_date, token=None):
+            if dataset == "TaiwanStockPrice":
+                return PRICE_ROWS
+            if dataset == "TaiwanStockInstitutionalInvestorsBuySell":
+                return INSTITUTIONAL_ROWS
+            return []
+
+        with patch.object(fetch_finmind, "fetch_dataset", side_effect=fake_fetch_dataset):
+            with patch.object(
+                fetch_finmind,
+                "load_tdcc_holding_distribution",
+                return_value=(make_tdcc_holding_rows(), None),
+            ):
+                result = fetch_finmind.fetch_all(
+                    "2330",
+                    "2026-04-01",
+                    "2026-05-05",
+                    token="token",
+                )
+
+        self.assertEqual(len(result["raw"]["tdcc_holding_distribution"]), 3)
+        self.assertEqual(result["raw"]["tdcc_holding_distribution"][0]["stock_id"], "2330")
+        self.assertEqual(result["metadata"]["row_counts"]["TDCCHoldingDistributionSnapshot"], 3)
+
     def test_fetch_all_keeps_running_when_holding_shares_per_is_not_allowed(self):
         def fake_fetch_dataset(dataset, stock_id, start_date, end_date, token=None):
             if dataset == "TaiwanStockHoldingSharesPer":
@@ -259,6 +316,24 @@ class EggTheoryReadTests(unittest.TestCase):
         self.assertEqual(six_month["confidence"], "high")
         self.assertEqual(six_month["holder_count_state"], "decreasing")
         self.assertNotIn("holder_data_missing", six_month["warnings"])
+
+    def test_egg_theory_uses_tdcc_snapshot_when_historical_holder_rows_are_unavailable(self):
+        price_rows = make_price_rows(180, start_close=100.0, close_step=1.0, volume=5000)
+
+        result = fetch_finmind.build_egg_theory_read(
+            price_rows,
+            tdcc_holding_distribution_rows=make_tdcc_holding_rows(),
+        )
+
+        six_month = result["windows"]["6m"]
+
+        self.assertEqual(six_month["status"], "ready")
+        self.assertEqual(six_month["confidence"], "medium")
+        self.assertEqual(six_month["holder_count_state"], "snapshot_only")
+        self.assertEqual(six_month["holder_total_count"], 1000)
+        self.assertEqual(six_month["large_holder_percent"], 70.0)
+        self.assertNotIn("holder_data_missing", six_month["warnings"])
+        self.assertIn("holder_trend_insufficient", six_month["warnings"])
 
 
 if __name__ == "__main__":

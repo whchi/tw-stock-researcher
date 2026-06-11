@@ -38,6 +38,7 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 | `quality-and-valuation-check.md` | `quality-and-valuation-check` | Business quality, owner earnings, capital allocation, implied expectations, margin of safety. |
 | `investment-memo.md` | `investment-thesis` | Bull / Base / Bear scenarios. Must integrate `investment-reasoning-framework.md` dual framework (Business Thesis + Pricing Thesis). |
 | `market-data.json` | `fetch_finmind.py` | FinMind price, volume, and institutional investor raw data plus 1D / 3D / 5D derived windows. |
+| `tdcc-data.json` | `fetch_tdcc.py` | TDCC ownership distribution snapshot: holding level, people, shares, and concentration by stock_id. |
 | `market-action-read.md` | `market-action-read` | Neutral market-state view: price/volume, institutional flow, market confirmation, watch conditions. No trade instructions. |
 | `signal-log.md` | `signal-update` | Append-only event log with data points and thesis changes. |
 
@@ -81,6 +82,16 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 - **Datasets:** `TaiwanStockPrice`, `TaiwanStockInstitutionalInvestorsBuySell`.
 - **Auto-detection:** The script looks for exactly one `companies/<stock_id>-*/` directory. If found, writes `market-data.json` there. If zero or multiple matches, falls back to repo root (`<stock_id>_market_data.json`) — **avoid this.**
 - **Derived windows:** `market-data.json` includes 1D / 3D / 5D price change, volume change, price-volume read, and institutional net buy/sell by investor type.
+
+### 4a. Fetching TDCC Ownership Distribution
+```bash
+# Uses the same repo-local venv:
+.venv/bin/python scripts/fetch_tdcc.py <stock_id>
+```
+- **Source:** TDCC OpenData dataset `id=1-5` is the all-market ownership distribution table, not a stock id.
+- **Auto-detection:** The script looks for exactly one `companies/<stock_id>-*/` directory. If found, writes `tdcc-data.json` there. If zero or multiple matches, falls back to repo root (`<stock_id>_tdcc_data.json`) — **avoid this.**
+- **Purpose:** `tdcc-data.json` stores the requested stock's holding levels (`持股分級`), people count, shares, and TDCC custody percentage. `fetch_finmind.py` reads this local file as a market-action / egg-theory snapshot fallback; it does not fetch TDCC directly.
+- **Trend limitation:** TDCC OpenData currently provides the latest snapshot through this endpoint. Keep each fetched `tdcc-data.json` if historical holder-count trend is needed.
 
 ### 5. Fetching Shared Macro Data
 ```bash
@@ -216,7 +227,7 @@ When the user explicitly asks for a comprehensive research result as HTML, use t
 companies/           # Per-stock cases (git-ignored contents)
 market/              # Shared macro/industry context
 templates/           # Canonical file shapes for each skill
-scripts/             # fetch_yahoo.py, fetch_goodinfo.py, and fetch_finmind.py (use .venv at repo root)
+scripts/             # fetch_yahoo.py, fetch_goodinfo.py, fetch_finmind.py, fetch_tdcc.py (use .venv at repo root)
 docs/data-layout.md  # Full layout rules
 investment-reasoning-framework.md         # Pricing framework (dual thesis)
 ```

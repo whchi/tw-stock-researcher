@@ -345,6 +345,29 @@ def classify_turnover(avg_turnover):
     return "normal"
 
 
+def default_tdcc_data_path(stock_id, repo_root=None):
+    root = Path(repo_root) if repo_root else Path(__file__).resolve().parent.parent
+    companies_dir = root / "companies"
+    case_dirs = sorted(p for p in companies_dir.glob(f"{stock_id}-*") if p.is_dir())
+
+    if len(case_dirs) == 1:
+        return case_dirs[0] / "tdcc-data.json"
+
+    return root / f"{stock_id}_tdcc_data.json"
+
+
+def load_tdcc_holding_distribution(stock_id, repo_root=None):
+    path = default_tdcc_data_path(stock_id, repo_root=repo_root)
+    if not path.exists():
+        return [], f"{path.name} not found; run scripts/fetch_tdcc.py {stock_id}"
+
+    with open(path, encoding="utf-8") as f:
+        payload = json.load(f)
+
+    rows = payload.get("raw", {}).get("holding_distribution", [])
+    return rows, None
+
+
 def holding_totals_by_date(rows):
     totals = {}
     for row in rows:
@@ -393,6 +416,44 @@ def holder_state_for_window(holding_shares_per_rows, start_date, end_date):
     }
 
 
+def tdcc_holder_snapshot(rows):
+    if not rows:
+        return {
+            "holder_count_state": "unknown",
+            "holder_total_count": None,
+            "large_holder_percent": None,
+            "retail_holder_percent": None,
+            "has_holder_snapshot": False,
+        }
+
+    latest_date = max(row.get("date", "") for row in rows)
+    latest_rows = [row for row in rows if row.get("date") == latest_date]
+    total_row = next(
+        (row for row in latest_rows if str(row.get("HoldingSharesLevel")) == "17"),
+        None,
+    )
+    large_holder_percent = sum(
+        to_float(row.get("percent")) or 0.0
+        for row in latest_rows
+        if str(row.get("HoldingSharesLevel")) in {"12", "13", "14", "15"}
+    )
+    retail_holder_percent = sum(
+        to_float(row.get("percent")) or 0.0
+        for row in latest_rows
+        if str(row.get("HoldingSharesLevel")) in {"1", "2", "3"}
+    )
+
+    return {
+        "holder_count_state": "snapshot_only",
+        "holder_total_count": int(total_row.get("people"))
+        if total_row and total_row.get("people") is not None
+        else None,
+        "large_holder_percent": round(large_holder_percent, 2),
+        "retail_holder_percent": round(retail_holder_percent, 2),
+        "has_holder_snapshot": True,
+    }
+
+
 def classify_egg_stage(price_change_pct, turnover_state, holder_count_state):
     price_structure = "A" if (price_change_pct or 0) >= 0 else "B"
 
@@ -415,6 +476,7 @@ def build_egg_window_read(
     sorted_price,
     holding_shares_per_rows=None,
     shareholding_rows=None,
+    tdcc_holding_distribution_rows=None,
 ):
     required_rows = EGG_WINDOWS[label]
     if len(sorted_price) < required_rows:
@@ -441,10 +503,19 @@ def build_egg_window_read(
         comparison.get("date", ""),
         latest.get("date", ""),
     )
+    holder_snapshot = tdcc_holder_snapshot(tdcc_holding_distribution_rows or [])
     warnings = []
 
     if holder_read["has_holder_data"]:
         confidence = "high"
+    elif holder_snapshot["has_holder_snapshot"]:
+        confidence = "medium"
+        holder_read = {
+            "holder_count_state": holder_snapshot["holder_count_state"],
+            "holder_change_pct": None,
+            "has_holder_data": False,
+        }
+        warnings.append("holder_trend_insufficient")
     else:
         confidence = "medium"
         warnings.append("holder_data_missing")
@@ -472,6 +543,9 @@ def build_egg_window_read(
         "turnover_state": turnover_state,
         "holder_count_state": holder_read["holder_count_state"],
         "holder_change_pct": holder_read["holder_change_pct"],
+        "holder_total_count": holder_snapshot["holder_total_count"],
+        "large_holder_percent": holder_snapshot["large_holder_percent"],
+        "retail_holder_percent": holder_snapshot["retail_holder_percent"],
         "warnings": warnings,
     }
 
@@ -480,6 +554,7 @@ def build_egg_theory_read(
     price_rows,
     holding_shares_per_rows=None,
     shareholding_rows=None,
+    tdcc_holding_distribution_rows=None,
 ):
     sorted_price = sorted(price_rows, key=lambda row: row.get("date", ""))
     return {
@@ -490,31 +565,45 @@ def build_egg_theory_read(
                 sorted_price,
                 holding_shares_per_rows=holding_shares_per_rows,
                 shareholding_rows=shareholding_rows,
+                tdcc_holding_distribution_rows=tdcc_holding_distribution_rows,
             )
             for label in ("1m", "3m", "6m")
         },
     }
 
 
-def build_metadata(stock_id, start_date, end_date, raw_rows_by_dataset, warnings):
+def build_metadata(
+    stock_id,
+    start_date,
+    end_date,
+    raw_rows_by_dataset,
+    warnings,
+    tdcc_holding_distribution_rows=None,
+):
+    source_urls = {
+        dataset: (
+            f"{BASE_URL}?dataset={dataset}&data_id={stock_id}"
+            f"&start_date={start_date}&end_date={end_date}"
+        )
+        for dataset in DATASETS
+    }
+    row_counts = {
+        dataset: len(raw_rows_by_dataset.get(dataset, []))
+        for dataset in DATASETS
+    }
+    row_counts["TDCCHoldingDistributionSnapshot"] = len(
+        tdcc_holding_distribution_rows or []
+    )
+
     return {
         "fetched_at": datetime.now(timezone.utc)
         .astimezone()
         .isoformat(timespec="seconds"),
         "source": "FinMind",
-        "source_urls": {
-            dataset: (
-                f"{BASE_URL}?dataset={dataset}&data_id={stock_id}"
-                f"&start_date={start_date}&end_date={end_date}"
-            )
-            for dataset in DATASETS
-        },
+        "source_urls": source_urls,
         "datasets": list(DATASETS),
         "date_range": {"start_date": start_date, "end_date": end_date},
-        "row_counts": {
-            dataset: len(raw_rows_by_dataset.get(dataset, []))
-            for dataset in DATASETS
-        },
+        "row_counts": row_counts,
         "warnings": warnings,
     }
 
@@ -544,11 +633,18 @@ def fetch_all(stock_id, start_date, end_date, token=None):
         if not rows:
             warnings.append(f"{dataset} returned no rows")
 
+    tdcc_holding_distribution_rows, tdcc_warning = load_tdcc_holding_distribution(
+        stock_id
+    )
+    if tdcc_warning:
+        warnings.append(tdcc_warning)
+
     market_action_read = build_market_action_read(price_rows, institutional_rows)
     egg_theory_read = build_egg_theory_read(
         price_rows,
         holding_shares_per_rows=raw_rows_by_dataset["TaiwanStockHoldingSharesPer"],
         shareholding_rows=raw_rows_by_dataset["TaiwanStockShareholding"],
+        tdcc_holding_distribution_rows=tdcc_holding_distribution_rows,
     )
     warnings.extend(market_action_read.get("warnings", []))
 
@@ -560,10 +656,14 @@ def fetch_all(stock_id, start_date, end_date, token=None):
             end_date,
             raw_rows_by_dataset,
             warnings,
+            tdcc_holding_distribution_rows=tdcc_holding_distribution_rows,
         ),
         "raw": {
-            raw_key: raw_rows_by_dataset[dataset]
-            for dataset, raw_key in RAW_DATASET_KEYS.items()
+            **{
+                raw_key: raw_rows_by_dataset[dataset]
+                for dataset, raw_key in RAW_DATASET_KEYS.items()
+            },
+            "tdcc_holding_distribution": tdcc_holding_distribution_rows,
         },
         "derived": {
             "market_action_read": market_action_read,

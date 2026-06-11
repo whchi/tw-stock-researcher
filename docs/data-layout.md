@@ -27,6 +27,7 @@ Create one folder per stock under `companies/`, for example `companies/6706-hui-
 | `quality-and-valuation-check.md` | value-investor quality layer: ROIC, owner earnings, working-capital quality, capital allocation, implied expectations, and margin of safety | `quality-and-valuation-check` |
 | `investment-memo.md` | current thesis memo | `investment-thesis` |
 | `market-data.json` | FinMind price, volume, and institutional investor data; raw rows plus derived 1D/3D/5D windows | `fetch_finmind.py` |
+| `tdcc-data.json` | TDCC ownership distribution snapshot with holding levels, people count, shares, and concentration percentages | `fetch_tdcc.py` |
 | `market-action-read.md` | neutral market-state read using price/volume and institutional flow evidence, without trading instructions | `market-action-read` |
 | `signal-log.md` | append-only event log with signal classification | `signal-update` |
 | `thesis-updates.md` | explicit thesis changes | `signal-update` |
