@@ -17,18 +17,19 @@ This repository is a markdown-first workspace template for researching one stock
 ## Standard Workflow
 
 1. Start a case with `stock-case-init`.
-2. Fetch Yahoo profile + financials with `scripts/fetch_yahoo.py`.
+2. Fetch Yahoo profile + financials with `yahoo-profile-financials`.
 3. Build the company view with `company-deep-dive`.
-4. Run financial analysis with Goodinfo via `scripts/fetch_goodinfo.py`, then write `financial-analysis.md`.
+4. Run financial analysis with Goodinfo using `financial-analysis`.
 5. Map industry drivers with `industry-transmission-analysis`.
 6. Filter macro variables with `macro-impact-analysis`.
 7. Add the value-investor quality layer with `quality-and-valuation-check`.
 8. Write the current thesis with `investment-thesis`.
-9. Add the market-state layer with `market-action-read` after fetching FinMind market data.
-10. Record expected evidence, thesis kill criteria, and tracking triggers in `active-decisions.md`.
-11. Use `signal-update` for new filings, revenue releases, or news.
-12. Use `case-revisit` when returning to the case later.
-13. Use `session-wrap` before ending a session.
+9. Refresh TDCC and FinMind market data with `market-data-fetch`.
+10. Add the market-state layer with `market-action-read`.
+11. Record expected evidence, thesis kill criteria, and tracking triggers in `active-decisions.md`.
+12. Use `signal-update` for new filings, revenue releases, or news.
+13. Use `case-revisit` when returning to the case later.
+14. Use `session-wrap` before ending a session.
 
 ## Data Layout
 
@@ -56,13 +57,18 @@ The screenshot below is the result of rendering a case into HTML with `scripts/r
 
 ## The Skills
 
+These project-local workflow skills live under `.agents/skills/<skill-name>/SKILL.md`.
+
 - `stock-case-init`: create case metadata, core questions, and initial open questions.
+- `yahoo-profile-financials`: run the Yahoo profile and supplemental financial fetch flow.
 - `company-deep-dive`: analyze business model, products, customers, and revenue structure.
+- `financial-analysis`: run Goodinfo first, then write the financial fact layer with MOPS cross-checks.
 - `industry-transmission-analysis`: map the industry chain and leading indicators.
 - `macro-impact-analysis`: keep only macro variables that materially transmit into the case.
 - `quality-and-valuation-check`: assess ROIC, owner earnings, working-capital quality, capital allocation, implied expectations, and margin of safety.
 - `investment-thesis`: produce the current memo with assumptions and disconfirming evidence.
-- `market-action-read`: summarize 1D/3D/5D price-volume action and institutional flow without trading instructions.
+- `market-data-fetch`: refresh TDCC ownership distribution and FinMind market data for the requested stock id.
+- `market-action-read`: summarize market state, institutional flow, and egg-theory evidence without trading instructions.
 - `research-html-output`: render an explicit HTML summary request from `templates/research-html-summary.html` using `scripts/render_research_html.py`.
 - `signal-update`: append new events and decide whether the thesis changed.
 - `case-revisit`: re-enter an existing case with a file-grounded summary.
@@ -80,13 +86,13 @@ The screenshot below is the result of rendering a case into HTML with `scripts/r
 
 ### Example 1: Researching a new stock
 
-**User:** "幫我分析 3037 欣興"
+**User:** "幫我分析 3105 穩懋"
 
 **What happens:**
 1. `stock-case-init` creates `companies/3105-awsc/` directory
-2. Runs `scripts/fetch_yahoo.py 3105` → saves `yahoo-data.json` in the case directory
+2. `yahoo-profile-financials` runs `scripts/fetch_yahoo.py 3105` → saves `yahoo-data.json` in the case directory
 3. Fetches Yahoo profile + financials (revenue, margins, cash flow) for the company deep-dive input
-4. Runs `scripts/fetch_goodinfo.py 3105` → saves `raw-data.json` in the case directory
+4. `financial-analysis` runs `scripts/fetch_goodinfo.py 3105` → saves `raw-data.json` in the case directory
 5. Uses Goodinfo data with MOPS cross-check links for financial-analysis primary evidence
 6. Writes `company-analysis.md` with business model, product mix, margin analysis
 7. Writes `financial-analysis.md` with 3D analysis (經營/獲利/財務健全度) using Goodinfo data
@@ -94,8 +100,8 @@ The screenshot below is the result of rendering a case into HTML with `scripts/r
 9. Writes `macro-map.md` filtering relevant macro variables
 10. Writes `quality-and-valuation-check.md` with business quality, implied expectations, and margin-of-safety evidence
 11. Writes `investment-memo.md` with Bull/Base/Bear scenarios using the `investment-reasoning-framework.md` pricing framework
-12. Runs `scripts/fetch_finmind.py 3105` with `FIN_MIND_TOKEN` → saves `market-data.json` in the case directory
-13. Writes `market-action-read.md` with 1D/3D/5D price-volume and institutional flow evidence
+12. `market-data-fetch` runs TDCC then FinMind with `FIN_MIND_TOKEN` when needed → saves `tdcc-data.json` and `market-data.json` in the case directory
+13. Writes `market-action-read.md` with 1D/3D/5D price-volume, institutional flow, holder distribution, and egg-theory evidence
 14. Records expected evidence timeline and thesis kill criteria in `active-decisions.md`
 15. Updates `stock-meta.json` with all file references
 
@@ -105,16 +111,17 @@ companies/3105-awsc/
 ├── stock-meta.json          # Case index
 ├── yahoo-data.json          # Yahoo profile, revenue, margins, and cash-flow summary
 ├── raw-data.json            # Goodinfo raw financial data
+├── tdcc-data.json           # TDCC ownership distribution snapshot
 ├── research-questions.md    # Core questions & unknowns
 ├── open-questions.md        # Active open questions
-├── active-decisions.md      # Current position & entry targets
+├── active-decisions.md      # Research stance & tracking triggers
 ├── company-analysis.md      # Business model deep-dive
 ├── financial-analysis.md    # 3D financial analysis
 ├── industry-transmission.md # Industry chain & leading indicators
 ├── macro-map.md            # Macro variables
 ├── quality-and-valuation-check.md # Quality, implied expectations, margin of safety
 ├── investment-memo.md      # Investment thesis (dual framework)
-├── market-data.json        # FinMind price/volume and institutional raw data
+├── market-data.json        # FinMind price/volume, institutional, margin, and egg-theory data
 ├── market-action-read.md   # Neutral market-state read
 └── signal-log.md           # Decision history
 ```
@@ -160,6 +167,7 @@ companies/3105-awsc/
 - **Quality and valuation:** Keep business-quality judgment and implied market expectations in `quality-and-valuation-check.md`; the investment memo should consume its conclusion, not duplicate its tables
 - **Expectation gap:** Use `investment-memo.md` to separate market belief, verified evidence, narrative-only claims, and the evidence needed to close or invalidate the gap
 - **Market action:** `market-action-read.md` summarizes evidence only; it must not output trade instructions
+- **Market data fetch:** run `market-data-fetch` before `market-action-read` when TDCC, FinMind, or egg-theory data is stale
 - **Tracking discipline:** Use `active-decisions.md` for expected evidence timelines, thesis kill criteria, and review triggers so a case can be downgraded when evidence stops compounding
 - **Thesis format:** Dual framework (Business Thesis + Pricing Thesis per `investment-reasoning-framework.md`)
 - **Pricing stages:** Stage 1 (narrative expansion) → Stage 2 (fundamentals catch up) → Stage 3 (growth slows)

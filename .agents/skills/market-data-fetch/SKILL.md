@@ -1,0 +1,49 @@
+---
+name: market-data-fetch
+description: Use when a stock case needs market-data.json or tdcc-data.json refreshed for price-volume, institutional flow, holder distribution, margin, short-sale, day-trading, or egg-theory analysis.
+---
+
+# Market Data Fetch
+
+Refresh the market-action data layer while preserving the user's stock-id workflow.
+
+## Source Of Truth
+
+- Follow `AGENTS.md` and `docs/data-layout.md`.
+- `fetch_tdcc.py` writes `tdcc-data.json`; `fetch_finmind.py` writes `market-data.json`.
+- `fetch_finmind.py` may read local `tdcc-data.json` as the holder-distribution snapshot for egg-theory proxy reads.
+
+## Commands
+
+```bash
+.venv/bin/python scripts/fetch_tdcc.py <stock_id>
+.venv/bin/python scripts/fetch_finmind.py <stock_id>
+```
+
+If FinMind needs credentials, provide `FIN_MIND_TOKEN` only in the command environment for that run; do not write it into repo files.
+
+## Workflow
+
+1. Confirm exactly one matching case folder exists.
+2. Run TDCC first so holder distribution is available before FinMind derivation.
+3. Run FinMind second to refresh price, volume, institutional flow, margin, shareholding, day-trading, and egg-theory derived reads.
+4. Inspect warnings for permission limits, especially `TaiwanStockHoldingSharesPer`.
+5. Keep TDCC `id=1-5` concept clear: it is the all-market ownership distribution dataset id, not a stock id.
+
+## Output
+
+- `tdcc-data.json`
+- `market-data.json`
+
+## Verification
+
+- Confirm both files are in the case folder when TDCC succeeds.
+- Confirm no `<stock_id>_tdcc_data.json` or `<stock_id>_market_data.json` remains in repo root.
+- Confirm `market-data.json` contains `derived.egg_theory_read` for `1m`, `3m`, and `6m` when enough price rows exist.
+- Confirm missing holder history caps confidence and is surfaced as a warning or note.
+
+## Red Lines
+
+- Do not hardcode a stock id inside the fetch flow.
+- Do not scrape via browser when the scripts can fetch the data.
+- Do not let FinMind permission errors fail the whole workflow when fallback data is available.

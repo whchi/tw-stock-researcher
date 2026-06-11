@@ -27,3 +27,5 @@ Use this only for an explicit HTML output request. Markdown and JSON case files 
 - Values may contain HTML snippets such as `<tr>`, `<li>`, `<span class="tag good">`.
 - Do not add new placeholders unless you update `templates/research-html-summary.html` and script tests.
 - Use neutral research labels: `Verified Fact`, `Market Inference`, `Speculation To Verify`, `Scenario Analysis`.
+- Include the egg-theory section when `market-action-read.md` or `market-data.json` has `derived.egg_theory_read`; preserve `snapshot_only` and holder-data-missing caveats.
+- If `tdcc-data.json` is present, surface holder-distribution evidence as a research data point, not as a trade instruction.

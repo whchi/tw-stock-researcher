@@ -25,6 +25,20 @@
 | 3D |  |  |  |  |  |  |
 | 5D |  |  |  |  |  |  |
 
+## Holder Distribution Snapshot
+
+| Source Date | Total Holders | Retail Holder % | Large Holder % | Holder Data State | Read |
+| --- | ---: | ---: | ---: | --- | --- |
+|  |  |  |  | snapshot_only / trend_available / missing |  |
+
+## Egg Theory Read
+
+| Horizon | Stage | Research Label | Confidence | Holder Data Caveat | Read |
+| --- | --- | --- | --- | --- | --- |
+| 1M | A1 / A2 / A3 / B1 / B2 / B3 / insufficient data | supply_demand_favorable / wait_for_confirmation / supply_demand_risk / holder_data_missing | low / medium / high |  |  |
+| 3M | A1 / A2 / A3 / B1 / B2 / B3 / insufficient data | supply_demand_favorable / wait_for_confirmation / supply_demand_risk / holder_data_missing | low / medium / high |  |  |
+| 6M | A1 / A2 / A3 / B1 / B2 / B3 / insufficient data | supply_demand_favorable / wait_for_confirmation / supply_demand_risk / holder_data_missing | low / medium / high |  |  |
+
 ## Market Interpretation
 
 - Is the market confirming the thesis:
@@ -49,4 +63,6 @@
 ## Sources
 
 - `market-data.json`
-- FinMind datasets: `TaiwanStockPrice`, `TaiwanStockInstitutionalInvestorsBuySell`
+- `tdcc-data.json` when present
+- FinMind datasets: `TaiwanStockPrice`, `TaiwanStockInstitutionalInvestorsBuySell`, `TaiwanStockMarginPurchaseShortSale`, `TaiwanStockShareholding`, `TaiwanStockDayTrading`, `TaiwanStockHoldingSharesPer` when available
+- TDCC OpenData dataset `id=1-5` when `tdcc-data.json` is present

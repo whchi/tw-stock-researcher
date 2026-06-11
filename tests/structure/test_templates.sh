@@ -77,6 +77,9 @@ require_line "templates/market-action-read.md" "## Current Market Read"
 require_line "templates/market-action-read.md" "Confirmation: Confirming / Diverging / Overextended / Insufficient data"
 require_line "templates/market-action-read.md" "## Price / Volume Windows"
 require_line "templates/market-action-read.md" "## Institutional Flow Windows"
+require_line "templates/market-action-read.md" "## Holder Distribution Snapshot"
+require_line "templates/market-action-read.md" "## Egg Theory Read"
+require_line "templates/market-action-read.md" "supply_demand_favorable / wait_for_confirmation / supply_demand_risk / holder_data_missing"
 require_line "templates/market-action-read.md" "## Market Interpretation"
 require_line "templates/market-action-read.md" "## Watch Conditions"
 require_line "templates/market-action-read.md" "## Next Validation"
@@ -141,5 +144,8 @@ fi
 
 require_line ".agents/skills/research-html-output/SKILL.md" "name: research-html-output"
 require_line ".agents/skills/research-html-output/SKILL.md" "companies/<ticker-slug>/research-summary.html"
+require_line ".agents/skills/market-data-fetch/SKILL.md" "scripts/fetch_tdcc.py <stock_id>"
+require_line ".agents/skills/market-data-fetch/SKILL.md" "scripts/fetch_finmind.py <stock_id>"
+require_line ".agents/skills/market-action-read/SKILL.md" "egg-theory"
 
 printf 'All template structure checks passed.\n'
