@@ -48,6 +48,12 @@ The HTML output is produced by string replacement, not by changing the canonical
 
 Build the JSON payload from the case files in the same company folder, then let `scripts/render_research_html.py` replace the template placeholders. The HTML output should stay in that company folder as `companies/<ticker-slug>/research-summary.html`. The 6706 惠特 and 6741 91APP preview layouts are represented by the shared template structure: research snapshot, expectation gap, expected evidence timeline, thesis kill criteria, scenario summary, watch items, source quality, and sources.
 
+### Rendered HTML Preview
+
+The screenshot below is the result of rendering a case into HTML with `scripts/render_research_html.py`.
+
+![Rendered HTML research summary result](docs/demo.jpg)
+
 ## The Skills
 
 - `stock-case-init`: create case metadata, core questions, and initial open questions.
