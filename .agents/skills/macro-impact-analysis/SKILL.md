@@ -22,7 +22,7 @@ Run this when `market/shared-macro-data.json` is missing or stale.
 
 ## Workflow
 
-1. Refresh shared macro data when needed.
+1. Check `market/shared-macro-data.json` freshness; refresh shared macro data when it is missing, stale, or the user asked for a fresh macro read.
 2. Read the company case to identify revenue, margin, cash-flow, valuation, and narrative sensitivities.
 3. Include only macro variables with a clear transmission path.
 4. Explicitly exclude popular but immaterial variables and state what evidence would make them relevant.
@@ -36,6 +36,7 @@ Run this when `market/shared-macro-data.json` is missing or stale.
 
 ## Verification
 
+- Confirm whether macro data was refreshed or deliberately reused, with the file date or `metadata.fetched_at`.
 - Confirm each included macro item has source, latest read or trend, directional impact, transmission path, cadence, and thesis link.
 - Confirm excluded variables have a reason.
 - Confirm no trade instruction language was introduced.

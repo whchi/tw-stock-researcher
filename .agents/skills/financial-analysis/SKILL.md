@@ -36,7 +36,9 @@ Build the financial fact layer before quality, valuation, or thesis writing.
 
 - Confirm `raw-data.json` exists in the case folder.
 - Confirm no `<stock_id>_raw_data.json` remains in repo root.
+- Confirm the fetch did not write to repo root because of zero or multiple matching case folders.
 - Confirm `financial-analysis.md` includes a MOPS official filing URL or an explicit missing-source note.
+- Confirm any `three_statement_coverage.required_missing` fields appear in `Open Verification Items`.
 
 ## Red Lines
 

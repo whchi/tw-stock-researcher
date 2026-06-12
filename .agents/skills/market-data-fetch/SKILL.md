@@ -26,9 +26,10 @@ If FinMind needs credentials, provide `FIN_MIND_TOKEN` only in the command envir
 
 1. Confirm exactly one matching case folder exists.
 2. Run TDCC first so holder distribution is available before FinMind derivation.
-3. Run FinMind second to refresh price, volume, institutional flow, margin, shareholding, day-trading, and egg-theory derived reads.
-4. Inspect warnings for permission limits, especially `TaiwanStockHoldingSharesPer`.
-5. Keep TDCC `id=1-5` concept clear: it is the all-market ownership distribution dataset id, not a stock id.
+3. If TDCC fails, record the failure and continue to FinMind only when price-volume data is still useful for the requested read.
+4. Run FinMind second to refresh price, volume, institutional flow, margin, shareholding, day-trading, and egg-theory derived reads.
+5. Inspect warnings for permission limits, especially `TaiwanStockHoldingSharesPer`.
+6. Keep TDCC `id=1-5` concept clear: it is the all-market ownership distribution dataset id, not a stock id.
 
 ## Output
 
@@ -39,6 +40,7 @@ If FinMind needs credentials, provide `FIN_MIND_TOKEN` only in the command envir
 
 - Confirm both files are in the case folder when TDCC succeeds.
 - Confirm no `<stock_id>_tdcc_data.json` or `<stock_id>_market_data.json` remains in repo root.
+- Confirm the fetchers did not write to repo root because of zero or multiple matching case folders.
 - Confirm `market-data.json` contains `derived.egg_theory_read` for `1m`, `3m`, and `6m` when enough price rows exist.
 - Confirm missing holder history caps confidence and is surfaced as a warning or note.
 

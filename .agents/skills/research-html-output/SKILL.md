@@ -21,6 +21,7 @@ Use this only for an explicit HTML output request. Markdown and JSON case files 
 
 4. Keep the output in the company folder as `companies/<ticker-slug>/research-summary.html`.
 5. Preserve disclaimer language and avoid buy/sell, entry/exit, stop-loss, or target-price wording.
+6. Verify the rendered HTML exists and contains no unresolved `{{PLACEHOLDER}}` values.
 
 ## Payload Rules
 
@@ -29,3 +30,10 @@ Use this only for an explicit HTML output request. Markdown and JSON case files 
 - Use neutral research labels: `Verified Fact`, `Market Inference`, `Speculation To Verify`, `Scenario Analysis`.
 - Include the egg-theory section when `market-action-read.md` or `market-data.json` has `derived.egg_theory_read`; preserve `snapshot_only` and holder-data-missing caveats.
 - If `tdcc-data.json` is present, surface holder-distribution evidence as a research data point, not as a trade instruction.
+
+## Verification
+
+- Confirm `research-summary-data.json` is valid JSON.
+- Confirm `research-summary.html` was written in the same company folder.
+- Confirm no template placeholders remain unresolved.
+- Confirm HTML remains a derived preview and does not replace source markdown files.
