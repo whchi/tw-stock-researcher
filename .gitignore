@@ -30,4 +30,5 @@ companies/**/*.md
 companies/**/*.json
 companies/**/*.html
 market/*.json
+market/*.csv
 .opencode

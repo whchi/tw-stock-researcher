@@ -5,10 +5,12 @@ import argparse
 import json
 import os
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 BASE_URL = "https://api.finmindtrade.com/api/v4/data"
+SCHEMA_VERSION = 2
 DATASETS = (
     "TaiwanStockPrice",
     "TaiwanStockInstitutionalInvestorsBuySell",
@@ -73,7 +75,7 @@ def resolve_token(args_token=None, env=None):
     return token
 
 
-def fetch_dataset(dataset, stock_id, start_date, end_date, token=None):
+def fetch_dataset(dataset, stock_id, start_date, end_date, token=None, session=None):
     import requests
 
     headers = {"Authorization": f"Bearer {token}"}
@@ -83,7 +85,8 @@ def fetch_dataset(dataset, stock_id, start_date, end_date, token=None):
         "start_date": start_date,
         "end_date": end_date,
     }
-    response = requests.get(BASE_URL, headers=headers, params=params, timeout=30)
+    client = session if session is not None else requests
+    response = client.get(BASE_URL, headers=headers, params=params, timeout=30)
 
     try:
         payload = response.json()
@@ -111,7 +114,7 @@ def fetch_dataset(dataset, stock_id, start_date, end_date, token=None):
     return payload.get("data", [])
 
 
-def fetch_dataset_safely(dataset, stock_id, start_date, end_date, token=None):
+def fetch_dataset_safely(dataset, stock_id, start_date, end_date, token=None, session=None):
     try:
         return fetch_dataset(
             dataset,
@@ -119,6 +122,7 @@ def fetch_dataset_safely(dataset, stock_id, start_date, end_date, token=None):
             start_date,
             end_date,
             token=token,
+            session=session,
         ), None
     except RuntimeError as exc:
         if dataset not in OPTIONAL_DATASETS:
@@ -298,10 +302,11 @@ def build_market_action_read(price_rows, institutional_rows):
     }
 
 
+# Trading rows per window: ~20 trading days per calendar month.
 EGG_WINDOWS = {
-    "1m": 60,
-    "3m": 120,
-    "6m": 180,
+    "1m": 20,
+    "3m": 60,
+    "6m": 120,
 }
 
 
@@ -310,10 +315,6 @@ def average(values):
     if not numeric_values:
         return None
     return sum(numeric_values) / len(numeric_values)
-
-
-def turnover_value(row):
-    return to_float(row.get("Trading_turnover"))
 
 
 def latest_issued_shares(shareholding_rows):
@@ -332,7 +333,9 @@ def turnover_pct(row, issued_shares=None):
     volume = to_float(row.get("Trading_Volume"))
     if volume is not None and issued_shares not in (None, 0):
         return volume / issued_shares * 100
-    return turnover_value(row)
+    # Trading_turnover is a transaction count, not a percentage; without issued
+    # shares there is no valid turnover ratio.
+    return None
 
 
 def classify_turnover(avg_turnover):
@@ -363,6 +366,14 @@ def load_tdcc_holding_distribution(stock_id, repo_root=None):
 
     with open(path, encoding="utf-8") as f:
         payload = json.load(f)
+
+    # Newer tdcc-data.json accumulates weekly snapshots under history; flatten
+    # them so multi-date holder trends become possible. Older files only have
+    # the single latest snapshot.
+    history = payload.get("history") or []
+    rows = [row for entry in history for row in entry.get("rows", [])]
+    if rows:
+        return rows, None
 
     rows = payload.get("raw", {}).get("holding_distribution", [])
     return rows, None
@@ -504,21 +515,41 @@ def build_egg_window_read(
         latest.get("date", ""),
     )
     holder_snapshot = tdcc_holder_snapshot(tdcc_holding_distribution_rows or [])
+    # Level "17" is the TDCC all-holders total row, so per-date level-17 people
+    # counts form a weekly holder-count series when snapshots are accumulated.
+    tdcc_level17_rows = [
+        row
+        for row in (tdcc_holding_distribution_rows or [])
+        if str(row.get("HoldingSharesLevel")) == "17"
+    ]
     warnings = []
+
+    if avg_turnover is None:
+        warnings.append("turnover_data_missing")
 
     if holder_read["has_holder_data"]:
         confidence = "high"
-    elif holder_snapshot["has_holder_snapshot"]:
-        confidence = "medium"
-        holder_read = {
-            "holder_count_state": holder_snapshot["holder_count_state"],
-            "holder_change_pct": None,
-            "has_holder_data": False,
-        }
-        warnings.append("holder_trend_insufficient")
     else:
-        confidence = "medium"
-        warnings.append("holder_data_missing")
+        tdcc_trend = holder_state_for_window(
+            tdcc_level17_rows,
+            comparison.get("date", ""),
+            latest.get("date", ""),
+        )
+        if tdcc_trend["has_holder_data"]:
+            confidence = "medium"
+            holder_read = tdcc_trend
+            warnings.append("holder_trend_from_tdcc_weekly")
+        elif holder_snapshot["has_holder_snapshot"]:
+            confidence = "medium"
+            holder_read = {
+                "holder_count_state": holder_snapshot["holder_count_state"],
+                "holder_change_pct": None,
+                "has_holder_data": False,
+            }
+            warnings.append("holder_trend_insufficient")
+        else:
+            confidence = "medium"
+            warnings.append("holder_data_missing")
 
     stage, signal = classify_egg_stage(
         price_change_pct,
@@ -600,6 +631,7 @@ def build_metadata(
         .astimezone()
         .isoformat(timespec="seconds"),
         "source": "FinMind",
+        "schema_version": SCHEMA_VERSION,
         "source_urls": source_urls,
         "datasets": list(DATASETS),
         "date_range": {"start_date": start_date, "end_date": end_date},
@@ -609,20 +641,30 @@ def build_metadata(
 
 
 def fetch_all(stock_id, start_date, end_date, token=None):
+    import requests
+
     raw_rows_by_dataset = {}
     warnings = []
 
-    for dataset in DATASETS:
-        rows, warning = fetch_dataset_safely(
-            dataset,
-            stock_id,
-            start_date,
-            end_date,
-            token=token,
-        )
-        raw_rows_by_dataset[dataset] = rows
-        if warning:
-            warnings.append(warning)
+    with requests.Session() as session:
+        with ThreadPoolExecutor(max_workers=len(DATASETS)) as executor:
+            futures = {
+                dataset: executor.submit(
+                    fetch_dataset_safely,
+                    dataset,
+                    stock_id,
+                    start_date,
+                    end_date,
+                    token=token,
+                    session=session,
+                )
+                for dataset in DATASETS
+            }
+            for dataset in DATASETS:
+                rows, warning = futures[dataset].result()
+                raw_rows_by_dataset[dataset] = rows
+                if warning:
+                    warnings.append(warning)
 
     price_rows = raw_rows_by_dataset["TaiwanStockPrice"]
     institutional_rows = raw_rows_by_dataset[

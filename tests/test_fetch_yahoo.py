@@ -94,6 +94,7 @@ class YahooParserTests(unittest.TestCase):
         result = build_metadata("2330")
 
         self.assertEqual(result["source"], "Yahoo Finance Taiwan")
+        self.assertEqual(result["schema_version"], 2)
         self.assertEqual(result["symbol_suffix"], "TW")
         self.assertIn("profile", result["source_urls"])
         self.assertEqual(

@@ -19,7 +19,7 @@ This repository is a markdown-first workspace template for researching one stock
 1. Start a case with `stock-case-init`.
 2. Fetch Yahoo profile + financials with `yahoo-profile-financials`.
 3. Build the company view with `company-deep-dive`.
-4. Run financial analysis with Goodinfo using `financial-analysis`.
+4. Run financial analysis with `financial-analysis` (Goodinfo annual via `fetch_goodinfo.py` plus official monthly revenue, quarterly statements, and valuation band via `fetch_fundamentals.py`).
 5. Map industry drivers with `industry-transmission-analysis`.
 6. Filter macro variables with `macro-impact-analysis`.
 7. Add the value-investor quality layer with `quality-and-valuation-check`.
@@ -111,6 +111,7 @@ companies/3105-awsc/
 ├── stock-meta.json          # Case index
 ├── yahoo-data.json          # Yahoo profile, revenue, margins, and cash-flow summary
 ├── raw-data.json            # Goodinfo raw financial data
+├── fundamentals-data.json   # FinMind monthly revenue, quarterly statements, valuation band
 ├── tdcc-data.json           # TDCC ownership distribution snapshot
 ├── research-questions.md    # Core questions & unknowns
 ├── open-questions.md        # Active open questions
@@ -162,8 +163,8 @@ companies/3105-awsc/
 - **Raw data:** Always saved as `companies/{ticker-slug}/raw-data.json`, never in repo root
 - **Yahoo data:** Always saved as `companies/{ticker-slug}/yahoo-data.json`, never in repo root
 - **Market data:** Always saved as `companies/{ticker-slug}/market-data.json`, never in repo root
-- **Financial data:** Primary source is Goodinfo.tw; always include MOPS links for cross-checking
-- **Macro data:** Taiwan-focused. Run `scripts/fetch_macro.py` to refresh `market/shared-macro-data.json` (TWSE Open API, Yahoo Finance, Taiwan official statistics); include only variables with a concrete company-level transmission path
+- **Financial data:** Goodinfo.tw is the annual primary source; `scripts/fetch_fundamentals.py` adds official monthly revenue, quarterly statements, and the P/E / P/B valuation band (`fundamentals-data.json`); always include MOPS links for cross-checking
+- **Macro data:** Taiwan-focused. Run `scripts/fetch_macro.py` to refresh `market/shared-macro-data.json` (TWSE Open API, Yahoo Finance, MOF customs trade statistics by default); include only variables with a concrete company-level transmission path
 - **Quality and valuation:** Keep business-quality judgment and implied market expectations in `quality-and-valuation-check.md`; the investment memo should consume its conclusion, not duplicate its tables
 - **Expectation gap:** Use `investment-memo.md` to separate market belief, verified evidence, narrative-only claims, and the evidence needed to close or invalidate the gap
 - **Market action:** `market-action-read.md` summarizes evidence only; it must not output trade instructions

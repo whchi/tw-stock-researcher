@@ -42,12 +42,117 @@ class TdccHoldingDistributionTests(unittest.TestCase):
         csv_text += "20260605,6451  ,17,19022,113593460,100.00\n"
         csv_text += "20260605,6706  ,17,46918,78549433,100.00\n"
 
-        with patch.object(fetch_tdcc, "fetch_holding_distribution_csv", return_value=csv_text):
-            result = fetch_tdcc.fetch_all("6451")
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.object(fetch_tdcc, "fetch_holding_distribution_csv", return_value=csv_text):
+                result = fetch_tdcc.fetch_all("6451", repo_root=Path(tmp))
 
         self.assertEqual(result["stock_id"], "6451")
         self.assertEqual(result["raw"]["holding_distribution"][0]["stock_id"], "6451")
         self.assertEqual(result["metadata"]["row_counts"]["TDCCStockHoldingDistribution"], 1)
+
+    def test_fetch_all_saves_cache_and_reuses_it_within_max_age(self):
+        csv_text = "﻿資料日期,證券代號,持股分級,人數,股數,占集保庫存數比例%\n"
+        csv_text += "20260605,6451  ,17,19022,113593460,100.00\n"
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            with patch.object(
+                fetch_tdcc, "fetch_holding_distribution_csv", return_value=csv_text
+            ) as fetcher:
+                first = fetch_tdcc.fetch_all("6451", repo_root=repo_root)
+                second = fetch_tdcc.fetch_all("6451", repo_root=repo_root)
+
+            self.assertEqual(fetcher.call_count, 1)
+            self.assertFalse(first["metadata"]["cache"]["hit"])
+            self.assertTrue(second["metadata"]["cache"]["hit"])
+            self.assertTrue((repo_root / "market" / fetch_tdcc.CACHE_CSV_NAME).exists())
+            self.assertEqual(
+                second["raw"]["holding_distribution"][0]["stock_id"], "6451"
+            )
+
+    def test_fetch_all_refetches_when_cache_expired_or_refresh_forced(self):
+        csv_text = "﻿資料日期,證券代號,持股分級,人數,股數,占集保庫存數比例%\n"
+        csv_text += "20260605,6451  ,17,19022,113593460,100.00\n"
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            with patch.object(
+                fetch_tdcc, "fetch_holding_distribution_csv", return_value=csv_text
+            ) as fetcher:
+                fetch_tdcc.fetch_all("6451", repo_root=repo_root)
+                fetch_tdcc.fetch_all("6451", repo_root=repo_root, max_age_hours=0)
+                fetch_tdcc.fetch_all("6451", repo_root=repo_root, refresh=True)
+
+            self.assertEqual(fetcher.call_count, 3)
+
+    def test_parse_args_defaults_cache_options(self):
+        args = fetch_tdcc.parse_args(["6451"])
+
+        self.assertEqual(args.max_age_hours, fetch_tdcc.DEFAULT_CACHE_MAX_AGE_HOURS)
+        self.assertFalse(args.refresh)
+
+    def test_merge_history_appends_new_dates_and_dedupes(self):
+        previous = {
+            "history": [
+                {
+                    "date": "2026-05-29",
+                    "rows": [{"date": "2026-05-29", "HoldingSharesLevel": "17", "people": 900}],
+                }
+            ]
+        }
+        snapshot = [{"date": "2026-06-05", "HoldingSharesLevel": "17", "people": 1000}]
+
+        history = fetch_tdcc.merge_history(previous, snapshot)
+        self.assertEqual([entry["date"] for entry in history], ["2026-05-29", "2026-06-05"])
+
+        deduped = fetch_tdcc.merge_history({"history": history}, snapshot)
+        self.assertEqual(len(deduped), 2)
+
+    def test_merge_history_seeds_from_legacy_snapshot_payload(self):
+        previous = {
+            "raw": {
+                "holding_distribution": [
+                    {"date": "2026-05-29", "HoldingSharesLevel": "17", "people": 900}
+                ]
+            }
+        }
+        snapshot = [{"date": "2026-06-05", "HoldingSharesLevel": "17", "people": 1000}]
+
+        history = fetch_tdcc.merge_history(previous, snapshot)
+
+        self.assertEqual([entry["date"] for entry in history], ["2026-05-29", "2026-06-05"])
+        self.assertEqual(history[0]["rows"][0]["people"], 900)
+
+    def test_fetch_all_accumulates_history_and_keeps_latest_snapshot_in_raw(self):
+        csv_text = "﻿資料日期,證券代號,持股分級,人數,股數,占集保庫存數比例%\n"
+        csv_text += "20260605,6451  ,17,19022,113593460,100.00\n"
+        previous = {
+            "history": [
+                {
+                    "date": "2026-05-29",
+                    "rows": [{"date": "2026-05-29", "HoldingSharesLevel": "17", "people": 18800}],
+                }
+            ]
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.object(fetch_tdcc, "fetch_holding_distribution_csv", return_value=csv_text):
+                result = fetch_tdcc.fetch_all(
+                    "6451", repo_root=Path(tmp), previous_payload=previous
+                )
+
+        self.assertEqual(
+            [entry["date"] for entry in result["history"]],
+            ["2026-05-29", "2026-06-05"],
+        )
+        self.assertEqual(
+            {row["date"] for row in result["raw"]["holding_distribution"]},
+            {"2026-06-05"},
+        )
+        self.assertEqual(
+            result["metadata"]["row_counts"]["TDCCHoldingDistributionHistoryDates"], 2
+        )
+        self.assertEqual(result["metadata"]["schema_version"], fetch_tdcc.SCHEMA_VERSION)
 
     def test_fetch_holding_distribution_retries_without_ssl_verification_for_tdcc_cert_issue(self):
         import requests

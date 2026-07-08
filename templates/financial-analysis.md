@@ -9,6 +9,11 @@
 
 ## Recent Operating Read
 
+## Quarterly Trend (8Q)
+
+| Quarter | Revenue | Rev YoY | Gross Margin | Operating Margin | Net Margin | EPS | Trend Assessment |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+
 ## Operating Analysis
 
 | Year | Revenue | YoY | Trend Assessment | Key Driver |

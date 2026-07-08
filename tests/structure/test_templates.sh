@@ -23,7 +23,8 @@ reject_line() {
 }
 
 require_line "README.md" "Fetch Yahoo profile + financials"
-require_line "README.md" "Run financial analysis with Goodinfo"
+require_line "README.md" "Run financial analysis with"
+require_line "README.md" "fetch_fundamentals.py"
 require_line "README.md" "HTML Summary Output"
 require_line "README.md" "scripts/render_research_html.py"
 require_line "README.md" "templates/research-html-summary.html"
@@ -35,6 +36,7 @@ require_line "templates/company-analysis.md" "## Technical Bottleneck And Why It
 require_line "templates/company-analysis.md" "## Customer Dependency And Switching Cost"
 require_line "templates/company-analysis.md" "## Monetization Path"
 
+require_line "templates/financial-analysis.md" "## Quarterly Trend (8Q)"
 require_line "templates/financial-analysis.md" "## Expense Structure"
 require_line "templates/financial-analysis.md" "## Asset Efficiency"
 require_line "templates/financial-analysis.md" "## Cash Flow And Capital Intensity"
@@ -53,6 +55,7 @@ require_line "templates/quality-and-valuation-check.md" "## Capital Allocation"
 require_line "templates/quality-and-valuation-check.md" "## Three-Statement Pattern Read"
 require_line "templates/quality-and-valuation-check.md" "Demand validated / stuffing risk / capex productivity / liquidity pressure / shareholder value accrual"
 require_line "templates/quality-and-valuation-check.md" "## Current Price Implied Expectations"
+require_line "templates/quality-and-valuation-check.md" "### Valuation Band Anchor"
 require_line "templates/quality-and-valuation-check.md" "## Margin Of Safety"
 require_line "templates/quality-and-valuation-check.md" "## Better Source Checklist"
 
@@ -97,6 +100,9 @@ require_line "templates/research-html-summary.html" "{{EVIDENCE_TIMELINE_ROWS}}"
 require_line "templates/research-html-summary.html" "{{KILL_CRITERIA_ROWS}}"
 
 require_line "AGENTS.md" "→ quality-and-valuation-check"
+require_line "AGENTS.md" "### 2a. Fetching Fundamentals (FinMind)"
+require_line "AGENTS.md" "fundamentals-data.json"
+require_line "docs/data-layout.md" "fundamentals-data.json"
 require_line "AGENTS.md" "research-html-output"
 require_line "AGENTS.md" "scripts/render_research_html.py"
 require_line "AGENTS.md" "companies/<ticker-slug>/research-summary.html"
@@ -146,6 +152,7 @@ fi
 
 require_line ".agents/skills/research-html-output/SKILL.md" "name: research-html-output"
 require_line ".agents/skills/research-html-output/SKILL.md" "companies/<ticker-slug>/research-summary.html"
+require_line ".agents/skills/financial-analysis/SKILL.md" "scripts/fetch_fundamentals.py <stock_id>"
 require_line ".agents/skills/market-data-fetch/SKILL.md" "scripts/fetch_tdcc.py <stock_id>"
 require_line ".agents/skills/market-data-fetch/SKILL.md" "scripts/fetch_finmind.py <stock_id>"
 require_line ".agents/skills/market-action-read/SKILL.md" "egg-theory"

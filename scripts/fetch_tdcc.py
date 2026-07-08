@@ -7,16 +7,34 @@ import io
 import json
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 TDCC_HOLDING_DISTRIBUTION_URL = "https://smart.tdcc.com.tw/opendata/getOD.ashx?id=1-5"
+
+# The endpoint returns the all-market table (~2.3MB); TDCC refreshes it weekly,
+# so a shared cache avoids re-downloading it for every stock case.
+CACHE_CSV_NAME = "tdcc-holding-distribution.csv"
+CACHE_META_NAME = "tdcc-cache-meta.json"
+DEFAULT_CACHE_MAX_AGE_HOURS = 72
+SCHEMA_VERSION = 2
 
 
 def parse_args(argv):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("stock_id")
     parser.add_argument("--output")
+    parser.add_argument(
+        "--max-age-hours",
+        type=float,
+        default=DEFAULT_CACHE_MAX_AGE_HOURS,
+        help="Reuse the shared all-market CSV cache when younger than this.",
+    )
+    parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Ignore the cache and re-download the all-market CSV.",
+    )
     return parser.parse_args(argv)
 
 
@@ -29,6 +47,48 @@ def default_output_path(stock_id, repo_root=None):
         return case_dirs[0] / "tdcc-data.json"
 
     return root / f"{stock_id}_tdcc_data.json"
+
+
+def cache_paths(repo_root=None):
+    root = Path(repo_root) if repo_root else Path(__file__).resolve().parent.parent
+    market_dir = root / "market"
+    return market_dir / CACHE_CSV_NAME, market_dir / CACHE_META_NAME
+
+
+def load_cached_csv(repo_root=None, max_age_hours=DEFAULT_CACHE_MAX_AGE_HOURS):
+    """Return (csv_text, meta) when a fresh cache exists, else (None, None)."""
+    csv_path, meta_path = cache_paths(repo_root=repo_root)
+    if not csv_path.exists() or not meta_path.exists():
+        return None, None
+
+    try:
+        with open(meta_path, encoding="utf-8") as f:
+            meta = json.load(f)
+        fetched_at = datetime.fromisoformat(meta["fetched_at"])
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+        return None, None
+
+    age = datetime.now(timezone.utc) - fetched_at.astimezone(timezone.utc)
+    if age > timedelta(hours=max_age_hours):
+        return None, None
+
+    return csv_path.read_text(encoding="utf-8"), meta
+
+
+def save_cached_csv(csv_text, repo_root=None):
+    csv_path, meta_path = cache_paths(repo_root=repo_root)
+    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    csv_path.write_text(csv_text, encoding="utf-8")
+
+    meta = {
+        "fetched_at": datetime.now(timezone.utc)
+        .astimezone()
+        .isoformat(timespec="seconds"),
+        "source_url": TDCC_HOLDING_DISTRIBUTION_URL,
+    }
+    with open(meta_path, "w", encoding="utf-8") as f:
+        json.dump(meta, f, ensure_ascii=False, indent=2)
+    return meta
 
 
 def tdcc_date(value):
@@ -110,18 +170,62 @@ def fetch_holding_distribution_csv_with_curl():
     return completed.stdout
 
 
-def build_metadata(rows):
+def merge_history(previous_payload, snapshot_rows):
+    """Append the new snapshot to the per-date history, deduplicated by date.
+
+    Older tdcc-data.json files only stored raw.holding_distribution, so their
+    snapshot is used to seed the history on the first run after the upgrade.
+    """
+    history = list((previous_payload or {}).get("history") or [])
+
+    if not history:
+        legacy_rows = (
+            (previous_payload or {}).get("raw", {}).get("holding_distribution") or []
+        )
+        legacy_dates = sorted({row.get("date") for row in legacy_rows if row.get("date")})
+        for legacy_date in legacy_dates:
+            history.append(
+                {
+                    "date": legacy_date,
+                    "rows": [row for row in legacy_rows if row.get("date") == legacy_date],
+                }
+            )
+
+    known_dates = {entry.get("date") for entry in history}
+    snapshot_dates = sorted({row.get("date") for row in snapshot_rows if row.get("date")})
+    for snapshot_date in snapshot_dates:
+        if snapshot_date in known_dates:
+            continue
+        history.append(
+            {
+                "date": snapshot_date,
+                "rows": [row for row in snapshot_rows if row.get("date") == snapshot_date],
+            }
+        )
+
+    history.sort(key=lambda entry: entry.get("date") or "")
+    return history
+
+
+def build_metadata(rows, cache_hit=False, cache_meta=None, history=None):
     return {
         "fetched_at": datetime.now(timezone.utc)
         .astimezone()
         .isoformat(timespec="seconds"),
         "source": "TDCC",
+        "schema_version": SCHEMA_VERSION,
         "source_urls": {
             "TDCCStockHoldingDistribution": TDCC_HOLDING_DISTRIBUTION_URL,
         },
         "datasets": ["TDCCStockHoldingDistribution"],
         "row_counts": {
             "TDCCStockHoldingDistribution": len(rows),
+            "TDCCHoldingDistributionHistoryDates": len(history or []),
+        },
+        "cache": {
+            "hit": cache_hit,
+            "path": f"market/{CACHE_CSV_NAME}",
+            "cache_fetched_at": (cache_meta or {}).get("fetched_at"),
         },
         "warnings": []
         if rows
@@ -129,22 +233,57 @@ def build_metadata(rows):
     }
 
 
-def fetch_all(stock_id):
-    csv_text = fetch_holding_distribution_csv()
+def fetch_all(
+    stock_id,
+    repo_root=None,
+    max_age_hours=DEFAULT_CACHE_MAX_AGE_HOURS,
+    refresh=False,
+    previous_payload=None,
+):
+    csv_text, cache_meta = (None, None)
+    if not refresh:
+        csv_text, cache_meta = load_cached_csv(
+            repo_root=repo_root, max_age_hours=max_age_hours
+        )
+    cache_hit = csv_text is not None
+
+    if not cache_hit:
+        csv_text = fetch_holding_distribution_csv()
+        cache_meta = save_cached_csv(csv_text, repo_root=repo_root)
+
     rows = parse_holding_distribution(csv_text, stock_id)
+    history = merge_history(previous_payload, rows)
     return {
         "stock_id": stock_id,
-        "metadata": build_metadata(rows),
+        "metadata": build_metadata(
+            rows, cache_hit=cache_hit, cache_meta=cache_meta, history=history
+        ),
         "raw": {
             "holding_distribution": rows,
         },
+        "history": history,
     }
+
+
+def load_previous_payload(output_path):
+    if not output_path.exists():
+        return None
+    try:
+        with open(output_path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return None
 
 
 def main(argv=None):
     args = parse_args(argv or sys.argv[1:])
     output_path = Path(args.output) if args.output else default_output_path(args.stock_id)
-    data = fetch_all(args.stock_id)
+    data = fetch_all(
+        args.stock_id,
+        max_age_hours=args.max_age_hours,
+        refresh=args.refresh,
+        previous_payload=load_previous_payload(output_path),
+    )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:

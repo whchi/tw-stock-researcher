@@ -29,6 +29,6 @@ Use this file only for reusable cross-case macro context. Keep company-specific 
 - Yahoo Finance: USD/TWD, TAIEX (^TWII), crude oil (CL=F), copper (HG=F), gold (GC=F).
 - MOEA (經濟部統計處): export orders (外銷訂單), industrial production (工業生產指數). Set TAIWAN_MACRO_URL to a known stable CSV/JSON endpoint.
 - DGBAS (主計總處): GDP, CPI, national accounts. https://www.dgbas.gov.tw/
-- MOF (財政部): trade statistics. https://portal.sw.nat.gov.tw/
+- MOF (財政部): trade statistics. https://portal.sw.nat.gov.tw/ — verified open-data CSV (monthly customs exports/imports, data.gov.tw dataset 6053, `fetch_macro.py` default): https://opendata.customs.gov.tw/data/6053/csv.csv
 - CBC (中央銀行): interest rates, money supply, FX reserves. https://www.cbc.gov.tw/
 - MOPS context: company-level filings and industry-specific context from public filing platform.

@@ -20,14 +20,15 @@ Create one folder per stock under `companies/`, for example `companies/6706-hui-
 | --- | --- | --- |
 | `stock-meta.json` | current status and case file index; each `file_references` value is `null` or a repo-relative case path | `stock-case-init` |
 | `yahoo-data.json` | Yahoo Finance Taiwan profile, revenue, income statement, cash flow, and derived summary for company deep-dive input | `fetch_yahoo.py` |
+| `fundamentals-data.json` | FinMind official monthly revenue, quarterly IS / BS / CF, and P/E / P/B valuation band with derived 6M / 8Q reads | `fetch_fundamentals.py` |
 | `research-questions.md` | core questions and unknowns | `stock-case-init` |
 | `company-analysis.md` | business facts, inference, and open questions | `company-deep-dive` |
 | `industry-transmission.md` | transmission chain and indicators | `industry-transmission-analysis` |
 | `macro-map.md` | included and excluded macro variables | `macro-impact-analysis` |
 | `quality-and-valuation-check.md` | value-investor quality layer: ROIC, owner earnings, working-capital quality, capital allocation, implied expectations, and margin of safety | `quality-and-valuation-check` |
 | `investment-memo.md` | current thesis memo | `investment-thesis` |
-| `market-data.json` | FinMind price, volume, and institutional investor data; raw rows plus derived 1D/3D/5D windows | `fetch_finmind.py` |
-| `tdcc-data.json` | TDCC ownership distribution snapshot with holding levels, people count, shares, and concentration percentages | `fetch_tdcc.py` |
+| `market-data.json` | FinMind price, volume, institutional, margin, shareholding, and day-trading data; raw rows plus derived 1D/3D/5D windows and 1m/3m/6m egg-theory reads | `fetch_finmind.py` |
+| `tdcc-data.json` | TDCC ownership distribution: latest snapshot plus accumulated weekly `history` for holder-count trends | `fetch_tdcc.py` |
 | `market-action-read.md` | neutral market-state read using price/volume and institutional flow evidence, without trading instructions | `market-action-read` |
 | `signal-log.md` | append-only event log with signal classification | `signal-update` |
 | `thesis-updates.md` | explicit thesis changes | `signal-update` |

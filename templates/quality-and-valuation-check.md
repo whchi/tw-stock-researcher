@@ -62,6 +62,15 @@
 | Revenue growth implied by base margin |  |  |  |
 | Margin implied by base revenue |  |  |  |
 
+### Valuation Band Anchor
+
+Multiples must come from `fundamentals-data.json` → `derived.valuation_band`, not from memory.
+
+| Multiple | Current | 1y Min / Median / Max | 3y Min / Median / Max | 5y Min / Median / Max | Current Percentile |
+| --- | --- | --- | --- | --- | --- |
+| P/E |  |  |  |  |  |
+| P/B |  |  |  |  |  |
+
 ## Margin Of Safety
 
 | Case | Scenario-Derived Value Range | Current Price Gap | What Must Be True | What Would Break It |

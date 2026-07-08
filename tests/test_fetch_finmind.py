@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from datetime import date, timedelta
@@ -50,9 +51,11 @@ def make_price_rows(count, start_close=100.0, close_step=1.0, volume=1000):
 
 
 def make_holding_rows():
+    # Dates must fall inside the 6m window (last 120 of 180 daily rows that
+    # start on 2026-01-01, so the window opens on 2026-03-02).
     return [
         {
-            "date": "2026-01-01",
+            "date": "2026-03-15",
             "stock_id": "2330",
             "HoldingSharesLevel": "1-999",
             "people": 1000,
@@ -65,6 +68,50 @@ def make_holding_rows():
             "HoldingSharesLevel": "1-999",
             "people": 700,
             "percent": 25.0,
+            "unit": "股",
+        },
+    ]
+
+
+def make_shareholding_rows(issued_shares=100000):
+    return [
+        {
+            "date": "2026-06-29",
+            "stock_id": "2330",
+            "NumberOfSharesIssued": issued_shares,
+        }
+    ]
+
+
+def make_tdcc_trend_rows():
+    # Two accumulated weekly level-17 totals inside the 6m window, plus a
+    # non-total level row that must not affect the holder trend.
+    return [
+        {
+            "date": "2026-03-20",
+            "stock_id": "2330",
+            "HoldingSharesLevel": "17",
+            "people": 1000,
+            "shares": 10000000,
+            "percent": 100.0,
+            "unit": "股",
+        },
+        {
+            "date": "2026-06-20",
+            "stock_id": "2330",
+            "HoldingSharesLevel": "17",
+            "people": 700,
+            "shares": 10000000,
+            "percent": 100.0,
+            "unit": "股",
+        },
+        {
+            "date": "2026-06-20",
+            "stock_id": "2330",
+            "HoldingSharesLevel": "1",
+            "people": 50,
+            "shares": 100000,
+            "percent": 1.0,
             "unit": "股",
         },
     ]
@@ -199,8 +246,8 @@ class MarketActionReadTests(unittest.TestCase):
 
 
 class EggTheoryReadTests(unittest.TestCase):
-    def test_fetch_all_marks_egg_theory_windows_insufficient_with_less_than_60_price_rows(self):
-        def fake_fetch_dataset(dataset, stock_id, start_date, end_date, token=None):
+    def test_fetch_all_marks_egg_theory_windows_insufficient_with_less_than_20_price_rows(self):
+        def fake_fetch_dataset(dataset, stock_id, start_date, end_date, token=None, session=None):
             if dataset == "TaiwanStockPrice":
                 return PRICE_ROWS
             if dataset == "TaiwanStockInstitutionalInvestorsBuySell":
@@ -219,14 +266,27 @@ class EggTheoryReadTests(unittest.TestCase):
         egg_read = result["derived"]["egg_theory_read"]
 
         self.assertEqual(egg_read["windows"]["1m"]["status"], "insufficient_data")
-        self.assertIn("Need at least 60 trading rows", egg_read["windows"]["1m"]["warnings"])
+        self.assertIn("Need at least 20 trading rows", egg_read["windows"]["1m"]["warnings"])
         self.assertEqual(egg_read["windows"]["1m"]["signal"], "wait_for_confirmation")
         self.assertEqual(egg_read["windows"]["1m"]["confidence"], "low")
+
+    def test_egg_windows_use_month_scaled_trading_rows(self):
+        price_rows = make_price_rows(30)
+
+        result = fetch_finmind.build_egg_theory_read(price_rows)
+
+        self.assertEqual(result["windows"]["1m"]["status"], "ready")
+        self.assertIn(
+            "Need at least 60 trading rows", result["windows"]["3m"]["warnings"]
+        )
+        self.assertIn(
+            "Need at least 120 trading rows", result["windows"]["6m"]["warnings"]
+        )
 
     def test_fetch_all_stores_extended_chip_datasets(self):
         requested = []
 
-        def fake_fetch_dataset(dataset, stock_id, start_date, end_date, token=None):
+        def fake_fetch_dataset(dataset, stock_id, start_date, end_date, token=None, session=None):
             requested.append(dataset)
             if dataset == "TaiwanStockPrice":
                 return PRICE_ROWS
@@ -242,6 +302,7 @@ class EggTheoryReadTests(unittest.TestCase):
                 token="token",
             )
 
+        self.assertEqual(result["metadata"]["schema_version"], 2)
         self.assertIn("TaiwanStockMarginPurchaseShortSale", requested)
         self.assertIn("TaiwanStockShareholding", requested)
         self.assertIn("TaiwanStockDayTrading", requested)
@@ -252,7 +313,7 @@ class EggTheoryReadTests(unittest.TestCase):
         self.assertEqual(result["raw"]["holding_shares_per"][0]["dataset"], "TaiwanStockHoldingSharesPer")
 
     def test_fetch_all_uses_local_tdcc_snapshot_when_available(self):
-        def fake_fetch_dataset(dataset, stock_id, start_date, end_date, token=None):
+        def fake_fetch_dataset(dataset, stock_id, start_date, end_date, token=None, session=None):
             if dataset == "TaiwanStockPrice":
                 return PRICE_ROWS
             if dataset == "TaiwanStockInstitutionalInvestorsBuySell":
@@ -277,7 +338,7 @@ class EggTheoryReadTests(unittest.TestCase):
         self.assertEqual(result["metadata"]["row_counts"]["TDCCHoldingDistributionSnapshot"], 3)
 
     def test_fetch_all_keeps_running_when_holding_shares_per_is_not_allowed(self):
-        def fake_fetch_dataset(dataset, stock_id, start_date, end_date, token=None):
+        def fake_fetch_dataset(dataset, stock_id, start_date, end_date, token=None, session=None):
             if dataset == "TaiwanStockHoldingSharesPer":
                 raise RuntimeError("FinMind request failed for TaiwanStockHoldingSharesPer: HTTP 402")
             if dataset == "TaiwanStockPrice":
@@ -306,6 +367,7 @@ class EggTheoryReadTests(unittest.TestCase):
         result = fetch_finmind.build_egg_theory_read(
             price_rows,
             holding_shares_per_rows=make_holding_rows(),
+            shareholding_rows=make_shareholding_rows(),
         )
 
         six_month = result["windows"]["6m"]
@@ -314,8 +376,65 @@ class EggTheoryReadTests(unittest.TestCase):
         self.assertEqual(six_month["stage"], "B3")
         self.assertEqual(six_month["signal"], "supply_demand_favorable")
         self.assertEqual(six_month["confidence"], "high")
+        self.assertEqual(six_month["turnover_state"], "active")
         self.assertEqual(six_month["holder_count_state"], "decreasing")
         self.assertNotIn("holder_data_missing", six_month["warnings"])
+
+    def test_egg_theory_marks_turnover_unknown_without_issued_shares(self):
+        price_rows = make_price_rows(120, start_close=100.0, close_step=1.0, volume=5000)
+
+        result = fetch_finmind.build_egg_theory_read(price_rows)
+
+        six_month = result["windows"]["6m"]
+
+        self.assertEqual(six_month["status"], "ready")
+        self.assertIsNone(six_month["average_turnover"])
+        self.assertEqual(six_month["turnover_state"], "unknown")
+        self.assertEqual(six_month["signal"], "wait_for_confirmation")
+        self.assertIn("turnover_data_missing", six_month["warnings"])
+
+    def test_egg_theory_builds_holder_trend_from_accumulated_tdcc_history(self):
+        price_rows = make_price_rows(180, start_close=200.0, close_step=-0.5, volume=5000)
+
+        result = fetch_finmind.build_egg_theory_read(
+            price_rows,
+            shareholding_rows=make_shareholding_rows(),
+            tdcc_holding_distribution_rows=make_tdcc_trend_rows(),
+        )
+
+        six_month = result["windows"]["6m"]
+
+        self.assertEqual(six_month["status"], "ready")
+        self.assertEqual(six_month["stage"], "B3")
+        self.assertEqual(six_month["signal"], "supply_demand_favorable")
+        self.assertEqual(six_month["confidence"], "medium")
+        self.assertEqual(six_month["holder_count_state"], "decreasing")
+        self.assertEqual(six_month["holder_change_pct"], -30.0)
+        self.assertIn("holder_trend_from_tdcc_weekly", six_month["warnings"])
+
+    def test_load_tdcc_holding_distribution_flattens_history_entries(self):
+        payload = {
+            "stock_id": "2330",
+            "raw": {"holding_distribution": [{"date": "2026-06-20", "people": 700}]},
+            "history": [
+                {"date": "2026-03-20", "rows": [{"date": "2026-03-20", "people": 1000}]},
+                {"date": "2026-06-20", "rows": [{"date": "2026-06-20", "people": 700}]},
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            case_dir = repo_root / "companies" / "2330-tsmc"
+            case_dir.mkdir(parents=True)
+            with open(case_dir / "tdcc-data.json", "w", encoding="utf-8") as f:
+                json.dump(payload, f, ensure_ascii=False)
+
+            rows, warning = fetch_finmind.load_tdcc_holding_distribution(
+                "2330", repo_root=repo_root
+            )
+
+        self.assertIsNone(warning)
+        self.assertEqual({row["date"] for row in rows}, {"2026-03-20", "2026-06-20"})
 
     def test_egg_theory_uses_tdcc_snapshot_when_historical_holder_rows_are_unavailable(self):
         price_rows = make_price_rows(180, start_close=100.0, close_step=1.0, volume=5000)

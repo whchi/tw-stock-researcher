@@ -27,14 +27,15 @@ def get_client_key():
     return client_key, days_adjusted
 
 
-def fetch_report(stock_id, rpt_cat, days_adjusted, client_key):
+def fetch_report(stock_id, rpt_cat, days_adjusted, client_key, session=None):
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         "Referer": f"https://goodinfo.tw/tw/StockDetail.asp?STOCK_ID={stock_id}",
     }
     cookies = {"CLIENT_KEY": client_key}
     url = f"https://goodinfo.tw/tw/StockFinDetail.asp?STOCK_ID={stock_id}&RPT_CAT={rpt_cat}"
-    r = requests.get(url, headers=headers, cookies=cookies, timeout=30)
+    client = session if session is not None else requests
+    r = client.get(url, headers=headers, cookies=cookies, timeout=30)
     r.encoding = "utf-8"
     return BeautifulSoup(r.text, "html.parser")
 
@@ -326,10 +327,14 @@ def build_three_statement_coverage(result):
 # ─── 驗證層 A：資料來源標注 ────────────────────────────────
 
 
+SCHEMA_VERSION = 2
+
+
 def build_metadata(stock_id, years):
     return {
         "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%S+08:00"),
         "source": "Goodinfo.tw",
+        "schema_version": SCHEMA_VERSION,
         "source_urls": {
             "income_statement": f"https://goodinfo.tw/tw/StockFinDetail.asp?RPT_CAT=IS_YEAR&STOCK_ID={stock_id}",
             "balance_sheet": f"https://goodinfo.tw/tw/StockFinDetail.asp?RPT_CAT=BS_YEAR&STOCK_ID={stock_id}",
@@ -435,23 +440,27 @@ def fetch_all(stock_id):
     client_key, days_adjusted = get_client_key()
     result = {"stock_id": stock_id}
 
-    print(f"正在抓取 {stock_id} 損益表...")
-    is_soup = fetch_report(stock_id, "IS_YEAR", days_adjusted, client_key)
-    is_data, years = parse_table(is_soup)
-    result["income_statement"] = is_data
-    result["years"] = years
+    # Keep the requests sequential with polite sleeps (Goodinfo anti-scraping);
+    # the shared session only reuses the TLS connection.
+    with requests.Session() as session:
+        print(f"正在抓取 {stock_id} 損益表...")
+        is_soup = fetch_report(stock_id, "IS_YEAR", days_adjusted, client_key, session=session)
+        is_data, years = parse_table(is_soup)
+        result["income_statement"] = is_data
+        result["years"] = years
 
-    time.sleep(1)
-    print(f"正在抓取 {stock_id} 資產負債表...")
-    bs_soup = fetch_report(stock_id, "BS_YEAR", days_adjusted, client_key)
-    bs_data, _ = parse_table(bs_soup)
-    result["balance_sheet"] = bs_data
+        time.sleep(1)
+        print(f"正在抓取 {stock_id} 資產負債表...")
+        bs_soup = fetch_report(stock_id, "BS_YEAR", days_adjusted, client_key, session=session)
+        bs_data, _ = parse_table(bs_soup)
+        result["balance_sheet"] = bs_data
 
-    time.sleep(1)
-    print(f"正在抓取 {stock_id} 現金流量表...")
-    cf_soup = fetch_report(stock_id, "CF_YEAR", days_adjusted, client_key)
-    cf_data, _ = parse_table(cf_soup)
-    result["cash_flow"] = cf_data
+        time.sleep(1)
+        print(f"正在抓取 {stock_id} 現金流量表...")
+        cf_soup = fetch_report(stock_id, "CF_YEAR", days_adjusted, client_key, session=session)
+        cf_data, _ = parse_table(cf_soup)
+        result["cash_flow"] = cf_data
+
     result["three_statement_coverage"] = build_three_statement_coverage(result)
 
     # 驗證層 A：資料標注

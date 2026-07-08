@@ -9,12 +9,13 @@
 stock-case-init
   → yahoo-profile-financials    # Uses fetch_yahoo.py / yahoo-data.json
   → company-deep-dive
-  → financial-analysis          # Must run fetch_goodinfo.py FIRST
+  → financial-analysis          # Must run fetch_goodinfo.py + fetch_fundamentals.py FIRST
   → industry-transmission-analysis
   → macro-impact-analysis       # Must run fetch_macro.py FIRST when macro data is stale/missing
   → quality-and-valuation-check # Business quality, implied expectations, margin of safety
   → investment-thesis
-  → market-action-read          # Uses fetch_finmind.py / market-data.json
+  → market-data-fetch           # Runs fetch_tdcc.py then fetch_finmind.py (FIN_MIND_TOKEN required)
+  → market-action-read          # Reads market-data.json / tdcc-data.json
 ```
 - **Return visit:** `case-revisit` → `session-wrap`
 - **New event:** `signal-update` (appends to `signal-log.md`, may update `thesis-updates.md`)
@@ -28,6 +29,7 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 | `stock-meta.json` | `stock-case-init` | Case index + status. All `file_references` values are `null` or repo-relative paths rooted in the case dir. |
 | `yahoo-data.json` | `fetch_yahoo.py` | Yahoo Finance Taiwan company profile, revenue, income statement, cash flow, and derived summary. |
 | `raw-data.json` | `fetch_goodinfo.py` | Goodinfo scraped data plus three-statement coverage check (auto-detected by script). |
+| `fundamentals-data.json` | `fetch_fundamentals.py` | FinMind official monthly revenue, quarterly IS / BS / CF, and P/E / P/B valuation band with derived 6M / 8Q reads. |
 | `research-questions.md` | `stock-case-init` | Core questions, facts to establish, disconfirming evidence to seek. |
 | `open-questions.md` | `case-revisit` / `session-wrap` | Unresolved items to carry forward; closed questions logged here. |
 | `active-decisions.md` | `session-wrap` | Current research stance, expected evidence timeline, thesis kill criteria, user-provided position context, observation ranges, structure-break conditions, next review triggers. |
@@ -37,10 +39,11 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 | `macro-map.md` | `macro-impact-analysis` | Included / excluded macro variables with transmission paths. |
 | `quality-and-valuation-check.md` | `quality-and-valuation-check` | Business quality, owner earnings, capital allocation, implied expectations, margin of safety. |
 | `investment-memo.md` | `investment-thesis` | Bull / Base / Bear scenarios. Must integrate `investment-reasoning-framework.md` dual framework (Business Thesis + Pricing Thesis). |
-| `market-data.json` | `fetch_finmind.py` | FinMind price, volume, and institutional investor raw data plus 1D / 3D / 5D derived windows. |
+| `market-data.json` | `fetch_finmind.py` | FinMind price, volume, institutional, margin, shareholding, and day-trading raw data plus derived 1D / 3D / 5D windows and 1m / 3m / 6m egg-theory reads. |
 | `tdcc-data.json` | `fetch_tdcc.py` | TDCC ownership distribution snapshot: holding level, people, shares, and concentration by stock_id. |
 | `market-action-read.md` | `market-action-read` | Neutral market-state view: price/volume, institutional flow, market confirmation, watch conditions. No trade instructions. |
 | `signal-log.md` | `signal-update` | Append-only event log with data points and thesis changes. |
+| `thesis-updates.md` | `signal-update` | Explicit thesis changes when a signal shifts the research stance. |
 
 ## Critical Toolchain & Commands
 
@@ -67,21 +70,33 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 - **Sanity checks:** The script flags gross margin >100%, current ratio <0, debt ratio >100%, ROE >100%, and adjacent-year net margin swings >30pp.
 - **Cross-check:** Always include the MOPS official filing URL in `financial-analysis.md`.
 
+### 2a. Fetching Fundamentals (FinMind)
+```bash
+# Uses the same repo-local venv. FIN_MIND_TOKEN must be set in the environment:
+.venv/bin/python scripts/fetch_fundamentals.py <stock_id>
+```
+- **Datasets:** `TaiwanStockMonthRevenue`, `TaiwanStockFinancialStatements`, `TaiwanStockBalanceSheet`, `TaiwanStockCashFlowsStatement`, `TaiwanStockPER` (5-year window; any dataset failure degrades to a warning).
+- **Auto-detection:** same single-case-folder rule; the repo-root fallback is `<stock_id>_fundamentals_data.json` — **avoid this.**
+- **Derived reads:** `derived.monthly_revenue_6m` (official 6M revenue path with MoM / YoY / cumulative YoY), `derived.quarterly_income_8q` (8 quarters with margins and YoY), `derived.quarterly_balance_key_items`, `derived.quarterly_cash_flow` (CFO / capex / FCF), and `derived.valuation_band` (current P/E / P/B vs 1y / 3y / 5y min / median / max with percentile).
+- **Role:** official monthly + quarterly fundamentals layer. Goodinfo stays the annual baseline, MOPS stays the official cross-check, and `valuation_band` is the required anchor for implied-expectation and pricing-thesis multiples.
+
 ### 3. Writing Files
 - **Always use `write` or `edit` tools** for markdown/JSON files. Do NOT use bash `echo`, `cat`, or `mv` for file creation.
 - **Do NOT create HTML dashboards.** Output all financial analysis as markdown (`financial-analysis.md`).
 - **Never leave `*_raw_data.json` in repo root.** Move to `companies/<ticker>-<slug>/raw-data.json` if the script fails auto-detection.
 - **Never leave `*_yahoo_data.json` in repo root.** Move to `companies/<ticker>-<slug>/yahoo-data.json` if the Yahoo script fails auto-detection.
 - **Never leave `*_market_data.json` in repo root.** Move to `companies/<ticker>-<slug>/market-data.json` if the FinMind script fails auto-detection.
+- **Never leave `*_fundamentals_data.json` in repo root.** Move to `companies/<ticker>-<slug>/fundamentals-data.json` if the fundamentals script fails auto-detection.
 
 ### 4. Fetching Market Data
 ```bash
-# Uses the same repo-local venv:
+# Uses the same repo-local venv. FIN_MIND_TOKEN must be set in the environment:
 .venv/bin/python scripts/fetch_finmind.py <stock_id>
 ```
-- **Datasets:** `TaiwanStockPrice`, `TaiwanStockInstitutionalInvestorsBuySell`.
+- **Token:** `FIN_MIND_TOKEN` is required — the script exits with an error without it. Never write the token into repo files.
+- **Datasets:** `TaiwanStockPrice`, `TaiwanStockInstitutionalInvestorsBuySell`, `TaiwanStockMarginPurchaseShortSale`, `TaiwanStockShareholding`, `TaiwanStockDayTrading`, `TaiwanStockHoldingSharesPer`. Optional datasets (margin, shareholding, day trading, holding-shares-per) degrade to warnings instead of failing the run.
 - **Auto-detection:** The script looks for exactly one `companies/<stock_id>-*/` directory. If found, writes `market-data.json` there. If zero or multiple matches, falls back to repo root (`<stock_id>_market_data.json`) — **avoid this.**
-- **Derived windows:** `market-data.json` includes 1D / 3D / 5D price change, volume change, price-volume read, and institutional net buy/sell by investor type.
+- **Derived windows:** `market-data.json` includes 1D / 3D / 5D price change, volume change, price-volume read, institutional net buy/sell by investor type, and 1m / 3m / 6m egg-theory reads.
 
 ### 4a. Fetching TDCC Ownership Distribution
 ```bash
@@ -90,8 +105,9 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 ```
 - **Source:** TDCC OpenData dataset `id=1-5` is the all-market ownership distribution table, not a stock id.
 - **Auto-detection:** The script looks for exactly one `companies/<stock_id>-*/` directory. If found, writes `tdcc-data.json` there. If zero or multiple matches, falls back to repo root (`<stock_id>_tdcc_data.json`) — **avoid this.**
-- **Purpose:** `tdcc-data.json` stores the requested stock's holding levels (`持股分級`), people count, shares, and TDCC custody percentage. `fetch_finmind.py` reads this local file as a market-action / egg-theory snapshot fallback; it does not fetch TDCC directly.
-- **Trend limitation:** TDCC OpenData currently provides the latest snapshot through this endpoint. Keep each fetched `tdcc-data.json` if historical holder-count trend is needed.
+- **Purpose:** `tdcc-data.json` stores the requested stock's holding levels (`持股分級`), people count, shares, and TDCC custody percentage. `fetch_finmind.py` reads this local file for egg-theory holder reads; it does not fetch TDCC directly.
+- **Cache:** the all-market CSV (~2.3MB) is cached at `market/tdcc-holding-distribution.csv` and reused for 72h by default (`--max-age-hours`, `--refresh` to force a re-download), so repeated per-stock runs within a week skip the download.
+- **Trend accumulation:** the endpoint serves only the latest weekly snapshot, but each new snapshot date is appended to `tdcc-data.json` under `history`. After a few weekly runs, `fetch_finmind.py` derives holder-count trends from this history (`holder_trend_from_tdcc_weekly`, confidence capped at medium) when FinMind `TaiwanStockHoldingSharesPer` is not accessible.
 
 ### 5. Fetching Shared Macro Data
 ```bash
@@ -100,7 +116,7 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 ```
 - **Output:** writes `market/shared-macro-data.json` by default.
 - **Scope discipline:** fetch only sources explicitly listed in `templates/shared-macro-view.md` and `templates/macro-map.md`: TWSE Open API, Yahoo Finance / public market data, and Taiwan official statistics / MOPS context.
-- **Taiwan official endpoint:** set `TAIWAN_MACRO_URL` when using a stable official CSV/JSON endpoint for Taiwan exports/orders (MOEA/DGBAS). If unset, the endpoint is recorded as a warning — the script still writes TWSE + Yahoo data.
+- **Taiwan official endpoint:** defaults to the MOF Customs monthly trade statistics CSV (data.gov.tw dataset 6053, `https://opendata.customs.gov.tw/data/6053/csv.csv`) with parsed exports / imports / trade balance and exports YoY. Set `TAIWAN_MACRO_URL` to override with another stable official CSV/JSON endpoint; custom endpoints are stored as a raw preview.
 
 ### 6. .gitignore Trap
 ```
@@ -127,8 +143,8 @@ When the user explicitly asks for a comprehensive research result as HTML, use t
 ## Financial Analysis Conventions
 
 ### Data Source
-- **Primary:** Goodinfo.tw (`IS_YEAR`, `BS_YEAR`, `CF_YEAR`)
-- **Scraper:** `scripts/fetch_goodinfo.py`
+- **Primary (annual):** Goodinfo.tw (`IS_YEAR`, `BS_YEAR`, `CF_YEAR`) via `scripts/fetch_goodinfo.py`
+- **Primary (monthly / quarterly):** FinMind via `scripts/fetch_fundamentals.py` (`fundamentals-data.json`: official monthly revenue, quarterly IS / BS / CF, valuation band)
 - **Cross-check:** MOPS (https://mops.twse.com.tw)
 
 ### Key Fields
@@ -221,13 +237,14 @@ When the user explicitly asks for a comprehensive research result as HTML, use t
 - Never leave `venv*/` or `.venv/` in repo root (already in `.gitignore`).
 - Never leave `*_raw_data.json` in repo root.
 - Never leave `*_market_data.json` in repo root.
+- Never leave `*_fundamentals_data.json` in repo root.
 
 ## Repo Layout Reference
 ```
 companies/           # Per-stock cases (git-ignored contents)
 market/              # Shared macro/industry context
 templates/           # Canonical file shapes for each skill
-scripts/             # fetch_yahoo.py, fetch_goodinfo.py, fetch_finmind.py, fetch_tdcc.py (use .venv at repo root)
+scripts/             # fetch_yahoo.py, fetch_goodinfo.py, fetch_fundamentals.py, fetch_finmind.py, fetch_tdcc.py, fetch_macro.py (use .venv at repo root)
 docs/data-layout.md  # Full layout rules
 investment-reasoning-framework.md         # Pricing framework (dual thesis)
 ```

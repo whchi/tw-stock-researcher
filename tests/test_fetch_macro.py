@@ -1,7 +1,9 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+import scripts.fetch_macro as fetch_macro
 from scripts.fetch_macro import (
     TEMPLATE_SOURCES,
     build_macro_data,
@@ -30,6 +32,78 @@ class SourceScopeTests(unittest.TestCase):
                 "Taiwan official statistics / MOPS context",
             ),
         )
+
+
+class TwseMarketStatsTests(unittest.TestCase):
+    def test_fetch_twse_market_stats_uses_last_ascending_row_and_iso_date(self):
+        payload = [
+            {
+                "Date": "1150701",
+                "TAIEX": "22000.00",
+                "Change": "10.0",
+                "TradeVolume": "1000",
+                "TradeValue": "2000",
+                "Transaction": "300",
+            },
+            {
+                "Date": "1150707",
+                "TAIEX": "23111.55",
+                "Change": "-5.0",
+                "TradeVolume": "4000",
+                "TradeValue": "5000",
+                "Transaction": "600",
+            },
+        ]
+
+        with patch.object(fetch_macro, "request_json", return_value=payload):
+            rows = fetch_macro.fetch_twse_market_stats()
+
+        self.assertEqual(rows[0]["latest"]["date"], "2026-07-07")
+        self.assertEqual(rows[0]["latest"]["taiex"], 23111.55)
+        self.assertEqual(rows[0]["latest"]["change"], -5.0)
+
+
+CUSTOMS_CSV = (
+    '﻿"年度","月份","出口總值(新臺幣千元)","進口總值(新臺幣千元)","出入超(新臺幣千元)"\n'
+    '"115","4","1200","900","300"\n'
+    '"115","3","1100","880","220"\n'
+    '"114","4","1000","800","200"\n'
+)
+
+
+class TaiwanOfficialTests(unittest.TestCase):
+    def test_parse_customs_trade_csv_converts_roc_dates_and_sorts_ascending(self):
+        rows = fetch_macro.parse_customs_trade_csv(CUSTOMS_CSV)
+
+        self.assertEqual([row["date"] for row in rows], ["2025-04", "2026-03", "2026-04"])
+        self.assertEqual(rows[-1]["exports_total_twd_thousand"], 1200.0)
+        self.assertEqual(rows[-1]["trade_balance_twd_thousand"], 300.0)
+
+    def test_build_customs_trade_rows_computes_exports_yoy(self):
+        result = fetch_macro.build_customs_trade_rows(CUSTOMS_CSV, "https://example.gov/csv")
+
+        latest = result[0]["latest"]
+        self.assertEqual(latest["date"], "2026-04")
+        self.assertEqual(latest["exports_yoy_pct"], 20.0)
+        self.assertEqual(result[0]["unit"], "TWD thousand")
+
+    def test_fetch_taiwan_official_uses_customs_default(self):
+        with patch.object(
+            fetch_macro, "request_text_with_ssl_fallback", return_value=CUSTOMS_CSV
+        ) as fetcher:
+            rows = fetch_macro.fetch_taiwan_official(None)
+
+        self.assertEqual(fetcher.call_args.args[0], fetch_macro.DEFAULT_TAIWAN_MACRO_URL)
+        self.assertEqual(rows[0]["latest"]["date"], "2026-04")
+
+    def test_fetch_taiwan_official_previews_custom_endpoints(self):
+        with patch.object(
+            fetch_macro, "request_text_with_ssl_fallback", return_value="col1,col2"
+        ):
+            rows = fetch_macro.fetch_taiwan_official("https://example.com/custom.csv")
+
+        self.assertEqual(rows[0]["raw_preview"], "col1,col2")
+        self.assertIsNone(rows[0]["latest"])
 
 
 class LatestReadTests(unittest.TestCase):

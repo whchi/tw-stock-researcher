@@ -5,11 +5,13 @@ import argparse
 import json
 import re
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 
 BASE_URL = "https://tw.stock.yahoo.com/quote"
+SCHEMA_VERSION = 2
 PAGE_PATHS = {
     "profile": "profile",
     "revenue": "revenue",
@@ -109,6 +111,7 @@ def build_metadata(stock_id, suffix="TW", warnings=None):
         .astimezone()
         .isoformat(timespec="seconds"),
         "source": "Yahoo Finance Taiwan",
+        "schema_version": SCHEMA_VERSION,
         "source_urls": {
             key: yahoo_url(stock_id, key, suffix=suffix)
             for key in ("profile", "revenue", "income_statement", "cash_flow_statement")
@@ -273,7 +276,7 @@ def build_summary(profile, revenue, income_statement, cash_flow_statement):
     }
 
 
-def fetch_page(url):
+def fetch_page(url, session=None):
     try:
         import requests
     except ModuleNotFoundError as exc:
@@ -288,8 +291,9 @@ def fetch_page(url):
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
         )
     }
+    client = session if session is not None else requests
     try:
-        response = requests.get(url, headers=headers, timeout=30)
+        response = client.get(url, headers=headers, timeout=30)
         response.raise_for_status()
     except requests.exceptions.RequestException as exc:
         raise RuntimeError(f"Yahoo request failed for {url}: {exc}") from exc
@@ -297,10 +301,27 @@ def fetch_page(url):
 
 
 def fetch_all(stock_id, suffix="TW"):
-    pages = {
-        key: fetch_page(yahoo_url(stock_id, key, suffix=suffix))
-        for key in ("profile", "revenue", "income_statement", "cash_flow_statement")
-    }
+    page_keys = ("profile", "revenue", "income_statement", "cash_flow_statement")
+    session = None
+    try:
+        import requests
+    except ModuleNotFoundError:
+        pass  # fetch_page raises the descriptive error
+    else:
+        session = requests.Session()
+
+    try:
+        with ThreadPoolExecutor(max_workers=len(page_keys)) as executor:
+            futures = {
+                key: executor.submit(
+                    fetch_page, yahoo_url(stock_id, key, suffix=suffix), session
+                )
+                for key in page_keys
+            }
+            pages = {key: future.result() for key, future in futures.items()}
+    finally:
+        if session is not None:
+            session.close()
     profile = parse_profile(pages["profile"])
     revenue = parse_revenue(pages["revenue"])
     income_statement = parse_statement(pages["income_statement"], INCOME_ITEMS)
