@@ -11,7 +11,6 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 BASE_URL = "https://tw.stock.yahoo.com/quote"
-SCHEMA_VERSION = 2
 PAGE_PATHS = {
     "profile": "profile",
     "revenue": "revenue",
@@ -111,7 +110,6 @@ def build_metadata(stock_id, suffix="TW", warnings=None):
         .astimezone()
         .isoformat(timespec="seconds"),
         "source": "Yahoo Finance Taiwan",
-        "schema_version": SCHEMA_VERSION,
         "source_urls": {
             key: yahoo_url(stock_id, key, suffix=suffix)
             for key in ("profile", "revenue", "income_statement", "cash_flow_statement")

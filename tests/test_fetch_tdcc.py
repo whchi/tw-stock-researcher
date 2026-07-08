@@ -152,8 +152,7 @@ class TdccHoldingDistributionTests(unittest.TestCase):
         self.assertEqual(
             result["metadata"]["row_counts"]["TDCCHoldingDistributionHistoryDates"], 2
         )
-        self.assertEqual(result["metadata"]["schema_version"], fetch_tdcc.SCHEMA_VERSION)
-
+        
     def test_fetch_holding_distribution_retries_without_ssl_verification_for_tdcc_cert_issue(self):
         import requests
 

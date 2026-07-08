@@ -302,7 +302,6 @@ class EggTheoryReadTests(unittest.TestCase):
                 token="token",
             )
 
-        self.assertEqual(result["metadata"]["schema_version"], 2)
         self.assertIn("TaiwanStockMarginPurchaseShortSale", requested)
         self.assertIn("TaiwanStockShareholding", requested)
         self.assertIn("TaiwanStockDayTrading", requested)

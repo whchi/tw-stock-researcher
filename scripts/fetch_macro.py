@@ -31,8 +31,6 @@ TWSE_BASE = "https://openapi.twse.com.tw"
 # official, free, updated monthly. Override with TAIWAN_MACRO_URL.
 DEFAULT_TAIWAN_MACRO_URL = "https://opendata.customs.gov.tw/data/6053/csv.csv"
 
-SCHEMA_VERSION = 2
-
 YAHOO_SYMBOLS = (
     {"indicator": "USD/TWD", "symbol": "TWD=X", "unit": "TWD per USD"},
     {"indicator": "TAIEX", "symbol": "^TWII", "unit": "index"},
@@ -125,7 +123,6 @@ def build_macro_data(records_by_source, warnings=None):
             "fetched_at": datetime.now(timezone.utc)
             .astimezone()
             .isoformat(timespec="seconds"),
-            "schema_version": SCHEMA_VERSION,
             "source_scope": list(TEMPLATE_SOURCES),
             "warnings": warnings or [],
         },

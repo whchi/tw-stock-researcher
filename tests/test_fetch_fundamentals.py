@@ -237,7 +237,6 @@ class FetchAllTests(unittest.TestCase):
                 "2330", "2021-05-05", "2026-05-05", token="token"
             )
 
-        self.assertEqual(result["metadata"]["schema_version"], 1)
         self.assertIn(
             "TaiwanStockFinancialStatements returned no rows",
             result["metadata"]["warnings"],

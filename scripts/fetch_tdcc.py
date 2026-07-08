@@ -17,7 +17,6 @@ TDCC_HOLDING_DISTRIBUTION_URL = "https://smart.tdcc.com.tw/opendata/getOD.ashx?i
 CACHE_CSV_NAME = "tdcc-holding-distribution.csv"
 CACHE_META_NAME = "tdcc-cache-meta.json"
 DEFAULT_CACHE_MAX_AGE_HOURS = 72
-SCHEMA_VERSION = 2
 
 
 def parse_args(argv):
@@ -213,7 +212,6 @@ def build_metadata(rows, cache_hit=False, cache_meta=None, history=None):
         .astimezone()
         .isoformat(timespec="seconds"),
         "source": "TDCC",
-        "schema_version": SCHEMA_VERSION,
         "source_urls": {
             "TDCCStockHoldingDistribution": TDCC_HOLDING_DISTRIBUTION_URL,
         },

@@ -19,7 +19,6 @@ from pathlib import Path
 from statistics import median
 
 BASE_URL = "https://api.finmindtrade.com/api/v4/data"
-SCHEMA_VERSION = 1
 
 DATASETS = (
     "TaiwanStockMonthRevenue",
@@ -417,7 +416,6 @@ def build_metadata(stock_id, start_date, end_date, raw_rows_by_dataset, warnings
         .astimezone()
         .isoformat(timespec="seconds"),
         "source": "FinMind",
-        "schema_version": SCHEMA_VERSION,
         "source_urls": source_urls,
         "datasets": list(DATASETS),
         "date_range": {"start_date": start_date, "end_date": end_date},

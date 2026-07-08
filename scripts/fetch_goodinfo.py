@@ -327,14 +327,10 @@ def build_three_statement_coverage(result):
 # ─── 驗證層 A：資料來源標注 ────────────────────────────────
 
 
-SCHEMA_VERSION = 2
-
-
 def build_metadata(stock_id, years):
     return {
         "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%S+08:00"),
         "source": "Goodinfo.tw",
-        "schema_version": SCHEMA_VERSION,
         "source_urls": {
             "income_statement": f"https://goodinfo.tw/tw/StockFinDetail.asp?RPT_CAT=IS_YEAR&STOCK_ID={stock_id}",
             "balance_sheet": f"https://goodinfo.tw/tw/StockFinDetail.asp?RPT_CAT=BS_YEAR&STOCK_ID={stock_id}",
