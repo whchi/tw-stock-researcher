@@ -10,6 +10,9 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from case_paths import CaseResolutionError, case_output_path, validate_explicit_output  # noqa: E402
+
 BASE_URL = "https://tw.stock.yahoo.com/quote"
 PAGE_PATHS = {
     "profile": "profile",
@@ -91,17 +94,6 @@ def normalize_number(value):
 
 def yahoo_url(stock_id, page_key, suffix="TW"):
     return f"{BASE_URL}/{stock_id}.{suffix}/{PAGE_PATHS[page_key]}"
-
-
-def default_output_path(stock_id, repo_root=None):
-    root = Path(repo_root) if repo_root else Path(__file__).resolve().parent.parent
-    companies_dir = root / "companies"
-    case_dirs = sorted(p for p in companies_dir.glob(f"{stock_id}-*") if p.is_dir())
-
-    if len(case_dirs) == 1:
-        return case_dirs[0] / "yahoo-data.json"
-
-    return root / f"{stock_id}_yahoo_data.json"
 
 
 def build_metadata(stock_id, suffix="TW", warnings=None):
@@ -359,7 +351,16 @@ def parse_args(argv):
 
 def main(argv=None):
     args = parse_args(argv or sys.argv[1:])
-    output_path = Path(args.output) if args.output else default_output_path(args.stock_id)
+    repo_root = Path(__file__).resolve().parent.parent
+    try:
+        if args.output:
+            output_path = validate_explicit_output(Path(args.output), repo_root)
+        else:
+            output_path = case_output_path(args.stock_id, "yahoo-data.json", repo_root)
+    except CaseResolutionError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
     data = fetch_all(args.stock_id, suffix=args.suffix)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

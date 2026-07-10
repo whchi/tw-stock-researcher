@@ -9,6 +9,9 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from case_paths import CaseResolutionError, case_output_path, validate_explicit_output  # noqa: E402
+
 BASE_URL = "https://api.finmindtrade.com/api/v4/data"
 DATASETS = (
     "TaiwanStockPrice",
@@ -50,17 +53,6 @@ def default_date_range(days, end_date=None):
     end = date.fromisoformat(end_date) if end_date else date.today()
     start = end - timedelta(days=days)
     return start.isoformat(), end.isoformat()
-
-
-def default_output_path(stock_id, repo_root=None):
-    root = Path(repo_root) if repo_root else Path(__file__).resolve().parent.parent
-    companies_dir = root / "companies"
-    case_dirs = sorted(p for p in companies_dir.glob(f"{stock_id}-*") if p.is_dir())
-
-    if len(case_dirs) == 1:
-        return case_dirs[0] / "market-data.json"
-
-    return root / f"{stock_id}_market_data.json"
 
 
 def resolve_token(args_token=None, env=None):
@@ -347,19 +339,13 @@ def classify_turnover(avg_turnover):
     return "normal"
 
 
-def default_tdcc_data_path(stock_id, repo_root=None):
-    root = Path(repo_root) if repo_root else Path(__file__).resolve().parent.parent
-    companies_dir = root / "companies"
-    case_dirs = sorted(p for p in companies_dir.glob(f"{stock_id}-*") if p.is_dir())
-
-    if len(case_dirs) == 1:
-        return case_dirs[0] / "tdcc-data.json"
-
-    return root / f"{stock_id}_tdcc_data.json"
-
-
 def load_tdcc_holding_distribution(stock_id, repo_root=None):
-    path = default_tdcc_data_path(stock_id, repo_root=repo_root)
+    root = Path(repo_root) if repo_root else Path(__file__).resolve().parent.parent
+    try:
+        path = case_output_path(stock_id, "tdcc-data.json", root)
+    except CaseResolutionError as exc:
+        return [], f"tdcc-data.json unavailable: {exc}"
+
     if not path.exists():
         return [], f"{path.name} not found; run scripts/fetch_tdcc.py {stock_id}"
 
@@ -719,9 +705,17 @@ def main(argv=None):
         end_date = date.today().isoformat()
 
     token = resolve_token(args.token)
-    output_path = (
-        Path(args.output) if args.output else default_output_path(args.stock_id)
-    )
+
+    repo_root = Path(__file__).resolve().parent.parent
+    try:
+        if args.output:
+            output_path = validate_explicit_output(Path(args.output), repo_root)
+        else:
+            output_path = case_output_path(args.stock_id, "market-data.json", repo_root)
+    except CaseResolutionError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
     data = fetch_all(args.stock_id, start_date, end_date, token=token)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

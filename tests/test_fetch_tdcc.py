@@ -1,3 +1,5 @@
+import contextlib
+import io
 import tempfile
 import unittest
 from pathlib import Path
@@ -24,18 +26,6 @@ class TdccHoldingDistributionTests(unittest.TestCase):
         self.assertEqual(result[0]["percent"], 1.22)
         self.assertEqual(result[0]["unit"], "股")
         self.assertEqual(result[1]["HoldingSharesLevel"], "17")
-
-    def test_default_output_path_uses_unique_case_directory(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            repo_root = Path(tmp)
-            (repo_root / "companies" / "6451-shunsin-ky").mkdir(parents=True)
-
-            output_path = fetch_tdcc.default_output_path("6451", repo_root=repo_root)
-
-            self.assertEqual(
-                output_path,
-                repo_root / "companies" / "6451-shunsin-ky" / "tdcc-data.json",
-            )
 
     def test_fetch_all_returns_only_requested_stock_rows(self):
         csv_text = "\ufeff資料日期,證券代號,持股分級,人數,股數,占集保庫存數比例%\n"
@@ -168,6 +158,47 @@ class TdccHoldingDistributionTests(unittest.TestCase):
         self.assertEqual(run.call_args.args[0][0], "curl")
         self.assertIn("90", run.call_args.args[0])
         self.assertIn(fetch_tdcc.TDCC_HOLDING_DISTRIBUTION_URL, run.call_args.args[0])
+
+
+class MainOutputResolutionTests(unittest.TestCase):
+    def test_main_fails_closed_when_case_resolution_raises(self):
+        with patch.object(
+            fetch_tdcc,
+            "case_output_path",
+            side_effect=fetch_tdcc.CaseResolutionError(
+                "expected exactly one companies/6451-*/ directory; found 0: none"
+            ),
+        ):
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                exit_code = fetch_tdcc.main(["6451"])
+
+        self.assertEqual(exit_code, 1)
+        self.assertIn("expected exactly one", stderr.getvalue())
+
+    def test_main_writes_to_resolved_case_output_path_by_default(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "tdcc-data.json"
+            with patch.object(fetch_tdcc, "case_output_path", return_value=target) as mock_resolve:
+                with patch.object(fetch_tdcc, "fetch_all", return_value={"ok": True}):
+                    exit_code = fetch_tdcc.main(["6451"])
+
+            mock_resolve.assert_called_once_with(
+                "6451", "tdcc-data.json", Path(fetch_tdcc.__file__).resolve().parent.parent
+            )
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(target.exists())
+
+    def test_main_routes_explicit_output_through_validation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "explicit.json"
+            with patch.object(fetch_tdcc, "validate_explicit_output", return_value=target) as mock_validate:
+                with patch.object(fetch_tdcc, "fetch_all", return_value={"ok": True}):
+                    exit_code = fetch_tdcc.main(["6451", "--output", str(target)])
+
+            mock_validate.assert_called_once()
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(target.exists())
 
 
 if __name__ == "__main__":

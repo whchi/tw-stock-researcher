@@ -1,11 +1,14 @@
 import contextlib
 import io
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
 from bs4 import BeautifulSoup
 
 import scripts.fetch_goodinfo as goodinfo
-from scripts.fetch_goodinfo import parse_table, pick_key
+from scripts.fetch_goodinfo import main, parse_table, pick_key
 
 
 SAMPLE_AJAX_HTML = """
@@ -213,6 +216,47 @@ class VerificationTests(unittest.TestCase):
         fields = [warning["field"] for warning in verified["verification"]["sanity"]]
         self.assertIn("Goodinfo 財報年度", fields)
         self.assertIn("Goodinfo 損益表", fields)
+
+
+class MainOutputResolutionTests(unittest.TestCase):
+    def test_main_fails_closed_when_case_resolution_raises(self):
+        with patch.object(
+            goodinfo,
+            "case_output_path",
+            side_effect=goodinfo.CaseResolutionError("expected exactly one companies/2330-*/ directory; found 0: none"),
+        ):
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                exit_code = main(["2330"])
+
+        self.assertEqual(exit_code, 1)
+        self.assertIn("expected exactly one", stderr.getvalue())
+
+    def test_main_writes_to_resolved_case_output_path_by_default(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "raw-data.json"
+            with patch.object(goodinfo, "case_output_path", return_value=target) as mock_resolve:
+                with patch.object(goodinfo, "fetch_all", return_value={"years": [], "income_statement": {}, "balance_sheet": {}, "cash_flow": {}, "metadata": {"mops_url": "https://mops.example.test"}}):
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        exit_code = main(["2330"])
+
+            mock_resolve.assert_called_once_with(
+                "2330", "raw-data.json", Path(goodinfo.__file__).resolve().parent.parent
+            )
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(target.exists())
+
+    def test_main_routes_explicit_output_through_validation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "explicit.json"
+            with patch.object(goodinfo, "validate_explicit_output", return_value=target) as mock_validate:
+                with patch.object(goodinfo, "fetch_all", return_value={"years": [], "income_statement": {}, "balance_sheet": {}, "cash_flow": {}, "metadata": {"mops_url": "https://mops.example.test"}}):
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        exit_code = main(["2330", str(target)])
+
+            mock_validate.assert_called_once()
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(target.exists())
 
 
 if __name__ == "__main__":

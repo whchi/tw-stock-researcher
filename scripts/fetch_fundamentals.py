@@ -18,6 +18,9 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from statistics import median
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from case_paths import CaseResolutionError, case_output_path, validate_explicit_output  # noqa: E402
+
 BASE_URL = "https://api.finmindtrade.com/api/v4/data"
 
 DATASETS = (
@@ -105,17 +108,6 @@ def parse_args(argv):
     parser.add_argument("--token")
     parser.add_argument("--output")
     return parser.parse_args(argv)
-
-
-def default_output_path(stock_id, repo_root=None):
-    root = Path(repo_root) if repo_root else Path(__file__).resolve().parent.parent
-    companies_dir = root / "companies"
-    case_dirs = sorted(p for p in companies_dir.glob(f"{stock_id}-*") if p.is_dir())
-
-    if len(case_dirs) == 1:
-        return case_dirs[0] / "fundamentals-data.json"
-
-    return root / f"{stock_id}_fundamentals_data.json"
 
 
 def resolve_token(args_token=None, env=None):
@@ -500,9 +492,17 @@ def main(argv=None):
     end_date = date.today().isoformat()
     start_date = (date.today() - timedelta(days=args.years * 365)).isoformat()
     token = resolve_token(args.token)
-    output_path = (
-        Path(args.output) if args.output else default_output_path(args.stock_id)
-    )
+
+    repo_root = Path(__file__).resolve().parent.parent
+    try:
+        if args.output:
+            output_path = validate_explicit_output(Path(args.output), repo_root)
+        else:
+            output_path = case_output_path(args.stock_id, "fundamentals-data.json", repo_root)
+    except CaseResolutionError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
     data = fetch_all(args.stock_id, start_date, end_date, token=token)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

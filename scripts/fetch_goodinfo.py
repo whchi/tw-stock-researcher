@@ -15,6 +15,9 @@ from pathlib import Path
 import requests
 from bs4 import BeautifulSoup
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from case_paths import CaseResolutionError, case_output_path, validate_explicit_output  # noqa: E402
+
 # ─── 抓取層 ───────────────────────────────────────────────
 
 
@@ -516,22 +519,21 @@ def run_verification(result, metrics_by_year):
     return result
 
 
-def default_output_path(stock_id):
+def main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    stock_id = argv[0] if argv else "2330"
+    explicit_output = argv[1] if len(argv) > 1 else None
+
     repo_root = Path(__file__).resolve().parent.parent
-    companies_dir = repo_root / "companies"
-    case_dirs = sorted(p for p in companies_dir.glob(f"{stock_id}-*") if p.is_dir())
+    try:
+        if explicit_output:
+            output_path = validate_explicit_output(Path(explicit_output), repo_root)
+        else:
+            output_path = case_output_path(stock_id, "raw-data.json", repo_root)
+    except CaseResolutionError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
 
-    if len(case_dirs) == 1:
-        return case_dirs[0] / "raw-data.json"
-
-    return repo_root / f"{stock_id}_raw_data.json"
-
-
-if __name__ == "__main__":
-    stock_id = sys.argv[1] if len(sys.argv) > 1 else "2330"
-    output_path = (
-        Path(sys.argv[2]) if len(sys.argv) > 2 else default_output_path(stock_id)
-    )
     data = fetch_all(stock_id)
 
     is_d = data["income_statement"]
@@ -592,3 +594,8 @@ if __name__ == "__main__":
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     print(f"\n原始數據（含驗證結果）已存至 {output_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

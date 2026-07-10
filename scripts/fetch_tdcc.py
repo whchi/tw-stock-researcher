@@ -10,6 +10,9 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from case_paths import CaseResolutionError, case_output_path, validate_explicit_output  # noqa: E402
+
 TDCC_HOLDING_DISTRIBUTION_URL = "https://smart.tdcc.com.tw/opendata/getOD.ashx?id=1-5"
 
 # The endpoint returns the all-market table (~2.3MB); TDCC refreshes it weekly,
@@ -35,17 +38,6 @@ def parse_args(argv):
         help="Ignore the cache and re-download the all-market CSV.",
     )
     return parser.parse_args(argv)
-
-
-def default_output_path(stock_id, repo_root=None):
-    root = Path(repo_root) if repo_root else Path(__file__).resolve().parent.parent
-    companies_dir = root / "companies"
-    case_dirs = sorted(p for p in companies_dir.glob(f"{stock_id}-*") if p.is_dir())
-
-    if len(case_dirs) == 1:
-        return case_dirs[0] / "tdcc-data.json"
-
-    return root / f"{stock_id}_tdcc_data.json"
 
 
 def cache_paths(repo_root=None):
@@ -258,7 +250,16 @@ def load_previous_payload(output_path):
 
 def main(argv=None):
     args = parse_args(argv or sys.argv[1:])
-    output_path = Path(args.output) if args.output else default_output_path(args.stock_id)
+    repo_root = Path(__file__).resolve().parent.parent
+    try:
+        if args.output:
+            output_path = validate_explicit_output(Path(args.output), repo_root)
+        else:
+            output_path = case_output_path(args.stock_id, "tdcc-data.json", repo_root)
+    except CaseResolutionError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+
     data = fetch_all(
         args.stock_id,
         max_age_hours=args.max_age_hours,

@@ -1,10 +1,14 @@
+import contextlib
+import io
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+import scripts.fetch_yahoo as fetch_yahoo
 from scripts.fetch_yahoo import (
     build_metadata,
-    default_output_path,
+    main,
     parse_profile,
     parse_revenue,
     parse_statement,
@@ -110,27 +114,56 @@ class YahooParserTests(unittest.TestCase):
         )
 
 
-class OutputPathTests(unittest.TestCase):
-    def test_default_output_path_uses_unique_case_directory(self):
+class MainOutputResolutionTests(unittest.TestCase):
+    def test_main_fails_closed_when_case_resolution_raises(self):
+        with patch.object(
+            fetch_yahoo,
+            "case_output_path",
+            side_effect=fetch_yahoo.CaseResolutionError("expected exactly one companies/2330-*/ directory; found 0: none"),
+        ):
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                exit_code = main(["2330"])
+
+        self.assertEqual(exit_code, 1)
+        self.assertIn("expected exactly one", stderr.getvalue())
+
+    def test_main_writes_to_resolved_case_output_path_by_default(self):
         with tempfile.TemporaryDirectory() as tmp:
-            repo_root = Path(tmp)
-            (repo_root / "companies" / "2330-tsmc").mkdir(parents=True)
+            target = Path(tmp) / "yahoo-data.json"
+            with patch.object(fetch_yahoo, "case_output_path", return_value=target) as mock_resolve:
+                with patch.object(fetch_yahoo, "fetch_all", return_value={"ok": True}):
+                    exit_code = main(["2330"])
 
-            output_path = default_output_path("2330", repo_root=repo_root)
-
-            self.assertEqual(
-                output_path,
-                repo_root / "companies" / "2330-tsmc" / "yahoo-data.json",
+            mock_resolve.assert_called_once_with(
+                "2330", "yahoo-data.json", Path(fetch_yahoo.__file__).resolve().parent.parent
             )
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(target.exists())
 
-    def test_default_output_path_falls_back_to_repo_root_without_unique_case(self):
+    def test_main_routes_explicit_output_through_validation(self):
         with tempfile.TemporaryDirectory() as tmp:
-            repo_root = Path(tmp)
-            (repo_root / "companies").mkdir()
+            target = Path(tmp) / "explicit.json"
+            with patch.object(fetch_yahoo, "validate_explicit_output", return_value=target) as mock_validate:
+                with patch.object(fetch_yahoo, "fetch_all", return_value={"ok": True}):
+                    exit_code = main(["2330", "--output", str(target)])
 
-            output_path = default_output_path("2330", repo_root=repo_root)
+            mock_validate.assert_called_once()
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(target.exists())
 
-            self.assertEqual(output_path, repo_root / "2330_yahoo_data.json")
+    def test_main_fails_closed_when_explicit_output_escapes_repo(self):
+        with patch.object(
+            fetch_yahoo,
+            "validate_explicit_output",
+            side_effect=fetch_yahoo.CaseResolutionError("explicit output escapes repository"),
+        ):
+            stderr = io.StringIO()
+            with contextlib.redirect_stderr(stderr):
+                exit_code = main(["2330", "--output", "/tmp/escape.json"])
+
+        self.assertEqual(exit_code, 1)
+        self.assertIn("escapes repository", stderr.getvalue())
 
 
 if __name__ == "__main__":
