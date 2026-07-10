@@ -279,6 +279,31 @@ class ArgsTests(unittest.TestCase):
         self.assertEqual(args.days, 400)
 
 
+class MarketConfirmationMetricsWiringTests(unittest.TestCase):
+    def test_computes_days_to_cover_from_latest_short_balance_and_median_volume(self):
+        price_rows = [
+            {"date": f"2026-06-{day:02d}", "Trading_Volume": 1000 + day}
+            for day in range(1, 21)
+        ]
+        margin_rows = [
+            {"date": "2026-06-19", "ShortSaleTodayBalance": 2000},
+            {"date": "2026-06-20", "ShortSaleTodayBalance": 3000},
+        ]
+
+        result = fetch_finmind.build_market_confirmation_metrics(price_rows, margin_rows)
+
+        self.assertEqual(result["days_to_cover"]["state"], "ready")
+        expected_median = sorted(1000 + day for day in range(1, 21))[9:11]
+        expected_median_value = sum(expected_median) / 2
+        self.assertAlmostEqual(result["days_to_cover"]["value"], 3000 / expected_median_value)
+
+    def test_unavailable_when_no_short_sale_rows(self):
+        result = fetch_finmind.build_market_confirmation_metrics(
+            [{"date": "2026-06-01", "Trading_Volume": 1000}], []
+        )
+        self.assertEqual(result["days_to_cover"]["state"], "unavailable")
+
+
 class MarketActionReadTests(unittest.TestCase):
     def test_build_market_action_read_calculates_5d_price_volume_and_state(self):
         result = build_market_action_read(PRICE_ROWS, INSTITUTIONAL_ROWS)

@@ -8,6 +8,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from statistics import median
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from case_paths import CaseResolutionError, case_output_path, validate_explicit_output  # noqa: E402
@@ -17,6 +18,8 @@ from data_contract import (  # noqa: E402
     latest_observation_date,
     metadata_envelope,
 )
+from metrics.common import metric_result_to_dict  # noqa: E402
+from metrics.market_confirmation import days_to_cover  # noqa: E402
 
 PARSER_VERSION = "2"
 
@@ -570,6 +573,34 @@ def build_egg_window_read(
     }
 
 
+def build_market_confirmation_metrics(price_rows, margin_purchase_short_sale_rows):
+    """Wire scripts/metrics/market_confirmation.py's pure functions using
+    only fields already fetched here.
+
+    Not wired here (pure functions exist and are tested, but the required
+    inputs are not currently fetched): NormalizedShortPressure (needs a
+    securities-lending-sold balance, which is a separate FinMind dataset not
+    in DATASETS, and a genuine free-float share count rather than total
+    issued shares) and TDCCConcentrationChange (needs a defined "large
+    holder" custody-tier threshold that isn't derived anywhere yet).
+    """
+    sorted_price = sorted(price_rows, key=lambda row: row.get("date", ""))
+    recent_volumes = [
+        row.get("Trading_Volume")
+        for row in sorted_price[-20:]
+        if row.get("Trading_Volume") is not None
+    ]
+    median_20d_volume = median(recent_volumes) if recent_volumes else None
+
+    sorted_margin = sorted(margin_purchase_short_sale_rows, key=lambda row: row.get("date", ""))
+    latest_short_balance = sorted_margin[-1].get("ShortSaleTodayBalance") if sorted_margin else None
+    period = sorted_margin[-1].get("date") if sorted_margin else ""
+
+    input_refs = ["market-data.json#/raw/margin_purchase_short_sale", "market-data.json#/raw/price"]
+    result = days_to_cover(latest_short_balance, median_20d_volume, period, input_refs)
+    return {"days_to_cover": metric_result_to_dict(result)}
+
+
 def build_egg_theory_read(
     price_rows,
     holding_shares_per_rows=None,
@@ -720,6 +751,9 @@ def fetch_all(stock_id, start_date, end_date, token=None):
         "derived": {
             "market_action_read": market_action_read,
             "egg_theory_read": egg_theory_read,
+            "market_confirmation_metrics": build_market_confirmation_metrics(
+                price_rows, raw_rows_by_dataset["TaiwanStockMarginPurchaseShortSale"]
+            ),
         },
     }
 

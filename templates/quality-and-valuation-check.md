@@ -15,16 +15,19 @@
 
 ## Owner Earnings And Cash Conversion
 
-| Metric | Current Read | Trend | Why It Matters | Source |
+Owner Earnings and Cash Conversion values must come from `fundamentals-data.json` → `derived.financial_quality_metrics` (also shown in `financial-analysis.md` → Derived Financial Quality Metrics); do not recompute here. Carry the metric's `state` forward — if `unavailable` or `not_meaningful`, write the caveat instead of a number.
+
+| Metric | Current Read | Trend | Why It Matters | State / Caveat |
 | --- | --- | --- | --- | --- |
 | Owner Earnings |  |  | Cash available after maintenance reinvestment |  |
-| Operating cash flow / net income |  |  | Earnings quality |  |
-| Free cash flow / net income |  |  | Cash conversion |  |
+| Cash Conversion (FCF / net income) |  |  | Cash conversion |  |
 | Capex / revenue |  |  | Capital intensity |  |
 
 ## Working Capital Quality Judgment
 
-| Metric | Current Read | Trend | Risk Signal | Source |
+DSO / DIO / DPO / Cash Conversion Cycle values must come from `fundamentals-data.json` → `derived.financial_quality_metrics`; do not recompute here. Carry the metric's `state` forward — if `unavailable` or `not_meaningful`, write the caveat instead of a number.
+
+| Metric | Current Read | Trend | Risk Signal | State / Caveat |
 | --- | --- | --- | --- | --- |
 | Days sales outstanding |  |  | Receivables rising faster than sales |  |
 | Inventory days |  |  | Inventory build without revenue validation |  |

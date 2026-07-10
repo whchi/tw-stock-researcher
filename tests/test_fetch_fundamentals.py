@@ -210,6 +210,58 @@ class QuarterlyCashFlowTests(unittest.TestCase):
         self.assertEqual(rows[-1]["free_cash_flow"], 300.0)
 
 
+class FinancialQualityMetricsWiringTests(unittest.TestCase):
+    def test_computes_dso_dio_dpo_and_cash_metrics_per_quarter(self):
+        quarterly_income = [
+            {"quarter": "2026Q1", "date": "2026-03-31", "revenue": 1000.0, "gross_profit": 400.0, "net_income": 200.0},
+        ]
+        quarterly_balance = [
+            {"quarter": "2026Q1", "date": "2026-03-31", "accounts_receivable": 100.0, "inventories": 150.0, "accounts_payable": 90.0, "total_assets": 5000.0},
+        ]
+        quarterly_cash_flow = [
+            {"quarter": "2026Q1", "date": "2026-03-31", "operating_cash_flow": 250.0, "capex": -50.0, "free_cash_flow": 200.0, "depreciation": 30.0},
+        ]
+
+        results = fetch_fundamentals.build_financial_quality_metrics(quarterly_income, quarterly_balance, quarterly_cash_flow)
+
+        self.assertEqual(len(results), 1)
+        row = results[0]
+        self.assertEqual(row["quarter"], "2026Q1")
+        self.assertEqual(row["dso"]["state"], "ready")
+        self.assertEqual(row["dio"]["state"], "ready")
+        self.assertEqual(row["dpo"]["state"], "ready")
+        self.assertEqual(row["cash_conversion_cycle"]["state"], "ready")
+        self.assertEqual(row["owner_earnings"]["state"], "ready")
+        self.assertEqual(row["owner_earnings"]["value"], 220.0)
+        self.assertEqual(row["cash_conversion"]["state"], "ready")
+        # Fewer than 4 trailing quarters -> TTM cash-flow accrual not computed.
+        self.assertIsNone(row["cash_flow_accrual"])
+
+    def test_cash_flow_accrual_computed_once_four_trailing_quarters_exist(self):
+        quarters = ["2025Q2", "2025Q3", "2025Q4", "2026Q1"]
+        dates = ["2025-06-30", "2025-09-30", "2025-12-31", "2026-03-31"]
+        quarterly_income = [
+            {"quarter": q, "date": d, "revenue": 1000.0, "gross_profit": 400.0, "net_income": 100.0}
+            for q, d in zip(quarters, dates)
+        ]
+        quarterly_balance = [
+            {"quarter": q, "date": d, "accounts_receivable": 100.0, "inventories": 150.0, "accounts_payable": 90.0, "total_assets": 5000.0}
+            for q, d in zip(quarters, dates)
+        ]
+        quarterly_cash_flow = [
+            {"quarter": q, "date": d, "operating_cash_flow": 80.0, "capex": -20.0, "free_cash_flow": 60.0, "depreciation": 10.0}
+            for q, d in zip(quarters, dates)
+        ]
+
+        results = fetch_fundamentals.build_financial_quality_metrics(quarterly_income, quarterly_balance, quarterly_cash_flow)
+
+        last = results[-1]
+        self.assertIsNotNone(last["cash_flow_accrual"])
+        self.assertEqual(last["cash_flow_accrual"]["state"], "ready")
+        # TTM net income = 400, TTM CFO = 320, average total assets = 5000 -> (400-320)/5000
+        self.assertAlmostEqual(last["cash_flow_accrual"]["value"], 80.0 / 5000.0)
+
+
 class MonthlyRevenueTests(unittest.TestCase):
     def test_build_monthly_revenue_derives_mom_yoy_and_cumulative(self):
         rows = [

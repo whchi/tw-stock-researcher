@@ -25,8 +25,19 @@ from data_contract import (  # noqa: E402
     latest_observation_date,
     metadata_envelope,
 )
+from metrics.common import metric_result_to_dict  # noqa: E402
+from metrics.financial_quality import (  # noqa: E402
+    cash_conversion,
+    cash_conversion_cycle,
+    cash_flow_accrual,
+    dio,
+    dpo,
+    dso,
+    owner_earnings,
+)
 
 PARSER_VERSION = "2"
+QUARTER_DAYS = 91  # fixed calendar-quarter approximation for DSO/DIO/DPO
 
 BASE_URL = "https://api.finmindtrade.com/api/v4/data"
 
@@ -456,6 +467,95 @@ def build_metadata(
     )
 
 
+def _sum_field(by_quarter, quarters, field):
+    values = [by_quarter.get(quarter, {}).get(field) for quarter in quarters]
+    if any(value is None for value in values):
+        return None
+    return sum(values)
+
+
+def build_financial_quality_metrics(quarterly_income, quarterly_balance, quarterly_cash_flow):
+    """Wire scripts/metrics/financial_quality.py's pure functions using only
+    fields already extracted above (cost of goods sold is derived from
+    revenue - gross_profit, a standard identity, not a new extraction).
+
+    Not wired here (pure functions exist and are tested, but the required
+    inputs are not yet extracted by this fetcher): IncrementalROIC3Y (needs
+    an effective tax rate and a 3-year/12-quarter lookback beyond the 8Q
+    window kept here), InterestCoverage / NetDebtToEBITDA (interest expense
+    and net debt come from Goodinfo's raw-data.json, not FinMind),
+    DilutedShareCAGR / DilutionAdjustedOwnerEarningsCAGR (no diluted-share
+    field is exposed by the FinMind datasets this project uses), and the
+    GovernanceDisclosureVector (pledge ratio / audit opinion / restatement
+    flags require MOPS material-event data, gated by Task 10's ADR).
+    """
+    income_by_quarter = {row["quarter"]: row for row in quarterly_income}
+    balance_by_quarter = {row["quarter"]: row for row in quarterly_balance}
+    cash_by_quarter = {row["quarter"]: row for row in quarterly_cash_flow}
+    quarters_sorted = sorted(income_by_quarter, key=lambda quarter: income_by_quarter[quarter]["date"])
+
+    results = []
+    for index, quarter in enumerate(quarters_sorted):
+        income_row = income_by_quarter[quarter]
+        balance_row = balance_by_quarter.get(quarter, {})
+        cash_row = cash_by_quarter.get(quarter, {})
+        input_refs = [f"fundamentals-data.json#/derived/quarterly_income_8q[quarter={quarter}]"]
+
+        revenue = income_row.get("revenue")
+        gross_profit = income_row.get("gross_profit")
+        cost_of_goods_sold = revenue - gross_profit if (revenue is not None and gross_profit is not None) else None
+
+        dso_result = dso(balance_row.get("accounts_receivable"), revenue, QUARTER_DAYS, quarter, input_refs)
+        dio_result = dio(balance_row.get("inventories"), cost_of_goods_sold, QUARTER_DAYS, quarter, input_refs)
+        dpo_result = dpo(balance_row.get("accounts_payable"), cost_of_goods_sold, QUARTER_DAYS, quarter, input_refs)
+        ccc_result = cash_conversion_cycle(
+            dso_result.value if dso_result.state == "ready" else None,
+            dio_result.value if dio_result.state == "ready" else None,
+            dpo_result.value if dpo_result.state == "ready" else None,
+            quarter,
+            input_refs,
+        )
+
+        # Depreciation & amortization as a maintenance-capex proxy, since a
+        # maintenance-vs-growth capex split is not available from FinMind.
+        owner_earnings_result = owner_earnings(
+            cash_row.get("operating_cash_flow"), cash_row.get("depreciation"), quarter, input_refs
+        )
+        cash_conversion_result = cash_conversion(
+            cash_row.get("free_cash_flow"), income_row.get("net_income"), quarter, input_refs
+        )
+
+        cash_flow_accrual_result = None
+        if index >= 3:
+            trailing_quarters = quarters_sorted[index - 3 : index + 1]
+            ttm_net_income = _sum_field(income_by_quarter, trailing_quarters, "net_income")
+            ttm_cfo = _sum_field(cash_by_quarter, trailing_quarters, "operating_cash_flow")
+            total_assets_now = balance_row.get("total_assets")
+            total_assets_prior = balance_by_quarter.get(quarters_sorted[index - 3], {}).get("total_assets")
+            average_total_assets = (
+                (total_assets_now + total_assets_prior) / 2
+                if (total_assets_now is not None and total_assets_prior is not None)
+                else None
+            )
+            cash_flow_accrual_result = cash_flow_accrual(
+                ttm_net_income, ttm_cfo, average_total_assets, quarter, input_refs
+            )
+
+        results.append(
+            {
+                "quarter": quarter,
+                "dso": metric_result_to_dict(dso_result),
+                "dio": metric_result_to_dict(dio_result),
+                "dpo": metric_result_to_dict(dpo_result),
+                "cash_conversion_cycle": metric_result_to_dict(ccc_result),
+                "owner_earnings": metric_result_to_dict(owner_earnings_result),
+                "cash_conversion": metric_result_to_dict(cash_conversion_result),
+                "cash_flow_accrual": metric_result_to_dict(cash_flow_accrual_result) if cash_flow_accrual_result else None,
+            }
+        )
+    return results
+
+
 def fetch_all(stock_id, start_date, end_date, token=None):
     import requests
 
@@ -502,6 +602,10 @@ def fetch_all(stock_id, start_date, end_date, token=None):
 
     source_as_of = latest_observation_date(raw_rows_by_dataset["TaiwanStockMonthRevenue"])
 
+    quarterly_income_8q = build_quarterly_income(income_by_date)
+    quarterly_balance_key_items = build_quarterly_key_items(balance_by_date, BALANCE_ITEMS)
+    quarterly_cash_flow = build_quarterly_cash_flow(cash_by_date)
+
     return {
         "stock_id": stock_id,
         "metadata": build_metadata(
@@ -521,13 +625,14 @@ def fetch_all(stock_id, start_date, end_date, token=None):
             "monthly_revenue_6m": build_monthly_revenue(
                 raw_rows_by_dataset["TaiwanStockMonthRevenue"]
             ),
-            "quarterly_income_8q": build_quarterly_income(income_by_date),
-            "quarterly_balance_key_items": build_quarterly_key_items(
-                balance_by_date, BALANCE_ITEMS
-            ),
-            "quarterly_cash_flow": build_quarterly_cash_flow(cash_by_date),
+            "quarterly_income_8q": quarterly_income_8q,
+            "quarterly_balance_key_items": quarterly_balance_key_items,
+            "quarterly_cash_flow": quarterly_cash_flow,
             "valuation_band": build_valuation_band(
                 raw_rows_by_dataset["TaiwanStockPER"]
+            ),
+            "financial_quality_metrics": build_financial_quality_metrics(
+                quarterly_income_8q, quarterly_balance_key_items, quarterly_cash_flow
             ),
         },
     }

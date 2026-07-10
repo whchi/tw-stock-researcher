@@ -44,6 +44,13 @@
 | Year | Current Ratio | Debt Ratio | Interest-Bearing Debt | Net Cash / Debt | Trend Assessment |
 | --- | --- | --- | --- | --- | --- |
 
+## Derived Financial Quality Metrics
+
+Read directly from `fundamentals-data.json` → `derived.financial_quality_metrics`; do not recompute DSO/DIO/DPO/cash-conversion-cycle/owner-earnings/cash-conversion/cash-flow-accrual formulas here. Each metric carries its own `state` (`ready` / `unavailable` / `not_meaningful`) — show the caveat when it is not `ready` instead of a blank or fabricated value.
+
+| Quarter | DSO | DIO | DPO | Cash Conversion Cycle | Owner Earnings | Cash Conversion | Cash-Flow Accrual | State / Caveat |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+
 ## Balance Sheet Demand Validation
 
 | Pattern | Evidence Combination | Current Read | Trend Assessment | Source / Missing Items |

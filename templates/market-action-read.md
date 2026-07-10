@@ -25,6 +25,14 @@
 | 3D |  |  |  |  |  |  |
 | 5D |  |  |  |  |  |  |
 
+## Derived Market Confirmation Metrics
+
+Read directly from `market-data.json` → `derived.market_confirmation_metrics`; do not recompute days-to-cover from raw price/margin rows here. Each metric carries its own `state` (`ready` / `unavailable` / `not_meaningful`) — show the caveat when it is not `ready` instead of a blank or fabricated value.
+
+| Metric | Current Read | State / Caveat |
+| --- | --- | --- |
+| Days to cover (short balance / median 20D volume) |  |  |
+
 ## Holder Distribution Snapshot
 
 | Source Date | Total Holders | Retail Holder % | Large Holder % | Holder Data State | Read |
