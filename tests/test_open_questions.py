@@ -263,5 +263,92 @@ class FixtureValidationTests(unittest.TestCase):
         self.assertTrue(any("session-wrap" in issue for issue in issues))
 
 
+class DeterministicResolverTests(unittest.TestCase):
+    def test_three_statement_coverage_ready_when_nothing_missing(self):
+        from scripts.open_questions import resolve_three_statement_coverage
+
+        result = resolve_three_statement_coverage({"three_statement_coverage": {"required_missing": []}})
+        self.assertTrue(result["ready"])
+
+    def test_three_statement_coverage_not_ready_when_fields_missing(self):
+        from scripts.open_questions import resolve_three_statement_coverage
+
+        result = resolve_three_statement_coverage(
+            {"three_statement_coverage": {"required_missing": ["現金及約當現金"]}}
+        )
+        self.assertFalse(result["ready"])
+        self.assertIn("現金及約當現金", result["reason"])
+
+    def test_monthly_revenue_period_ready_with_enough_rows(self):
+        from scripts.open_questions import resolve_monthly_revenue_period
+
+        data = {"derived": {"monthly_revenue_6m": [{"period": "2026-05"}, {"period": "2026-06"}]}}
+        result = resolve_monthly_revenue_period(data, min_rows=1)
+        self.assertTrue(result["ready"])
+        self.assertIn("2026-06", result["reason"])
+
+    def test_monthly_revenue_period_not_ready_when_empty(self):
+        from scripts.open_questions import resolve_monthly_revenue_period
+
+        result = resolve_monthly_revenue_period({"derived": {"monthly_revenue_6m": []}}, min_rows=1)
+        self.assertFalse(result["ready"])
+
+    def test_valuation_band_ready_when_status_ready(self):
+        from scripts.open_questions import resolve_valuation_band_readiness
+
+        result = resolve_valuation_band_readiness({"derived": {"valuation_band": {"status": "ready"}}})
+        self.assertTrue(result["ready"])
+
+    def test_valuation_band_not_ready_when_no_data(self):
+        from scripts.open_questions import resolve_valuation_band_readiness
+
+        result = resolve_valuation_band_readiness({"derived": {"valuation_band": {"status": "no_data"}}})
+        self.assertFalse(result["ready"])
+
+    def test_market_price_5d_window_ready_with_five_rows(self):
+        from scripts.open_questions import resolve_market_price_5d_window
+
+        result = resolve_market_price_5d_window({"raw": {"price": [{}] * 5}})
+        self.assertTrue(result["ready"])
+
+    def test_market_price_5d_window_not_ready_with_four_rows(self):
+        from scripts.open_questions import resolve_market_price_5d_window
+
+        result = resolve_market_price_5d_window({"raw": {"price": [{}] * 4}})
+        self.assertFalse(result["ready"])
+
+    def test_market_history_6m_window_requires_120_rows(self):
+        from scripts.open_questions import resolve_market_history_6m_window
+
+        self.assertFalse(resolve_market_history_6m_window({"raw": {"price": [{}] * 119}})["ready"])
+        self.assertTrue(resolve_market_history_6m_window({"raw": {"price": [{}] * 120}})["ready"])
+
+    def test_tdcc_history_length_ready_with_one_snapshot(self):
+        from scripts.open_questions import resolve_tdcc_history_length
+
+        result = resolve_tdcc_history_length({"history": [{"date": "2026-07-04"}]})
+        self.assertTrue(result["ready"])
+
+    def test_tdcc_history_length_not_ready_when_empty(self):
+        from scripts.open_questions import resolve_tdcc_history_length
+
+        result = resolve_tdcc_history_length({"history": []})
+        self.assertFalse(result["ready"])
+
+    def test_macro_variable_readiness_ready_when_latest_populated(self):
+        from scripts.open_questions import resolve_macro_variable_readiness
+
+        data = {"sources": {"TWSE Open API": [{"indicator": "TAIEX", "latest": {"date": "2026-07-09"}}]}}
+        result = resolve_macro_variable_readiness(data, "TWSE Open API")
+        self.assertTrue(result["ready"])
+
+    def test_macro_variable_readiness_not_ready_when_empty(self):
+        from scripts.open_questions import resolve_macro_variable_readiness
+
+        data = {"sources": {"TWSE Open API": []}}
+        result = resolve_macro_variable_readiness(data, "TWSE Open API")
+        self.assertFalse(result["ready"])
+
+
 if __name__ == "__main__":
     unittest.main()

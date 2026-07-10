@@ -334,6 +334,90 @@ def resolve_question(
     return new_resolved_row
 
 
+# Deterministic resolver hooks: pure predicates over already-fetched JSON
+# evidence. Each returns {"ready": bool, "evidence_ref": str, "reason": str}
+# so a caller can decide whether to call resolve_question with that same
+# evidence_ref, rather than an agent inventing a resolution by prose alone.
+# Every resolver here closes only its own namespace (FIN-DATA, MKT-DATA, or
+# MAC) and only when the stated predicate is actually true.
+
+
+def resolve_three_statement_coverage(raw_data):
+    """FIN-DATA: closes when Goodinfo's annual three-statement baseline has no required fields missing."""
+    coverage = raw_data.get("three_statement_coverage") or {}
+    required_missing = coverage.get("required_missing") or []
+    ready = not required_missing
+    reason = "no required fields missing" if ready else f"missing: {required_missing}"
+    return {"ready": ready, "evidence_ref": "raw-data.json#/three_statement_coverage", "reason": reason}
+
+
+def resolve_monthly_revenue_period(fundamentals_data, min_rows=1):
+    """FIN-DATA: closes when the official monthly-revenue window has at least min_rows periods."""
+    monthly = ((fundamentals_data.get("derived") or {}).get("monthly_revenue_6m")) or []
+    ready = len(monthly) >= min_rows
+    latest_period = monthly[-1].get("period") if monthly else None
+    return {
+        "ready": ready,
+        "evidence_ref": "fundamentals-data.json#/derived/monthly_revenue_6m",
+        "reason": f"{len(monthly)} monthly revenue rows (need >= {min_rows}), latest period {latest_period!r}",
+    }
+
+
+def resolve_valuation_band_readiness(fundamentals_data):
+    """FIN-DATA: closes when derived.valuation_band.status == 'ready'."""
+    band = (fundamentals_data.get("derived") or {}).get("valuation_band") or {}
+    status_value = band.get("status")
+    ready = status_value == "ready"
+    return {
+        "ready": ready,
+        "evidence_ref": "fundamentals-data.json#/derived/valuation_band",
+        "reason": f"status={status_value!r}",
+    }
+
+
+def resolve_market_price_window(market_data, min_rows):
+    """MKT-DATA: closes when raw.price has at least min_rows rows for the requested window."""
+    rows = (market_data.get("raw") or {}).get("price") or []
+    ready = len(rows) >= min_rows
+    return {
+        "ready": ready,
+        "evidence_ref": "market-data.json#/raw/price",
+        "reason": f"{len(rows)} price rows (need >= {min_rows})",
+    }
+
+
+def resolve_market_price_5d_window(market_data):
+    """MKT-DATA: closes when there are enough price rows for a 5-day window read."""
+    return resolve_market_price_window(market_data, min_rows=5)
+
+
+def resolve_market_history_6m_window(market_data):
+    """MKT-DATA: closes when there are enough price rows (~120 trading days) for a 6-month read."""
+    return resolve_market_price_window(market_data, min_rows=120)
+
+
+def resolve_tdcc_history_length(tdcc_data, min_entries=1):
+    """MKT-DATA: closes when the accumulated weekly TDCC history has at least min_entries snapshots."""
+    history = tdcc_data.get("history") or []
+    ready = len(history) >= min_entries
+    return {
+        "ready": ready,
+        "evidence_ref": "tdcc-data.json#/history",
+        "reason": f"{len(history)} history snapshots (need >= {min_entries})",
+    }
+
+
+def resolve_macro_variable_readiness(macro_data, source_name):
+    """MAC: closes when the named macro source has at least one record with a populated latest read."""
+    records = (macro_data.get("sources") or {}).get(source_name) or []
+    ready = any(record.get("latest") for record in records)
+    return {
+        "ready": ready,
+        "evidence_ref": f"shared-macro-data.json#/sources/{source_name}",
+        "reason": f"{len(records)} records for {source_name!r}, ready={ready}",
+    }
+
+
 def parse_args(argv):
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
