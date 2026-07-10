@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "terminal_stage": "session-wrap",
+  "stage_statuses": ["pending", "running", "pass", "degraded", "blocked", "stale", "failed"],
+  "consumable_statuses": ["pass", "degraded"],
+  "stages": [
+    {"id": "stock-case-init", "depends_on": [], "required_inputs": [], "optional_inputs": [], "outputs": ["stock-meta.json", "research-questions.md", "open-questions.md"], "question_namespace": "CASE"},
+    {"id": "yahoo-profile-financials", "depends_on": ["stock-case-init"], "required_inputs": ["stock-meta.json"], "optional_inputs": [], "outputs": ["yahoo-data.json"], "question_namespace": "PROFILE"},
+    {"id": "financial-data-fetch", "depends_on": ["stock-case-init"], "required_inputs": ["stock-meta.json"], "optional_inputs": ["yahoo-data.json"], "outputs": ["official-issuer-data.json", "raw-data.json", "fundamentals-data.json"], "question_namespace": "FIN-DATA"},
+    {"id": "market-data-fetch", "depends_on": ["stock-case-init"], "required_inputs": ["stock-meta.json"], "optional_inputs": [], "outputs": ["tdcc-data.json", "market-data.json"], "question_namespace": "MKT-DATA"},
+    {"id": "company-deep-dive", "depends_on": ["yahoo-profile-financials"], "required_inputs": ["stock-meta.json", "yahoo-data.json"], "optional_inputs": ["official-issuer-data.json"], "outputs": ["company-analysis.md"], "question_namespace": "COMPANY"},
+    {"id": "financial-analysis", "depends_on": ["company-deep-dive", "financial-data-fetch"], "required_inputs": ["company-analysis.md", "fundamentals-data.json"], "optional_inputs": ["official-issuer-data.json", "raw-data.json", "yahoo-data.json"], "outputs": ["financial-analysis.md"], "question_namespace": "FIN"},
+    {"id": "industry-transmission-analysis", "depends_on": ["company-deep-dive"], "required_inputs": ["company-analysis.md"], "optional_inputs": ["official-issuer-data.json"], "outputs": ["industry-transmission.md"], "question_namespace": "IND"},
+    {"id": "macro-impact-analysis", "depends_on": ["company-deep-dive"], "required_inputs": ["company-analysis.md"], "optional_inputs": ["market/shared-macro-data.json"], "outputs": ["macro-map.md"], "question_namespace": "MAC"},
+    {"id": "market-action-read", "depends_on": ["market-data-fetch"], "required_inputs": ["market-data.json"], "optional_inputs": ["tdcc-data.json"], "outputs": ["market-action-read.md"], "question_namespace": "MKT"},
+    {"id": "quality-and-valuation-check", "depends_on": ["financial-analysis", "market-data-fetch"], "required_inputs": ["financial-analysis.md", "fundamentals-data.json", "market-data.json"], "optional_inputs": ["tdcc-data.json", "official-issuer-data.json"], "outputs": ["quality-and-valuation-check.md"], "question_namespace": "QUAL"},
+    {"id": "investment-thesis", "depends_on": ["company-deep-dive", "financial-analysis", "industry-transmission-analysis", "macro-impact-analysis", "quality-and-valuation-check", "market-action-read"], "required_inputs": ["company-analysis.md", "financial-analysis.md", "industry-transmission.md", "macro-map.md", "quality-and-valuation-check.md", "market-action-read.md"], "optional_inputs": [], "outputs": ["investment-memo.md"], "question_namespace": "THESIS"},
+    {"id": "session-wrap", "depends_on": ["investment-thesis"], "required_inputs": ["investment-memo.md", "open-questions.md"], "optional_inputs": ["signal-log.md", "thesis-updates.md"], "outputs": ["active-decisions.md"], "question_namespace": "WRAP"},
+    {"id": "research-html-output", "depends_on": ["session-wrap"], "required_inputs": ["investment-memo.md", "active-decisions.md", "open-questions.md", "quality-and-valuation-check.md", "market-action-read.md"], "optional_inputs": ["tdcc-data.json"], "outputs": ["research-summary-data.json", "research-summary.html"], "question_namespace": "HTML"}
+  ]
+}
