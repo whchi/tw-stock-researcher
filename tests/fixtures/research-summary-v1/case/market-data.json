@@ -1,0 +1,38 @@
+{
+  "stock_id": "9999",
+  "metadata": {
+    "schema_version": 2,
+    "status": "pass",
+    "fetched_at": "2026-07-09T00:00:00Z",
+    "source_as_of": "2026-07-09",
+    "expected_source_as_of": "2026-07-09",
+    "requested_range": {"start": "2026-01-01", "end": "2026-07-09"},
+    "observed_range": {"start": "2026-01-01", "end": "2026-07-09"},
+    "required_datasets": ["TaiwanStockPrice", "TaiwanStockInstitutionalInvestorsBuySell"],
+    "optional_datasets": ["TaiwanStockMarginPurchaseShortSale", "TaiwanStockShareholding", "TaiwanStockDayTrading", "TaiwanStockHoldingSharesPer"],
+    "row_counts": {"TaiwanStockPrice": 120, "TaiwanStockInstitutionalInvestorsBuySell": 120},
+    "source_urls": {
+      "TaiwanStockPrice": "https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice",
+      "TaiwanStockInstitutionalInvestorsBuySell": "https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInstitutionalInvestorsBuySell"
+    },
+    "source_tiers": {
+      "TaiwanStockPrice": "secondary_aggregator",
+      "TaiwanStockInstitutionalInvestorsBuySell": "secondary_aggregator"
+    },
+    "license_ids": {},
+    "warnings": [],
+    "errors": [],
+    "parser_version": "2"
+  },
+  "raw": {},
+  "derived": {
+    "egg_theory_read": {
+      "method": "egg_theory_v1",
+      "windows": {
+        "1m": {"window": "1m", "status": "insufficient_data", "stage": null, "signal": "wait_for_confirmation", "confidence": "low", "warnings": ["Need at least 20 trading rows"]},
+        "3m": {"window": "3m", "status": "ready", "stage": "A1", "signal": "wait_for_confirmation", "confidence": "medium", "warnings": ["turnover_data_missing"]},
+        "6m": {"window": "6m", "status": "ready", "stage": "B3", "signal": "supply_demand_favorable", "confidence": "high", "warnings": []}
+      }
+    }
+  }
+}

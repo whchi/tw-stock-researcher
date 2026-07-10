@@ -50,6 +50,14 @@ Create one folder per stock under `companies/`, for example `companies/6706-hui-
 - `gate_stage` rejects a stage when any upstream dependency's last recorded status is not in `consumable_statuses` (`pass`/`degraded`), or when a required input file is missing or itself carries a non-consumable embedded `metadata.status`. Missing or degraded **optional** inputs never block readiness.
 - A case is "complete" only when the terminal stage (`session-wrap`) has a stage record with a consumable status. A file existing on disk is not evidence that its producing stage passed — only a recorded stage status is.
 
+## Research Summary Rendering
+
+`templates/research-summary-data.schema.json` documents the typed payload shape; `scripts/research_summary_contract.py` enforces it in code (`validate_summary`, `canonical_json`) without adding a schema-validator runtime dependency.
+
+- `scripts/build_research_summary.py` builds the payload from a fixed source map only (`stock-meta.json`, `active-decisions.md`, `investment-memo.md`, `market-data.json` + `tdcc-data.json`, validated `open-questions.md`, `DISCLAIMER.md`) and requires the `research-html-output` workflow gate to be ready first. It never reads an existing `research-summary-data.json` or `research-summary.html` as an input.
+- `scripts/render_research_html.py` renders `research-summary.html` from that payload only, escaping every scalar with `html.escape(..., quote=True)` and accepting only `http`/`https` source URLs. Both scripts support `--check` to validate without writing, and both write atomically.
+- `scripts/validate_research_summary.py --all` is a read-only audit of every existing case's `research-summary-data.json` (legacy `v0`, version mismatch, invalid shape, or a source-manifest hash that no longer matches the file on disk). It never writes; rebuilding a specific case requires the user to explicitly approve that case.
+
 ## Validation Workflow
 
 1. Run `sh tests/structure/test_templates.sh` after template or workflow-doc changes.

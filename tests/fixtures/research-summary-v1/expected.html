@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="research-summary-schema-version" content="{{SCHEMA_VERSION}}">
-  <meta name="research-summary-template-version" content="{{TEMPLATE_VERSION}}">
-  <title>{{TITLE}}</title>
+  <meta name="research-summary-schema-version" content="1">
+  <meta name="research-summary-template-version" content="1">
+  <title>9999 Fixture Listed Co</title>
   <style>
     :root {
       color-scheme: light;
@@ -288,9 +288,11 @@
 <body>
   <div class="shell">
     <aside>
-      <div class="ticker">{{SIDEBAR_TICKER}}</div>
-      <h1>{{SIDEBAR_TITLE}}</h1>
-      <p>{{SIDEBAR_DESCRIPTION}}</p>
+      <div class="ticker">9999</div>
+      <h1>Fixture Listed Co</h1>
+      <p>Gross margin improved in the latest quarter, but monthly revenue has not yet
+shown a matching acceleration. The thesis remains a watch item pending the
+next two monthly releases.</p>
       <nav aria-label="頁面導覽">
         <a href="#snapshot">研究快照</a>
         <a href="#gap">預期落差</a>
@@ -305,17 +307,52 @@
       </nav>
     </aside>
     <main>
-      <div class="notice">{{DISCLAIMER}}</div>
+      <div class="notice"># Disclaimer
+
+## 1. Educational and Research Purposes Only
+
+The content contained in this project is provided solely for educational, research, and reference purposes. Any stock market indices, financial instruments, data analysis, or research reports covered herein **do not constitute any form of investment advice, purchase recommendation, price target, or solicitation to buy or sell**.
+
+## 2. Data Sources
+
+All financial data and market information are sourced from publicly available websites and APIs, including but not limited to:
+- Goodinfo.tw
+- Yahoo Finance Taiwan (tw.stock.yahoo.com)
+- FinMind API
+- MOPS Market Observation Post System (mops.twse.com.tw)
+- Official company websites and public filings
+
+This project does not own, control, or guarantee the timeliness, completeness, or accuracy of data from the above sources.
+
+## 3. Risk Disclosure
+
+Investing involves high risk and you may lose your principal. Past performance does not guarantee future results. Users should exercise due diligence and bear their own risks before making any investment decisions.
+
+## 4. Limitation of Liability
+
+The authors, software developers, or platform **shall not be liable for any direct, indirect, or consequential losses arising from any trading activities conducted by users based on the content of this project**. Users bear ultimate responsibility for their own financial decisions.
+
+## 5. Seek Independent Professional Advice
+
+Users are advised to consult a licensed financial advisor before making any financial investment, to evaluate whether such investment is suitable for their personal financial situation and investment objectives.
+
+---
+
+**By using this project, you acknowledge that you have read, understood, and agree to the above disclaimer.**
+</div>
       <header class="hero" id="snapshot">
         <div class="hero-top">
           <div>
-            <h2>{{HERO_HEADLINE}}</h2>
-            <p>{{HERO_SUMMARY}}</p>
+            <h2>Margin recovery still unconfirmed by monthly revenue</h2>
+            <p>Gross margin improved in the latest quarter, but monthly revenue has not yet
+shown a matching acceleration. The thesis remains a watch item pending the
+next two monthly releases.</p>
           </div>
-          <div class="stance">{{STANCE}}</div>
+          <div class="stance">Base Case Constructive</div>
         </div>
         <div class="kpis">
-          {{KPI_CARDS}}
+          <div class="kpi"><div class="label">Gross margin</div><div class="value">34.2%</div><div class="read">Confirms mix shift toward higher-margin product</div></div>
+<div class="kpi"><div class="label">Monthly revenue YoY</div><div class="value">8.1%</div><div class="read">Validates demand recovery narrative</div></div>
         </div>
       </header>
       <div class="grid">
@@ -331,13 +368,13 @@
               </tr>
             </thead>
             <tbody>
-              {{EXPECTATION_GAP_ROWS}}
+              <tr><td>Margin expansion is durable</td><td>Partially confirmed</td><td>Revenue has not yet validated</td><td>fundamentals-data.json</td></tr>
             </tbody>
           </table>
         </section>
         <section id="pricing-stage" class="wide">
           <h3>Pricing Stage</h3>
-          <p class="note"><strong>{{PRICING_STAGE_LABEL}}</strong> — {{PRICING_STAGE_READ}}</p>
+          <p class="note"><strong>Stage 2 (fundamentals catch up)</strong> — Margin expansion confirmed, revenue lagging</p>
           <table>
             <thead>
               <tr>
@@ -348,7 +385,9 @@
               </tr>
             </thead>
             <tbody>
-              {{PRICING_STAGE_ROWS}}
+              <tr><td>Stage 1 (narrative expansion)</td><td>past</td><td>Prior re-rating already occurred</td><td>n/a</td></tr>
+<tr><td>Stage 2 (fundamentals catch up)</td><td>current</td><td>Margin expansion confirmed, revenue lagging</td><td>Two consecutive months of accelerating revenue</td></tr>
+<tr><td>Stage 3 (growth slows / valuation contraction)</td><td>not yet</td><td></td><td>Growth deceleration below industry average</td></tr>
             </tbody>
           </table>
         </section>
@@ -365,7 +404,9 @@
               </tr>
             </thead>
             <tbody>
-              {{EGG_THEORY_ROWS}}
+              <tr><td>1m</td><td></td><td>wait_for_confirmation</td><td>low</td><td>Need at least 20 trading rows; TDCC holder history is snapshot-only (no multi-week trend yet)</td></tr>
+<tr><td>3m</td><td>A1</td><td>wait_for_confirmation</td><td>medium</td><td>turnover_data_missing; TDCC holder history is snapshot-only (no multi-week trend yet)</td></tr>
+<tr><td>6m</td><td>B3</td><td>supply_demand_favorable</td><td>high</td><td>TDCC holder history is snapshot-only (no multi-week trend yet)</td></tr>
             </tbody>
           </table>
         </section>
@@ -382,7 +423,7 @@
               </tr>
             </thead>
             <tbody>
-              {{EVIDENCE_TIMELINE_ROWS}}
+              <tr><td>Monthly revenue</td><td>Monthly, ~10th</td><td>YoY growth re-accelerates</td><td>YoY growth stalls again</td><td>fundamentals-data.json</td></tr>
             </tbody>
           </table>
         </section>
@@ -398,20 +439,22 @@
               </tr>
             </thead>
             <tbody>
-              {{KILL_CRITERIA_ROWS}}
+              <tr><td>Gross margin reverses for 2 consecutive quarters</td><td>Quarterly IS</td><td>fundamentals-data.json</td><td>Downgrade to Cautious</td></tr>
             </tbody>
           </table>
         </section>
         <section id="scenarios" class="wide">
           <h3>Scenario Summary</h3>
           <div class="scenario">
-            {{SCENARIO_CARDS}}
+            <div class="case"><strong>Bull — 30.0%</strong><p>Revenue re-accelerates to 15% YoY</p><p>P/E expands to 1y high</p><p>120-140</p><p>Two months of 12%+ YoY revenue</p><p>Revenue growth stalls below 5%</p></div>
+<div class="case"><strong>Base — 50.0%</strong><p>Revenue grows in line with 3y median</p><p>P/E holds near median</p><p>95-115</p><p>Revenue growth stays 5-10%</p><p>Margin reverses for 2 quarters</p></div>
+<div class="case"><strong>Bear — 20.0%</strong><p>Revenue growth stalls</p><p>P/E compresses to 1y low</p><p>70-90</p><p>Revenue growth below 3%</p><p>New competitor share loss confirmed</p></div>
           </div>
         </section>
         <section>
           <h3>What To Watch</h3>
           <ul class="bullets">
-            {{WATCH_ITEMS}}
+            <li>Monthly revenue release — Revenue validation for current case probabilities</li>
           </ul>
         </section>
         <section id="questions" class="wide">
@@ -426,22 +469,24 @@
               </tr>
             </thead>
             <tbody>
-              {{OPEN_QUESTIONS_ROWS}}
+              <tr><td>FIN-DATA-VALUATION</td><td>high</td><td>Is the valuation band complete?</td><td>open</td></tr>
             </tbody>
           </table>
         </section>
         <section id="freshness">
           <h3>Data Freshness</h3>
-          <p class="note">As of {{AS_OF}} ({{TIMEZONE}})</p>
+          <p class="note">As of 2026-07-09 (Asia/Taipei)</p>
           <table>
             <tbody>
-              {{SOURCE_QUALITY_ROWS}}
+              <tr><td>TDCCStockHoldingDistribution</td><td>official</td><td>shareable</td></tr>
+<tr><td>TaiwanStockInstitutionalInvestorsBuySell</td><td>secondary_aggregator</td><td>restricted</td></tr>
+<tr><td>TaiwanStockPrice</td><td>secondary_aggregator</td><td>restricted</td></tr>
             </tbody>
           </table>
         </section>
         <section id="provenance" class="wide">
           <h3>Build Provenance</h3>
-          <p class="note">schema v{{SCHEMA_VERSION}} · template v{{TEMPLATE_VERSION}} · case {{CASE_ID}}</p>
+          <p class="note">schema v1 · template v1 · case case</p>
           <table>
             <thead>
               <tr>
@@ -450,7 +495,12 @@
               </tr>
             </thead>
             <tbody>
-              {{SOURCE_MANIFEST_ROWS}}
+              <tr><td>active-decisions.md</td><td>45dc5165f9834cff6ec502dfaeba90d598abd7974585e45c8ca7314ac3a8f274</td></tr>
+<tr><td>investment-memo.md</td><td>344268727b95e238b0c882653328f75a0a09ebde306899161dbdd4a2c62dfd90</td></tr>
+<tr><td>market-data.json</td><td>07f608ecf479287e7ccebf59c395efd6a7656a15c1efe69f5ce48f908d644f85</td></tr>
+<tr><td>open-questions.md</td><td>88ca47b29f5cc39334ae15aa30404600fe37368dce709ce0b03de6a1bf1ffb14</td></tr>
+<tr><td>stock-meta.json</td><td>cb35fd43c11478ea9a2366e149d8027d5e6dc1aa126e144212f45c5a1146dd7d</td></tr>
+<tr><td>tdcc-data.json</td><td>636f288fa286c3629270c595cba1b5077f05096084d2ecf515d54b0982bad442</td></tr>
             </tbody>
           </table>
         </section>
@@ -458,7 +508,9 @@
       <footer>
         <strong>Sources:</strong>
         <div class="source-list">
-          {{SOURCE_TAGS}}
+          <a class="tag" href="https://smart.tdcc.com.tw/opendata/getOD.ashx?id=1-5" target="_blank" rel="noopener">TDCCStockHoldingDistribution</a>
+<a class="tag" href="https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInstitutionalInvestorsBuySell" target="_blank" rel="noopener">TaiwanStockInstitutionalInvestorsBuySell</a>
+<a class="tag" href="https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice" target="_blank" rel="noopener">TaiwanStockPrice</a>
         </div>
       </footer>
     </main>

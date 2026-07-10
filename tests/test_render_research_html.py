@@ -1,99 +1,168 @@
 import json
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.render_research_html import render_html
+from scripts.render_research_html import RenderError, main, render_summary
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_TEMPLATE = REPO_ROOT / "templates" / "research-html-summary.html"
+FIXTURE_CASE = REPO_ROOT / "tests" / "fixtures" / "research-summary-v1" / "case"
+EXPECTED_DATA = REPO_ROOT / "tests" / "fixtures" / "research-summary-v1" / "expected-data.json"
+EXPECTED_HTML = REPO_ROOT / "tests" / "fixtures" / "research-summary-v1" / "expected.html"
 
 
-class RenderResearchHtmlTests(unittest.TestCase):
-    def test_render_html_replaces_placeholders_with_payload_values(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            template = root / "template.html"
-            output = root / "output.html"
-            template.write_text(
-                "<html><title>{{TITLE}}</title><body>{{BODY_HTML}}</body></html>",
-                encoding="utf-8",
-            )
-            payload = {"TITLE": "6741 91APP", "BODY_HTML": "<strong>quality view</strong>"}
+def load_expected_payload():
+    return json.loads(EXPECTED_DATA.read_text(encoding="utf-8"))
 
-            render_html(template, output, payload)
 
-            html = output.read_text(encoding="utf-8")
-            self.assertIn("<title>6741 91APP</title>", html)
-            self.assertIn("<strong>quality view</strong>", html)
-            self.assertNotIn("{{TITLE}}", html)
-            self.assertNotIn("{{BODY_HTML}}", html)
+class RenderSummaryGoldenTests(unittest.TestCase):
+    def test_matches_the_golden_expected_html(self):
+        payload = load_expected_payload()
+        template = DEFAULT_TEMPLATE.read_text(encoding="utf-8")
 
-    def test_render_html_fails_when_payload_misses_template_placeholder(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            template = root / "template.html"
-            output = root / "output.html"
-            template.write_text("{{TITLE}} {{MISSING}}", encoding="utf-8")
+        html = render_summary(payload, template)
 
-            with self.assertRaisesRegex(RuntimeError, "Missing template values: MISSING"):
-                render_html(template, output, {"TITLE": "6706 惠特"})
+        self.assertEqual(html, EXPECTED_HTML.read_text(encoding="utf-8"))
 
-    def test_render_html_cli_accepts_json_payload_shape(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            payload_path = root / "payload.json"
-            payload_path.write_text(
-                json.dumps({"TITLE": "6706 惠特", "BODY_HTML": "preview"}),
-                encoding="utf-8",
-            )
-            template = root / "template.html"
-            output = root / "output.html"
-            template.write_text("{{TITLE}}: {{BODY_HTML}}", encoding="utf-8")
+    def test_two_renders_of_the_same_payload_are_byte_identical(self):
+        payload = load_expected_payload()
+        template = DEFAULT_TEMPLATE.read_text(encoding="utf-8")
 
-            from scripts.render_research_html import main
+        first = render_summary(payload, template)
+        second = render_summary(payload, template)
 
-            exit_code = main(
-                [
-                    "--template",
-                    str(template),
-                    "--data",
-                    str(payload_path),
-                    "--output",
-                    str(output),
-                ]
-            )
+        self.assertEqual(first, second)
+
+    def test_no_placeholder_tokens_remain(self):
+        payload = load_expected_payload()
+        template = DEFAULT_TEMPLATE.read_text(encoding="utf-8")
+
+        html = render_summary(payload, template)
+
+        self.assertNotIn("{{", html)
+        self.assertNotIn("}}", html)
+
+
+class RenderSummarySecurityTests(unittest.TestCase):
+    def test_escapes_script_tags_in_headline(self):
+        payload = load_expected_payload()
+        payload["current_view"]["headline"] = "<script>alert(1)</script>"
+
+        html = render_summary(payload, DEFAULT_TEMPLATE.read_text(encoding="utf-8"))
+
+        self.assertNotIn("<script>alert(1)</script>", html)
+        self.assertIn("&lt;script&gt;", html)
+
+    def test_escapes_closing_title_tag(self):
+        payload = load_expected_payload()
+        payload["identity"]["company_name"] = "</title><script>x</script>"
+
+        html = render_summary(payload, DEFAULT_TEMPLATE.read_text(encoding="utf-8"))
+
+        self.assertNotIn("</title><script>", html)
+
+    def test_escapes_ampersand_and_quotes(self):
+        payload = load_expected_payload()
+        payload["current_view"]["stance"] = 'A & B "quoted"'
+
+        html = render_summary(payload, DEFAULT_TEMPLATE.read_text(encoding="utf-8"))
+
+        self.assertIn("&amp;", html)
+        self.assertIn("&quot;", html)
+
+    def test_preserves_literal_double_brace_text_in_payload_values(self):
+        payload = load_expected_payload()
+        payload["current_view"]["summary"] = "Contains a literal {{TOKEN}} in the text"
+
+        html = render_summary(payload, DEFAULT_TEMPLATE.read_text(encoding="utf-8"))
+
+        self.assertIn("{{TOKEN}}", html)
+
+    def test_rejects_non_http_source_url(self):
+        payload = load_expected_payload()
+        payload["sources"] = payload["sources"] + [
+            {"name": "evil", "tier": "unknown", "url": "javascript:alert(1)", "restricted": False}
+        ]
+
+        with self.assertRaises(RenderError):
+            render_summary(payload, DEFAULT_TEMPLATE.read_text(encoding="utf-8"))
+
+
+class RenderSummaryValidationTests(unittest.TestCase):
+    def test_rejects_invalid_payload_before_rendering(self):
+        payload = load_expected_payload()
+        payload["unexpected_field"] = "x"
+
+        with self.assertRaises(RenderError):
+            render_summary(payload, DEFAULT_TEMPLATE.read_text(encoding="utf-8"))
+
+    def test_rejects_template_placeholder_with_no_payload_mapping(self):
+        payload = load_expected_payload()
+        template = "{{TITLE}} {{SOME_UNKNOWN_PLACEHOLDER}}"
+
+        with self.assertRaises(RenderError):
+            render_summary(payload, template)
+
+
+class MainCliTests(unittest.TestCase):
+    def _prepare_case(self, tmp):
+        case_dir = Path(tmp) / "case"
+        shutil.copytree(FIXTURE_CASE, case_dir)
+        (case_dir / "research-summary-data.json").write_text(
+            json.dumps(load_expected_payload()), encoding="utf-8"
+        )
+        return case_dir
+
+    def test_check_mode_does_not_write_output(self):
+        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:
+            case_dir = self._prepare_case(tmp)
+            output_path = case_dir / "research-summary.html"
+
+            exit_code = main(["--case", str(case_dir), "--check"])
 
             self.assertEqual(exit_code, 0)
-            self.assertEqual(output.read_text(encoding="utf-8"), "6706 惠特: preview")
+            self.assertFalse(output_path.exists())
 
-    def test_render_html_cli_writes_output_inside_company_folder(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            case_dir = root / "companies" / "6741-91app"
-            case_dir.mkdir(parents=True)
-            payload_path = case_dir / "research-summary-data.json"
-            payload_path.write_text(
-                json.dumps({"TITLE": "6741 91APP", "BODY_HTML": "case preview"}),
-                encoding="utf-8",
-            )
-            template = root / "template.html"
-            output = case_dir / "research-summary.html"
-            template.write_text("{{TITLE}}: {{BODY_HTML}}", encoding="utf-8")
+    def test_writes_html_into_the_case_folder(self):
+        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:
+            case_dir = self._prepare_case(tmp)
+            output_path = case_dir / "research-summary.html"
 
-            from scripts.render_research_html import main
-
-            exit_code = main(
-                [
-                    "--template",
-                    str(template),
-                    "--data",
-                    str(payload_path),
-                    "--output",
-                    str(output),
-                ]
-            )
+            exit_code = main(["--case", str(case_dir)])
 
             self.assertEqual(exit_code, 0)
-            self.assertTrue(output.exists())
-            self.assertEqual(output.read_text(encoding="utf-8"), "6741 91APP: case preview")
+            self.assertTrue(output_path.exists())
+
+    def test_rejects_case_dir_escaping_the_repository(self):
+        exit_code = main(["--case", "/etc"])
+        self.assertEqual(exit_code, 1)
+
+    def test_fails_closed_when_payload_file_missing(self):
+        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:
+            case_dir = Path(tmp) / "case"
+            shutil.copytree(FIXTURE_CASE, case_dir)
+
+            exit_code = main(["--case", str(case_dir)])
+
+            self.assertEqual(exit_code, 1)
+
+    def test_atomic_write_failure_leaves_previous_output_unchanged(self):
+        with tempfile.TemporaryDirectory(dir=REPO_ROOT) as tmp:
+            case_dir = self._prepare_case(tmp)
+            main(["--case", str(case_dir)])
+            output_path = case_dir / "research-summary.html"
+            original = output_path.read_text(encoding="utf-8")
+
+            bad_payload = load_expected_payload()
+            bad_payload["unexpected_field"] = "x"
+            (case_dir / "research-summary-data.json").write_text(json.dumps(bad_payload), encoding="utf-8")
+
+            exit_code = main(["--case", str(case_dir)])
+
+            self.assertEqual(exit_code, 1)
+            self.assertEqual(output_path.read_text(encoding="utf-8"), original)
 
 
 if __name__ == "__main__":

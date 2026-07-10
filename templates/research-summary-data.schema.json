@@ -1,0 +1,207 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Research Summary Data",
+  "description": "Typed render payload for research-summary.html. This file documents the shape enforced in code by scripts/research_summary_contract.py:validate_summary; it is not executed by a schema validator library (no new runtime dependency is added for this plan).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "template_version", "case_id", "locale", "timezone", "as_of",
+    "distribution", "identity", "current_view", "kpis", "expectation_gaps",
+    "pricing_stage", "egg_theory", "evidence_timeline", "kill_criteria", "scenarios",
+    "watch_items", "open_questions", "sources", "source_manifest"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "template_version": { "const": 1 },
+    "case_id": { "type": "string", "minLength": 1 },
+    "locale": { "type": "string" },
+    "timezone": { "type": "string" },
+    "as_of": { "type": "string", "format": "date" },
+    "distribution": { "enum": ["local", "shareable"] },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ticker", "company_name", "market", "currency"],
+      "properties": {
+        "ticker": { "type": "string" },
+        "company_name": { "type": "string" },
+        "market": { "type": "string" },
+        "currency": { "type": "string" }
+      }
+    },
+    "current_view": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["headline", "summary", "stance", "disclaimer"],
+      "properties": {
+        "headline": { "type": "string" },
+        "summary": { "type": "string" },
+        "stance": { "type": "string" },
+        "disclaimer": { "type": "string" }
+      }
+    },
+    "kpis": { "type": "array", "items": { "$ref": "#/definitions/kpi" } },
+    "expectation_gaps": { "type": "array", "items": { "$ref": "#/definitions/expectation_gap" } },
+    "pricing_stage": { "$ref": "#/definitions/pricing_stage" },
+    "egg_theory": { "type": "array", "items": { "$ref": "#/definitions/egg_theory_row" } },
+    "evidence_timeline": { "type": "array", "items": { "$ref": "#/definitions/evidence_timeline_row" } },
+    "kill_criteria": { "type": "array", "items": { "$ref": "#/definitions/kill_criteria_row" } },
+    "scenarios": { "type": "array", "items": { "$ref": "#/definitions/scenario" } },
+    "watch_items": { "type": "array", "items": { "$ref": "#/definitions/watch_item" } },
+    "open_questions": { "type": "array", "items": { "$ref": "#/definitions/open_question" } },
+    "sources": { "type": "array", "items": { "$ref": "#/definitions/source" } },
+    "source_manifest": { "type": "array", "items": { "$ref": "#/definitions/manifest_entry" } }
+  },
+  "definitions": {
+    "typed_fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state"],
+      "properties": {
+        "value": {},
+        "unit": { "type": "string" },
+        "period": { "type": "string" },
+        "state": { "enum": ["ready", "unavailable"] },
+        "source_ref": { "type": "string" },
+        "reason": { "type": "string" }
+      },
+      "description": "Missing optional facts use {state: 'unavailable', reason: ...} instead of empty text."
+    },
+    "kpi": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "fact", "read"],
+      "properties": {
+        "label": { "type": "string" },
+        "fact": { "$ref": "#/definitions/typed_fact" },
+        "read": { "type": "string" }
+      }
+    },
+    "expectation_gap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["market_belief", "evidence_status", "gap", "verification_source"],
+      "properties": {
+        "market_belief": { "type": "string" },
+        "evidence_status": { "type": "string" },
+        "gap": { "type": "string" },
+        "verification_source": { "type": "string" }
+      }
+    },
+    "pricing_stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "read", "rows"],
+      "properties": {
+        "label": { "type": "string" },
+        "read": { "type": "string" },
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["stage", "status", "evidence", "transition_trigger"],
+            "properties": {
+              "stage": { "type": "string" },
+              "status": { "type": "string" },
+              "evidence": { "type": "string" },
+              "transition_trigger": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "egg_theory_row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["window", "stage", "signal", "confidence", "read"],
+      "properties": {
+        "window": { "type": "string" },
+        "stage": { "type": "string" },
+        "signal": { "type": "string" },
+        "confidence": { "type": "string" },
+        "read": { "type": "string" }
+      }
+    },
+    "evidence_timeline_row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence", "expected_timing", "what_confirms", "what_disconfirms", "source"],
+      "properties": {
+        "evidence": { "type": "string" },
+        "expected_timing": { "type": "string" },
+        "what_confirms": { "type": "string" },
+        "what_disconfirms": { "type": "string" },
+        "source": { "type": "string" }
+      }
+    },
+    "kill_criteria_row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kill_condition", "evidence_needed", "source", "tracking_impact"],
+      "properties": {
+        "kill_condition": { "type": "string" },
+        "evidence_needed": { "type": "string" },
+        "source": { "type": "string" },
+        "tracking_impact": { "type": "string" }
+      }
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name", "probability", "eps_driver_assumption", "multiple_assumption",
+        "scenario_derived_range", "validation_trigger", "break_condition"
+      ],
+      "properties": {
+        "name": { "enum": ["Bull", "Base", "Bear"] },
+        "probability": { "$ref": "#/definitions/typed_fact" },
+        "eps_driver_assumption": { "type": "string" },
+        "multiple_assumption": { "type": "string" },
+        "scenario_derived_range": { "type": "string" },
+        "validation_trigger": { "type": "string" },
+        "break_condition": { "type": "string" }
+      }
+    },
+    "watch_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["trigger", "why_it_matters"],
+      "properties": {
+        "trigger": { "type": "string" },
+        "why_it_matters": { "type": "string" }
+      }
+    },
+    "open_question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "priority", "question", "status"],
+      "properties": {
+        "id": { "type": "string" },
+        "priority": { "type": "string" },
+        "question": { "type": "string" },
+        "status": { "type": "string" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "tier", "url", "restricted"],
+      "properties": {
+        "name": { "type": "string" },
+        "tier": { "type": "string" },
+        "url": { "type": "string" },
+        "restricted": { "type": "boolean" }
+      }
+    },
+    "manifest_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "type": "string" },
+        "sha256": { "type": "string" }
+      }
+    }
+  }
+}

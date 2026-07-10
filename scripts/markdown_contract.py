@@ -51,7 +51,7 @@ def parse_pipe_table(block):
     return headers, rows
 
 
-def extract_table_under_heading(text, heading, level=2):
+def _section_lines(text, heading, level=2):
     marker = "#" * level + " " + heading
     lines = text.splitlines()
     start = None
@@ -69,8 +69,17 @@ def extract_table_under_heading(text, heading, level=2):
             end = i
             break
 
-    block = "\n".join(lines[start:end])
+    return lines[start:end]
+
+
+def extract_table_under_heading(text, heading, level=2):
+    block = "\n".join(_section_lines(text, heading, level=level))
     return parse_pipe_table(block)
+
+
+def extract_text_under_heading(text, heading, level=2):
+    lines = [line for line in _section_lines(text, heading, level=level) if line.strip()]
+    return "\n".join(lines).strip()
 
 
 def render_pipe_table(headers, rows):

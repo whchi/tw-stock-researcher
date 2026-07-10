@@ -143,16 +143,18 @@ companies/**/*.json
 When the user explicitly asks for a comprehensive research result as HTML, use the `research-html-output` skill from `.agents/skills/research-html-output/SKILL.md`.
 
 - Keep markdown / JSON case files as the source of truth.
-- Use `templates/research-html-summary.html` as the shared template.
-- Build a JSON payload from the case files in the same company folder and render via string replacement:
+- Use `templates/research-html-summary.html` as the shared template and `templates/research-summary-data.schema.json` as the payload shape (enforced by `scripts/research_summary_contract.py`).
+- Build the typed payload deterministically from fixed source files, then render it:
 ```bash
-.venv/bin/python scripts/render_research_html.py \
-  --data companies/<ticker-slug>/research-summary-data.json \
-  --output companies/<ticker-slug>/research-summary.html
+.venv/bin/python scripts/build_research_summary.py --case companies/<ticker-slug>
+.venv/bin/python scripts/render_research_html.py --case companies/<ticker-slug>
 ```
+- Both commands accept `--check` to validate without writing. `build_research_summary.py` fails closed (non-zero exit) when a required source is missing, a source table is malformed, the built payload fails validation, or `research-html-output`'s workflow gate is not ready (most commonly because `session-wrap` has not passed).
+- Never hand-write `research-summary-data.json` and never consult an existing `research-summary-data.json` or `research-summary.html` as a builder input — every field is re-derived from the canonical markdown/JSON case files each time.
 - The output HTML must live in the company folder as `companies/<ticker-slug>/research-summary.html`.
 - HTML is a derived preview, not a replacement for `investment-memo.md`, `active-decisions.md`, or other case artifacts.
 - Preserve disclaimer discipline and never introduce buy/sell, entry/exit, stop-loss, or target-price language.
+- Run `scripts/validate_research_summary.py --all` to audit existing cases for legacy (`v0`), version-mismatched, or stale-manifest `research-summary-data.json` files. It is read-only and never rewrites a case; rebuilding one requires the user to explicitly approve that case.
 
 ## Financial Analysis Conventions
 

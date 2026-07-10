@@ -4,15 +4,17 @@
 
 ## Headline
 
-_(one-line thesis headline for HTML/summary rendering, e.g. "Margin recovery still unconfirmed by monthly revenue")_
+Margin recovery still unconfirmed by monthly revenue
 
 ## Summary
 
-_(2-3 plain-language sentences: what the current evidence shows and what remains open)_
+Gross margin improved in the latest quarter, but monthly revenue has not yet
+shown a matching acceleration. The thesis remains a watch item pending the
+next two monthly releases.
 
 ## Stance
 
-_(a neutral research stance label, e.g. `Base Case Constructive`, `Watching`, `Cautious` — never a buy/sell recommendation)_
+Base Case Constructive
 
 ## Current Research Stance
 
@@ -27,6 +29,8 @@ _(a neutral research stance label, e.g. `Base Case Constructive`, `Watching`, `C
 
 | Number / Signal | Current Read | Why It Matters | Next Check |
 | --- | --- | --- | --- |
+| Gross margin | 34.2% | Confirms mix shift toward higher-margin product | Next quarterly report |
+| Monthly revenue YoY | 8.1% | Validates demand recovery narrative | Next monthly release |
 
 ## Leading Signals
 
@@ -47,29 +51,25 @@ _(a neutral research stance label, e.g. `Base Case Constructive`, `Watching`, `C
 
 | Evidence | Expected Timing | What Confirms | What Disconfirms | Source |
 | --- | --- | --- | --- | --- |
+| Monthly revenue | Monthly, ~10th | YoY growth re-accelerates | YoY growth stalls again | fundamentals-data.json |
 
 ## Thesis Kill Criteria
 
 | Kill Condition | Evidence Needed | Source | Tracking Impact |
 | --- | --- | --- | --- |
+| Gross margin reverses for 2 consecutive quarters | Quarterly IS | fundamentals-data.json | Downgrade to Cautious |
 
 ## Evidence Inputs Already Read
 
 | Source File | Last Read | Decision-Relevant Takeaway | Refresh Trigger |
 | --- | --- | --- | --- |
-| `financial-analysis.md` |  |  |  |
-| `quality-and-valuation-check.md` |  |  |  |
-| `investment-memo.md` |  |  |  |
-| `market-action-read.md` |  |  |  |
+| `financial-analysis.md` | 2026-07-08 | Margin mix shift confirmed | Next quarterly report |
 
 ## Next Review Triggers
 
 | Trigger | Source To Refresh | Why It Matters | Planned Response |
 | --- | --- | --- | --- |
-| Monthly revenue release | `financial-analysis.md`, `investment-memo.md` | Revenue validation for current case probabilities |  |
-| Quarterly earnings | `financial-analysis.md`, `quality-and-valuation-check.md`, `investment-memo.md` | Margin, cash conversion, and scenario update |  |
-| Material event / filing | `signal-log.md`, relevant analysis file | Thesis change or disconfirming evidence |  |
-| Abnormal price-volume move | `market-action-read.md` | Market confirmation, divergence, or overextension |  |
+| Monthly revenue release | `financial-analysis.md`, `investment-memo.md` | Revenue validation for current case probabilities | Re-run financial-analysis |
 
 ## Decision History
 

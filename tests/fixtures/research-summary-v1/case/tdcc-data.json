@@ -1,0 +1,26 @@
+{
+  "stock_id": "9999",
+  "metadata": {
+    "schema_version": 2,
+    "status": "pass",
+    "fetched_at": "2026-07-09T00:00:00Z",
+    "source_as_of": "2026-07-04",
+    "expected_source_as_of": null,
+    "requested_range": {"start": null, "end": null},
+    "observed_range": {"start": null, "end": null},
+    "required_datasets": ["TDCCStockHoldingDistribution"],
+    "optional_datasets": [],
+    "row_counts": {"TDCCStockHoldingDistribution": 5, "TDCCHoldingDistributionHistoryDates": 1},
+    "source_urls": {"TDCCStockHoldingDistribution": "https://smart.tdcc.com.tw/opendata/getOD.ashx?id=1-5"},
+    "source_tiers": {"TDCCStockHoldingDistribution": "official"},
+    "license_ids": {},
+    "warnings": [],
+    "errors": [],
+    "parser_version": "2"
+  },
+  "cache": {"hit": false, "path": "market/tdcc-holding-distribution.csv", "cache_fetched_at": "2026-07-04T00:00:00Z"},
+  "raw": {"holding_distribution": []},
+  "history": [
+    {"date": "2026-07-04", "rows": []}
+  ]
+}

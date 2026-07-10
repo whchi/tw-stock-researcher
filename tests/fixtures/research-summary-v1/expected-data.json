@@ -1,0 +1,224 @@
+{
+  "as_of": "2026-07-09",
+  "case_id": "case",
+  "current_view": {
+    "disclaimer": "# Disclaimer\n\n## 1. Educational and Research Purposes Only\n\nThe content contained in this project is provided solely for educational, research, and reference purposes. Any stock market indices, financial instruments, data analysis, or research reports covered herein **do not constitute any form of investment advice, purchase recommendation, price target, or solicitation to buy or sell**.\n\n## 2. Data Sources\n\nAll financial data and market information are sourced from publicly available websites and APIs, including but not limited to:\n- Goodinfo.tw\n- Yahoo Finance Taiwan (tw.stock.yahoo.com)\n- FinMind API\n- MOPS Market Observation Post System (mops.twse.com.tw)\n- Official company websites and public filings\n\nThis project does not own, control, or guarantee the timeliness, completeness, or accuracy of data from the above sources.\n\n## 3. Risk Disclosure\n\nInvesting involves high risk and you may lose your principal. Past performance does not guarantee future results. Users should exercise due diligence and bear their own risks before making any investment decisions.\n\n## 4. Limitation of Liability\n\nThe authors, software developers, or platform **shall not be liable for any direct, indirect, or consequential losses arising from any trading activities conducted by users based on the content of this project**. Users bear ultimate responsibility for their own financial decisions.\n\n## 5. Seek Independent Professional Advice\n\nUsers are advised to consult a licensed financial advisor before making any financial investment, to evaluate whether such investment is suitable for their personal financial situation and investment objectives.\n\n---\n\n**By using this project, you acknowledge that you have read, understood, and agree to the above disclaimer.**\n",
+    "headline": "Margin recovery still unconfirmed by monthly revenue",
+    "stance": "Base Case Constructive",
+    "summary": "Gross margin improved in the latest quarter, but monthly revenue has not yet\nshown a matching acceleration. The thesis remains a watch item pending the\nnext two monthly releases."
+  },
+  "distribution": "local",
+  "egg_theory": [
+    {
+      "confidence": "low",
+      "read": "Need at least 20 trading rows; TDCC holder history is snapshot-only (no multi-week trend yet)",
+      "signal": "wait_for_confirmation",
+      "stage": "",
+      "window": "1m"
+    },
+    {
+      "confidence": "medium",
+      "read": "turnover_data_missing; TDCC holder history is snapshot-only (no multi-week trend yet)",
+      "signal": "wait_for_confirmation",
+      "stage": "A1",
+      "window": "3m"
+    },
+    {
+      "confidence": "high",
+      "read": "TDCC holder history is snapshot-only (no multi-week trend yet)",
+      "signal": "supply_demand_favorable",
+      "stage": "B3",
+      "window": "6m"
+    }
+  ],
+  "evidence_timeline": [
+    {
+      "evidence": "Monthly revenue",
+      "expected_timing": "Monthly, ~10th",
+      "source": "fundamentals-data.json",
+      "what_confirms": "YoY growth re-accelerates",
+      "what_disconfirms": "YoY growth stalls again"
+    }
+  ],
+  "expectation_gaps": [
+    {
+      "evidence_status": "Partially confirmed",
+      "gap": "Revenue has not yet validated",
+      "market_belief": "Margin expansion is durable",
+      "verification_source": "fundamentals-data.json"
+    }
+  ],
+  "identity": {
+    "company_name": "Fixture Listed Co",
+    "currency": "TWD",
+    "market": "TWSE",
+    "ticker": "9999"
+  },
+  "kill_criteria": [
+    {
+      "evidence_needed": "Quarterly IS",
+      "kill_condition": "Gross margin reverses for 2 consecutive quarters",
+      "source": "fundamentals-data.json",
+      "tracking_impact": "Downgrade to Cautious"
+    }
+  ],
+  "kpis": [
+    {
+      "fact": {
+        "period": "",
+        "source_ref": "active-decisions.md",
+        "state": "ready",
+        "unit": "",
+        "value": "34.2%"
+      },
+      "label": "Gross margin",
+      "read": "Confirms mix shift toward higher-margin product"
+    },
+    {
+      "fact": {
+        "period": "",
+        "source_ref": "active-decisions.md",
+        "state": "ready",
+        "unit": "",
+        "value": "8.1%"
+      },
+      "label": "Monthly revenue YoY",
+      "read": "Validates demand recovery narrative"
+    }
+  ],
+  "locale": "zh-Hant-TW",
+  "open_questions": [
+    {
+      "id": "FIN-DATA-VALUATION",
+      "priority": "high",
+      "question": "Is the valuation band complete?",
+      "status": "open"
+    }
+  ],
+  "pricing_stage": {
+    "label": "Stage 2 (fundamentals catch up)",
+    "read": "Margin expansion confirmed, revenue lagging",
+    "rows": [
+      {
+        "evidence": "Prior re-rating already occurred",
+        "stage": "Stage 1 (narrative expansion)",
+        "status": "past",
+        "transition_trigger": "n/a"
+      },
+      {
+        "evidence": "Margin expansion confirmed, revenue lagging",
+        "stage": "Stage 2 (fundamentals catch up)",
+        "status": "current",
+        "transition_trigger": "Two consecutive months of accelerating revenue"
+      },
+      {
+        "evidence": "",
+        "stage": "Stage 3 (growth slows / valuation contraction)",
+        "status": "not yet",
+        "transition_trigger": "Growth deceleration below industry average"
+      }
+    ]
+  },
+  "scenarios": [
+    {
+      "break_condition": "Revenue growth stalls below 5%",
+      "eps_driver_assumption": "Revenue re-accelerates to 15% YoY",
+      "multiple_assumption": "P/E expands to 1y high",
+      "name": "Bull",
+      "probability": {
+        "period": "",
+        "source_ref": "investment-memo.md",
+        "state": "ready",
+        "unit": "%",
+        "value": 30.0
+      },
+      "scenario_derived_range": "120-140",
+      "validation_trigger": "Two months of 12%+ YoY revenue"
+    },
+    {
+      "break_condition": "Margin reverses for 2 quarters",
+      "eps_driver_assumption": "Revenue grows in line with 3y median",
+      "multiple_assumption": "P/E holds near median",
+      "name": "Base",
+      "probability": {
+        "period": "",
+        "source_ref": "investment-memo.md",
+        "state": "ready",
+        "unit": "%",
+        "value": 50.0
+      },
+      "scenario_derived_range": "95-115",
+      "validation_trigger": "Revenue growth stays 5-10%"
+    },
+    {
+      "break_condition": "New competitor share loss confirmed",
+      "eps_driver_assumption": "Revenue growth stalls",
+      "multiple_assumption": "P/E compresses to 1y low",
+      "name": "Bear",
+      "probability": {
+        "period": "",
+        "source_ref": "investment-memo.md",
+        "state": "ready",
+        "unit": "%",
+        "value": 20.0
+      },
+      "scenario_derived_range": "70-90",
+      "validation_trigger": "Revenue growth below 3%"
+    }
+  ],
+  "schema_version": 1,
+  "source_manifest": [
+    {
+      "path": "active-decisions.md",
+      "sha256": "45dc5165f9834cff6ec502dfaeba90d598abd7974585e45c8ca7314ac3a8f274"
+    },
+    {
+      "path": "investment-memo.md",
+      "sha256": "344268727b95e238b0c882653328f75a0a09ebde306899161dbdd4a2c62dfd90"
+    },
+    {
+      "path": "market-data.json",
+      "sha256": "07f608ecf479287e7ccebf59c395efd6a7656a15c1efe69f5ce48f908d644f85"
+    },
+    {
+      "path": "open-questions.md",
+      "sha256": "88ca47b29f5cc39334ae15aa30404600fe37368dce709ce0b03de6a1bf1ffb14"
+    },
+    {
+      "path": "stock-meta.json",
+      "sha256": "cb35fd43c11478ea9a2366e149d8027d5e6dc1aa126e144212f45c5a1146dd7d"
+    },
+    {
+      "path": "tdcc-data.json",
+      "sha256": "636f288fa286c3629270c595cba1b5077f05096084d2ecf515d54b0982bad442"
+    }
+  ],
+  "sources": [
+    {
+      "name": "TDCCStockHoldingDistribution",
+      "restricted": false,
+      "tier": "official",
+      "url": "https://smart.tdcc.com.tw/opendata/getOD.ashx?id=1-5"
+    },
+    {
+      "name": "TaiwanStockInstitutionalInvestorsBuySell",
+      "restricted": true,
+      "tier": "secondary_aggregator",
+      "url": "https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockInstitutionalInvestorsBuySell"
+    },
+    {
+      "name": "TaiwanStockPrice",
+      "restricted": true,
+      "tier": "secondary_aggregator",
+      "url": "https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice"
+    }
+  ],
+  "template_version": 1,
+  "timezone": "Asia/Taipei",
+  "watch_items": [
+    {
+      "trigger": "Monthly revenue release",
+      "why_it_matters": "Revenue validation for current case probabilities"
+    }
+  ]
+}

@@ -3,6 +3,7 @@ import unittest
 from scripts.markdown_contract import (
     MarkdownContractError,
     extract_table_under_heading,
+    extract_text_under_heading,
     normalize_text,
     parse_pipe_table,
     render_pipe_table,
@@ -112,6 +113,31 @@ class RenderPipeTableTests(unittest.TestCase):
         rendered = render_pipe_table(["ID", "Status"], [{"ID": "A-1"}])
         _, rows = parse_pipe_table(rendered)
         self.assertEqual(rows, [{"ID": "A-1", "Status": ""}])
+
+
+class ExtractTextUnderHeadingTests(unittest.TestCase):
+    def test_extracts_stripped_prose_between_headings(self):
+        text = (
+            "# Doc\n\n"
+            "## Headline\n\n"
+            "Company X margins accelerating.\n\n"
+            "## Summary\n\n"
+            "Two sentence summary here.\n"
+        )
+        self.assertEqual(extract_text_under_heading(text, "Headline"), "Company X margins accelerating.")
+        self.assertEqual(extract_text_under_heading(text, "Summary"), "Two sentence summary here.")
+
+    def test_extracts_to_end_of_document_when_no_following_heading(self):
+        text = "## Stance\n\nBase Case Constructive.\n"
+        self.assertEqual(extract_text_under_heading(text, "Stance"), "Base Case Constructive.")
+
+    def test_returns_empty_string_for_a_blank_section(self):
+        text = "## Headline\n\n## Summary\n\ntext\n"
+        self.assertEqual(extract_text_under_heading(text, "Headline"), "")
+
+    def test_raises_when_heading_not_found(self):
+        with self.assertRaises(MarkdownContractError):
+            extract_text_under_heading("# Doc\n\nno such section", "Headline")
 
 
 if __name__ == "__main__":

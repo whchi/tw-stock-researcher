@@ -10,12 +10,7 @@
 
 | Evidence Layer | Source File | Supports Which Case | Key Read | What Would Change The Read |
 | --- | --- | --- | --- | --- |
-| Business facts | `company-analysis.md` |  |  |  |
-| Financial trend | `financial-analysis.md` |  |  |  |
-| Industry chain | `industry-transmission.md` |  |  |  |
-| Macro backdrop | `macro-map.md` |  |  |  |
-| Business quality / valuation | `quality-and-valuation-check.md` |  |  |  |
-| Market action | `market-action-read.md` |  |  |  |
+| Business facts | `company-analysis.md` | Base | Stable moat | New competitor entry |
 
 ## Recent Evidence Conclusion
 
@@ -29,14 +24,15 @@
 
 | Stage | Status | Evidence | Transition Trigger |
 | --- | --- | --- | --- |
-| Stage 1 (narrative expansion) |  |  |  |
-| Stage 2 (fundamentals catch up) |  |  |  |
-| Stage 3 (growth slows / valuation contraction) |  |  |  |
+| Stage 1 (narrative expansion) | past | Prior re-rating already occurred | n/a |
+| Stage 2 (fundamentals catch up) | current | Margin expansion confirmed, revenue lagging | Two consecutive months of accelerating revenue |
+| Stage 3 (growth slows / valuation contraction) | not yet | | Growth deceleration below industry average |
 
 ## Expectation Gap Analysis
 
 | Market Belief | Evidence Status | Gap / Mispricing Risk | Verification Source |
 | --- | --- | --- | --- |
+| Margin expansion is durable | Partially confirmed | Revenue has not yet validated | fundamentals-data.json |
 
 - What the market appears to believe:
 - What verified evidence supports:
@@ -73,28 +69,28 @@
 
 | Input | Read From `quality-and-valuation-check.md` | Impact On Scenario Weights |
 | --- | --- | --- |
-| Business quality |  |  |
-| Implied market expectations |  |  |
-| Margin of safety |  |  |
-| Accounting / governance risk |  |  |
+| Business quality | High | Supports Base/Bull weighting |
+| Implied market expectations | Moderate | |
+| Margin of safety | Thin | |
+| Accounting / governance risk | Low | |
 
 ## Bull Case
 
 | Probability | EPS / Driver Assumption | Multiple Assumption | Scenario-Derived Price Range | Validation Trigger | Break Condition |
 | --- | --- | --- | --- | --- | --- |
-|  |  |  |  |  |  |
+| 30 | Revenue re-accelerates to 15% YoY | P/E expands to 1y high | 120-140 | Two months of 12%+ YoY revenue | Revenue growth stalls below 5% |
 
 ## Base Case
 
 | Probability | EPS / Driver Assumption | Multiple Assumption | Scenario-Derived Price Range | Validation Trigger | Break Condition |
 | --- | --- | --- | --- | --- | --- |
-|  |  |  |  |  |  |
+| 50 | Revenue grows in line with 3y median | P/E holds near median | 95-115 | Revenue growth stays 5-10% | Margin reverses for 2 quarters |
 
 ## Bear Case
 
 | Probability | EPS / Driver Assumption | Multiple Assumption | Scenario-Derived Price Range | Validation Trigger | Break Condition |
 | --- | --- | --- | --- | --- | --- |
-|  |  |  |  |  |  |
+| 20 | Revenue growth stalls | P/E compresses to 1y low | 70-90 | Revenue growth below 3% | New competitor share loss confirmed |
 
 ## Key Assumptions
 
