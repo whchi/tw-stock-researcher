@@ -108,21 +108,6 @@ class TdccHoldingDistributionTests(unittest.TestCase):
         deduped = fetch_tdcc.merge_history({"history": history}, snapshot)
         self.assertEqual(len(deduped), 2)
 
-    def test_merge_history_seeds_from_legacy_snapshot_payload(self):
-        previous = {
-            "raw": {
-                "holding_distribution": [
-                    {"date": "2026-05-29", "HoldingSharesLevel": "17", "people": 900}
-                ]
-            }
-        }
-        snapshot = [{"date": "2026-06-05", "HoldingSharesLevel": "17", "people": 1000}]
-
-        history = fetch_tdcc.merge_history(previous, snapshot)
-
-        self.assertEqual([entry["date"] for entry in history], ["2026-05-29", "2026-06-05"])
-        self.assertEqual(history[0]["rows"][0]["people"], 900)
-
     def test_fetch_all_accumulates_history_and_keeps_latest_snapshot_in_raw(self):
         csv_text = "﻿資料日期,證券代號,持股分級,人數,股數,占集保庫存數比例%\n"
         csv_text += "20260605,6451  ,17,19022,113593460,100.00\n"

@@ -170,25 +170,8 @@ def fetch_holding_distribution_csv_with_curl():
 
 
 def merge_history(previous_payload, snapshot_rows):
-    """Append the new snapshot to the per-date history, deduplicated by date.
-
-    Older tdcc-data.json files only stored raw.holding_distribution, so their
-    snapshot is used to seed the history on the first run after the upgrade.
-    """
+    """Append the new snapshot to the per-date history, deduplicated by date."""
     history = list((previous_payload or {}).get("history") or [])
-
-    if not history:
-        legacy_rows = (
-            (previous_payload or {}).get("raw", {}).get("holding_distribution") or []
-        )
-        legacy_dates = sorted({row.get("date") for row in legacy_rows if row.get("date")})
-        for legacy_date in legacy_dates:
-            history.append(
-                {
-                    "date": legacy_date,
-                    "rows": [row for row in legacy_rows if row.get("date") == legacy_date],
-                }
-            )
 
     known_dates = {entry.get("date") for entry in history}
     snapshot_dates = sorted({row.get("date") for row in snapshot_rows if row.get("date")})

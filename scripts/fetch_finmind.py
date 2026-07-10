@@ -366,15 +366,10 @@ def load_tdcc_holding_distribution(stock_id, repo_root=None):
     with open(path, encoding="utf-8") as f:
         payload = json.load(f)
 
-    # Newer tdcc-data.json accumulates weekly snapshots under history; flatten
-    # them so multi-date holder trends become possible. Older files only have
-    # the single latest snapshot.
+    # tdcc-data.json accumulates weekly snapshots under history; flatten them so
+    # multi-date holder trends become possible.
     history = payload.get("history") or []
     rows = [row for entry in history for row in entry.get("rows", [])]
-    if rows:
-        return rows, None
-
-    rows = payload.get("raw", {}).get("holding_distribution", [])
     return rows, None
 
 
