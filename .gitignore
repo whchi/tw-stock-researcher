@@ -32,3 +32,4 @@ companies/**/*.html
 market/*.json
 market/*.csv
 .opencode
+.claude
