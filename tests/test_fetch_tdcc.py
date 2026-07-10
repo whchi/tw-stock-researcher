@@ -53,8 +53,8 @@ class TdccHoldingDistributionTests(unittest.TestCase):
                 second = fetch_tdcc.fetch_all("6451", repo_root=repo_root)
 
             self.assertEqual(fetcher.call_count, 1)
-            self.assertFalse(first["metadata"]["cache"]["hit"])
-            self.assertTrue(second["metadata"]["cache"]["hit"])
+            self.assertFalse(first["cache"]["hit"])
+            self.assertTrue(second["cache"]["hit"])
             self.assertTrue((repo_root / "market" / fetch_tdcc.CACHE_CSV_NAME).exists())
             self.assertEqual(
                 second["raw"]["holding_distribution"][0]["stock_id"], "6451"
@@ -160,6 +160,19 @@ class TdccHoldingDistributionTests(unittest.TestCase):
         self.assertIn(fetch_tdcc.TDCC_HOLDING_DISTRIBUTION_URL, run.call_args.args[0])
 
 
+class BuildMetadataTests(unittest.TestCase):
+    def test_blocked_when_requested_stock_snapshot_is_empty(self):
+        result = fetch_tdcc.build_metadata([])
+
+        self.assertEqual(result["status"], "blocked")
+
+    def test_pass_when_requested_stock_snapshot_has_rows(self):
+        result = fetch_tdcc.build_metadata([{"date": "2026-06-05", "stock_id": "6451"}])
+
+        self.assertEqual(result["status"], "pass")
+        self.assertEqual(result["source_as_of"], "2026-06-05")
+
+
 class MainOutputResolutionTests(unittest.TestCase):
     def test_main_fails_closed_when_case_resolution_raises(self):
         with patch.object(
@@ -180,7 +193,7 @@ class MainOutputResolutionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "tdcc-data.json"
             with patch.object(fetch_tdcc, "case_output_path", return_value=target) as mock_resolve:
-                with patch.object(fetch_tdcc, "fetch_all", return_value={"ok": True}):
+                with patch.object(fetch_tdcc, "fetch_all", return_value={"metadata": {"status": "pass"}}):
                     exit_code = fetch_tdcc.main(["6451"])
 
             mock_resolve.assert_called_once_with(
@@ -193,7 +206,7 @@ class MainOutputResolutionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "explicit.json"
             with patch.object(fetch_tdcc, "validate_explicit_output", return_value=target) as mock_validate:
-                with patch.object(fetch_tdcc, "fetch_all", return_value={"ok": True}):
+                with patch.object(fetch_tdcc, "fetch_all", return_value={"metadata": {"status": "pass"}}):
                     exit_code = fetch_tdcc.main(["6451", "--output", str(target)])
 
             mock_validate.assert_called_once()

@@ -10,7 +10,6 @@ Feeds the financial-analysis / quality-and-valuation layers with official data:
 """
 
 import argparse
-import json
 import os
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -20,6 +19,14 @@ from statistics import median
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from case_paths import CaseResolutionError, case_output_path, validate_explicit_output  # noqa: E402
+from data_contract import (  # noqa: E402
+    atomic_write_json,
+    classify_status,
+    latest_observation_date,
+    metadata_envelope,
+)
+
+PARSER_VERSION = "2"
 
 BASE_URL = "https://api.finmindtrade.com/api/v4/data"
 
@@ -30,6 +37,12 @@ DATASETS = (
     "TaiwanStockCashFlowsStatement",
     "TaiwanStockPER",
 )
+
+# The monthly-revenue and quarterly-income layers are the core official/normalized
+# recent-data layer this fetcher exists to provide; balance sheet, cash flow, and
+# valuation band support deeper reads but a case can still proceed without them.
+REQUIRED_DATASETS = ("TaiwanStockMonthRevenue", "TaiwanStockFinancialStatements")
+OPTIONAL_DATASETS = ("TaiwanStockBalanceSheet", "TaiwanStockCashFlowsStatement", "TaiwanStockPER")
 
 RAW_DATASET_KEYS = {
     "TaiwanStockMonthRevenue": "month_revenue",
@@ -395,7 +408,16 @@ def build_valuation_band(per_rows):
 # ─── main flow ───────────────────────────────────────────────
 
 
-def build_metadata(stock_id, start_date, end_date, raw_rows_by_dataset, warnings):
+def build_metadata(
+    stock_id,
+    start_date,
+    end_date,
+    raw_rows_by_dataset,
+    warnings=None,
+    errors=None,
+    fetched_at=None,
+    source_as_of=None,
+):
     source_urls = {
         dataset: (
             f"{BASE_URL}?dataset={dataset}&data_id={stock_id}"
@@ -403,26 +425,39 @@ def build_metadata(stock_id, start_date, end_date, raw_rows_by_dataset, warnings
         )
         for dataset in DATASETS
     }
-    return {
-        "fetched_at": datetime.now(timezone.utc)
-        .astimezone()
-        .isoformat(timespec="seconds"),
-        "source": "FinMind",
-        "source_urls": source_urls,
-        "datasets": list(DATASETS),
-        "date_range": {"start_date": start_date, "end_date": end_date},
-        "row_counts": {
-            dataset: len(raw_rows_by_dataset.get(dataset, []))
-            for dataset in DATASETS
-        },
-        "warnings": warnings,
+    row_counts = {
+        dataset: len(raw_rows_by_dataset.get(dataset, []))
+        for dataset in DATASETS
     }
+    status = classify_status(
+        required_counts={key: row_counts[key] for key in REQUIRED_DATASETS},
+        optional_counts={key: row_counts[key] for key in OPTIONAL_DATASETS},
+        errors=errors or [],
+    )
+    return metadata_envelope(
+        status=status,
+        fetched_at=fetched_at or datetime.now(timezone.utc),
+        source_as_of=source_as_of,
+        expected_source_as_of=None,
+        requested_range={"start": start_date, "end": end_date},
+        observed_range={"start": start_date, "end": end_date},
+        required_datasets=list(REQUIRED_DATASETS),
+        optional_datasets=list(OPTIONAL_DATASETS),
+        row_counts=row_counts,
+        source_urls=source_urls,
+        source_tiers={dataset: "secondary_aggregator" for dataset in DATASETS},
+        license_ids={},
+        warnings=warnings or [],
+        errors=errors or [],
+        parser_version=PARSER_VERSION,
+    )
 
 
 def fetch_all(stock_id, start_date, end_date, token=None):
     import requests
 
     raw_rows_by_dataset = {}
+    errors = []
     warnings = []
 
     def fetch_safely(dataset):
@@ -448,11 +483,11 @@ def fetch_all(stock_id, start_date, end_date, token=None):
                 rows, warning = futures[dataset].result()
                 raw_rows_by_dataset[dataset] = rows
                 if warning:
-                    warnings.append(warning)
+                    errors.append({"code": "fetch_failed", "dataset": dataset, "message": warning})
 
     for dataset, rows in raw_rows_by_dataset.items():
-        if not rows:
-            warnings.append(f"{dataset} returned no rows")
+        if not rows and not any(err["dataset"] == dataset for err in errors):
+            warnings.append({"code": "no_rows", "dataset": dataset, "message": f"{dataset} returned no rows"})
 
     income_by_date = pivot_statement(
         raw_rows_by_dataset["TaiwanStockFinancialStatements"]
@@ -462,10 +497,18 @@ def fetch_all(stock_id, start_date, end_date, token=None):
         raw_rows_by_dataset["TaiwanStockCashFlowsStatement"]
     )
 
+    source_as_of = latest_observation_date(raw_rows_by_dataset["TaiwanStockMonthRevenue"])
+
     return {
         "stock_id": stock_id,
         "metadata": build_metadata(
-            stock_id, start_date, end_date, raw_rows_by_dataset, warnings
+            stock_id,
+            start_date,
+            end_date,
+            raw_rows_by_dataset,
+            warnings=warnings,
+            errors=errors,
+            source_as_of=source_as_of,
         ),
         "raw": {
             raw_key: raw_rows_by_dataset[dataset]
@@ -505,14 +548,12 @@ def main(argv=None):
 
     data = fetch_all(args.stock_id, start_date, end_date, token=token)
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    atomic_write_json(output_path, data)
 
     print(f"FinMind fundamentals saved to {output_path}")
     for warning in data["metadata"]["warnings"]:
-        print(f"- warning: {warning}")
-    return 0
+        print(f"- warning: {warning['message']}")
+    return 2 if data["metadata"]["status"] == "blocked" else 0
 
 
 if __name__ == "__main__":

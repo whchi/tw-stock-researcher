@@ -12,6 +12,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from case_paths import CaseResolutionError, case_output_path, validate_explicit_output  # noqa: E402
+from data_contract import (  # noqa: E402
+    atomic_write_json,
+    classify_status,
+    latest_observation_date,
+    metadata_envelope,
+)
+
+PARSER_VERSION = "2"
 
 TDCC_HOLDING_DISTRIBUTION_URL = "https://smart.tdcc.com.tw/opendata/getOD.ashx?id=1-5"
 
@@ -181,29 +189,38 @@ def merge_history(previous_payload, snapshot_rows):
     return history
 
 
-def build_metadata(rows, cache_hit=False, cache_meta=None, history=None):
-    return {
-        "fetched_at": datetime.now(timezone.utc)
-        .astimezone()
-        .isoformat(timespec="seconds"),
-        "source": "TDCC",
-        "source_urls": {
-            "TDCCStockHoldingDistribution": TDCC_HOLDING_DISTRIBUTION_URL,
-        },
-        "datasets": ["TDCCStockHoldingDistribution"],
-        "row_counts": {
-            "TDCCStockHoldingDistribution": len(rows),
-            "TDCCHoldingDistributionHistoryDates": len(history or []),
-        },
-        "cache": {
-            "hit": cache_hit,
-            "path": f"market/{CACHE_CSV_NAME}",
-            "cache_fetched_at": (cache_meta or {}).get("fetched_at"),
-        },
-        "warnings": []
-        if rows
-        else ["TDCCStockHoldingDistribution returned no rows"],
+def build_metadata(rows, history=None, fetched_at=None):
+    row_counts = {
+        "TDCCStockHoldingDistribution": len(rows),
+        "TDCCHoldingDistributionHistoryDates": len(history or []),
     }
+    status = classify_status(
+        required_counts={"TDCCStockHoldingDistribution": row_counts["TDCCStockHoldingDistribution"]},
+        optional_counts={},
+        errors=[],
+    )
+    warnings = (
+        []
+        if rows
+        else [{"code": "no_rows", "dataset": "TDCCStockHoldingDistribution", "message": "TDCCStockHoldingDistribution returned no rows"}]
+    )
+    return metadata_envelope(
+        status=status,
+        fetched_at=fetched_at or datetime.now(timezone.utc),
+        source_as_of=latest_observation_date(rows),
+        expected_source_as_of=None,
+        requested_range={"start": None, "end": None},
+        observed_range={"start": None, "end": None},
+        required_datasets=["TDCCStockHoldingDistribution"],
+        optional_datasets=[],
+        row_counts=row_counts,
+        source_urls={"TDCCStockHoldingDistribution": TDCC_HOLDING_DISTRIBUTION_URL},
+        source_tiers={"TDCCStockHoldingDistribution": "official"},
+        license_ids={},
+        warnings=warnings,
+        errors=[],
+        parser_version=PARSER_VERSION,
+    )
 
 
 def fetch_all(
@@ -228,9 +245,12 @@ def fetch_all(
     history = merge_history(previous_payload, rows)
     return {
         "stock_id": stock_id,
-        "metadata": build_metadata(
-            rows, cache_hit=cache_hit, cache_meta=cache_meta, history=history
-        ),
+        "metadata": build_metadata(rows, history=history),
+        "cache": {
+            "hit": cache_hit,
+            "path": f"market/{CACHE_CSV_NAME}",
+            "cache_fetched_at": (cache_meta or {}).get("fetched_at"),
+        },
         "raw": {
             "holding_distribution": rows,
         },
@@ -267,12 +287,10 @@ def main(argv=None):
         previous_payload=load_previous_payload(output_path),
     )
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    atomic_write_json(output_path, data)
 
     print(f"TDCC data saved to {output_path}")
-    return 0
+    return 2 if data["metadata"]["status"] == "blocked" else 0
 
 
 if __name__ == "__main__":

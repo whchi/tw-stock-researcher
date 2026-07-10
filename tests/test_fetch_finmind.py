@@ -10,6 +10,7 @@ from unittest.mock import patch
 import scripts.fetch_finmind as fetch_finmind
 from scripts.fetch_finmind import (
     build_market_action_read,
+    build_metadata,
     main,
     parse_args,
     resolve_token,
@@ -151,6 +152,38 @@ def make_tdcc_holding_rows():
     ]
 
 
+class BuildMetadataTests(unittest.TestCase):
+    def test_blocked_when_required_price_dataset_is_empty(self):
+        raw_rows_by_dataset = {dataset: [{"date": "2026-06-01"}] for dataset in fetch_finmind.DATASETS}
+        raw_rows_by_dataset["TaiwanStockPrice"] = []
+
+        result = build_metadata("2330", "2026-01-01", "2026-07-01", raw_rows_by_dataset)
+
+        self.assertEqual(result["status"], "blocked")
+
+    def test_degraded_when_only_optional_datasets_are_empty(self):
+        raw_rows_by_dataset = {dataset: [] for dataset in fetch_finmind.DATASETS}
+        raw_rows_by_dataset["TaiwanStockPrice"] = [{"date": "2026-06-01"}]
+        raw_rows_by_dataset["TaiwanStockInstitutionalInvestorsBuySell"] = [{"date": "2026-06-01"}]
+
+        result = build_metadata("2330", "2026-01-01", "2026-07-01", raw_rows_by_dataset)
+
+        self.assertEqual(result["status"], "degraded")
+
+    def test_pass_when_required_and_optional_datasets_have_rows(self):
+        raw_rows_by_dataset = {dataset: [{"date": "2026-06-01"}] for dataset in fetch_finmind.DATASETS}
+
+        result = build_metadata(
+            "2330",
+            "2026-01-01",
+            "2026-07-01",
+            raw_rows_by_dataset,
+            tdcc_holding_distribution_rows=[{"date": "2026-06-01"}],
+        )
+
+        self.assertEqual(result["status"], "pass")
+
+
 class MainOutputResolutionTests(unittest.TestCase):
     def test_main_fails_closed_when_case_resolution_raises(self):
         with patch.object(
@@ -173,7 +206,7 @@ class MainOutputResolutionTests(unittest.TestCase):
             target = Path(tmp) / "market-data.json"
             with patch.object(fetch_finmind, "case_output_path", return_value=target) as mock_resolve:
                 with patch.object(fetch_finmind, "resolve_token", return_value="tok"):
-                    with patch.object(fetch_finmind, "fetch_all", return_value={"ok": True}):
+                    with patch.object(fetch_finmind, "fetch_all", return_value={"metadata": {"status": "pass"}}):
                         exit_code = main(["2330"])
 
             mock_resolve.assert_called_once_with(
@@ -187,7 +220,7 @@ class MainOutputResolutionTests(unittest.TestCase):
             target = Path(tmp) / "explicit.json"
             with patch.object(fetch_finmind, "validate_explicit_output", return_value=target) as mock_validate:
                 with patch.object(fetch_finmind, "resolve_token", return_value="tok"):
-                    with patch.object(fetch_finmind, "fetch_all", return_value={"ok": True}):
+                    with patch.object(fetch_finmind, "fetch_all", return_value={"metadata": {"status": "pass"}}):
                         exit_code = main(["2330", "--output", str(target)])
 
             mock_validate.assert_called_once()
@@ -405,9 +438,10 @@ class EggTheoryReadTests(unittest.TestCase):
             )
 
         self.assertEqual(result["raw"]["holding_shares_per"], [])
+        error_messages = [err["message"] for err in result["metadata"]["errors"]]
         self.assertIn(
             "TaiwanStockHoldingSharesPer unavailable",
-            " ".join(result["metadata"]["warnings"]),
+            " ".join(error_messages),
         )
 
     def test_egg_theory_uses_holding_shares_when_available(self):

@@ -11,6 +11,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from case_paths import CaseResolutionError, case_output_path, validate_explicit_output  # noqa: E402
+from data_contract import (  # noqa: E402
+    atomic_write_json,
+    classify_status,
+    latest_observation_date,
+    metadata_envelope,
+)
+
+PARSER_VERSION = "2"
 
 BASE_URL = "https://api.finmindtrade.com/api/v4/data"
 DATASETS = (
@@ -21,6 +29,7 @@ DATASETS = (
     "TaiwanStockDayTrading",
     "TaiwanStockHoldingSharesPer",
 )
+REQUIRED_DATASETS = ("TaiwanStockPrice", "TaiwanStockInstitutionalInvestorsBuySell")
 
 RAW_DATASET_KEYS = {
     "TaiwanStockPrice": "price",
@@ -588,8 +597,11 @@ def build_metadata(
     start_date,
     end_date,
     raw_rows_by_dataset,
-    warnings,
+    warnings=None,
+    errors=None,
     tdcc_holding_distribution_rows=None,
+    fetched_at=None,
+    source_as_of=None,
 ):
     source_urls = {
         dataset: (
@@ -605,18 +617,29 @@ def build_metadata(
     row_counts["TDCCHoldingDistributionSnapshot"] = len(
         tdcc_holding_distribution_rows or []
     )
-
-    return {
-        "fetched_at": datetime.now(timezone.utc)
-        .astimezone()
-        .isoformat(timespec="seconds"),
-        "source": "FinMind",
-        "source_urls": source_urls,
-        "datasets": list(DATASETS),
-        "date_range": {"start_date": start_date, "end_date": end_date},
-        "row_counts": row_counts,
-        "warnings": warnings,
-    }
+    optional_datasets = list(OPTIONAL_DATASETS) + ["TDCCHoldingDistributionSnapshot"]
+    status = classify_status(
+        required_counts={key: row_counts[key] for key in REQUIRED_DATASETS},
+        optional_counts={key: row_counts[key] for key in optional_datasets},
+        errors=errors or [],
+    )
+    return metadata_envelope(
+        status=status,
+        fetched_at=fetched_at or datetime.now(timezone.utc),
+        source_as_of=source_as_of,
+        expected_source_as_of=None,
+        requested_range={"start": start_date, "end": end_date},
+        observed_range={"start": start_date, "end": end_date},
+        required_datasets=list(REQUIRED_DATASETS),
+        optional_datasets=optional_datasets,
+        row_counts=row_counts,
+        source_urls=source_urls,
+        source_tiers={dataset: "secondary_aggregator" for dataset in DATASETS},
+        license_ids={},
+        warnings=warnings or [],
+        errors=errors or [],
+        parser_version=PARSER_VERSION,
+    )
 
 
 def fetch_all(stock_id, start_date, end_date, token=None):
@@ -624,6 +647,7 @@ def fetch_all(stock_id, start_date, end_date, token=None):
 
     raw_rows_by_dataset = {}
     warnings = []
+    errors = []
 
     with requests.Session() as session:
         with ThreadPoolExecutor(max_workers=len(DATASETS)) as executor:
@@ -643,7 +667,7 @@ def fetch_all(stock_id, start_date, end_date, token=None):
                 rows, warning = futures[dataset].result()
                 raw_rows_by_dataset[dataset] = rows
                 if warning:
-                    warnings.append(warning)
+                    errors.append({"code": "fetch_failed", "dataset": dataset, "message": warning})
 
     price_rows = raw_rows_by_dataset["TaiwanStockPrice"]
     institutional_rows = raw_rows_by_dataset[
@@ -651,14 +675,14 @@ def fetch_all(stock_id, start_date, end_date, token=None):
     ]
 
     for dataset, rows in raw_rows_by_dataset.items():
-        if not rows:
-            warnings.append(f"{dataset} returned no rows")
+        if not rows and not any(err["dataset"] == dataset for err in errors):
+            warnings.append({"code": "no_rows", "dataset": dataset, "message": f"{dataset} returned no rows"})
 
     tdcc_holding_distribution_rows, tdcc_warning = load_tdcc_holding_distribution(
         stock_id
     )
     if tdcc_warning:
-        warnings.append(tdcc_warning)
+        warnings.append({"code": "tdcc_unavailable", "dataset": "TDCCHoldingDistributionSnapshot", "message": tdcc_warning})
 
     market_action_read = build_market_action_read(price_rows, institutional_rows)
     egg_theory_read = build_egg_theory_read(
@@ -667,7 +691,12 @@ def fetch_all(stock_id, start_date, end_date, token=None):
         shareholding_rows=raw_rows_by_dataset["TaiwanStockShareholding"],
         tdcc_holding_distribution_rows=tdcc_holding_distribution_rows,
     )
-    warnings.extend(market_action_read.get("warnings", []))
+    warnings.extend(
+        {"code": "market_action_read_warning", "dataset": "market_action_read", "message": message}
+        for message in market_action_read.get("warnings", [])
+    )
+
+    source_as_of = latest_observation_date(price_rows)
 
     return {
         "stock_id": stock_id,
@@ -676,8 +705,10 @@ def fetch_all(stock_id, start_date, end_date, token=None):
             start_date,
             end_date,
             raw_rows_by_dataset,
-            warnings,
+            warnings=warnings,
+            errors=errors,
             tdcc_holding_distribution_rows=tdcc_holding_distribution_rows,
+            source_as_of=source_as_of,
         ),
         "raw": {
             **{
@@ -718,12 +749,10 @@ def main(argv=None):
 
     data = fetch_all(args.stock_id, start_date, end_date, token=token)
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    atomic_write_json(output_path, data)
 
     print(f"FinMind market data saved to {output_path}")
-    return 0
+    return 2 if data["metadata"]["status"] == "blocked" else 0
 
 
 if __name__ == "__main__":

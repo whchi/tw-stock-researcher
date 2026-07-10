@@ -11,12 +11,22 @@ Sources follow templates/shared-macro-view.md and templates/macro-map.md:
 import argparse
 import csv
 import io
-import json
 import os
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from data_contract import (  # noqa: E402
+    STATUS_BLOCKED,
+    atomic_write_json,
+    classify_status,
+    latest_observation_date,
+    metadata_envelope,
+)
+
+PARSER_VERSION = "2"
 
 TEMPLATE_SOURCES = (
     "TWSE Open API",
@@ -116,16 +126,45 @@ def latest_read(rows):
     return result
 
 
-def build_macro_data(records_by_source, warnings=None):
+def build_macro_data(records_by_source, warnings=None, errors=None, fetched_at=None):
     sources = {source: records_by_source.get(source, []) for source in TEMPLATE_SOURCES}
-    return {
-        "metadata": {
-            "fetched_at": datetime.now(timezone.utc)
-            .astimezone()
-            .isoformat(timespec="seconds"),
-            "source_scope": list(TEMPLATE_SOURCES),
-            "warnings": warnings or [],
+    row_counts = {source: len(records) for source, records in sources.items()}
+
+    if all(count == 0 for count in row_counts.values()):
+        status = STATUS_BLOCKED
+    else:
+        status = classify_status(required_counts={}, optional_counts=row_counts, errors=errors or [])
+
+    observation_dates = [
+        {"date": record["latest"]["date"]}
+        for records in sources.values()
+        for record in records
+        if record.get("latest") and record["latest"].get("date")
+    ]
+
+    metadata = metadata_envelope(
+        status=status,
+        fetched_at=fetched_at or datetime.now(timezone.utc),
+        source_as_of=latest_observation_date(observation_dates),
+        expected_source_as_of=None,
+        requested_range={"start": None, "end": None},
+        observed_range={"start": None, "end": None},
+        required_datasets=[],
+        optional_datasets=list(TEMPLATE_SOURCES),
+        row_counts=row_counts,
+        source_urls={},
+        source_tiers={
+            "TWSE Open API": "official",
+            "Yahoo Finance / public market data": "unofficial_secondary",
+            "Taiwan official statistics / MOPS context": "official",
         },
+        license_ids={},
+        warnings=warnings or [],
+        errors=errors or [],
+        parser_version=PARSER_VERSION,
+    )
+    return {
+        "metadata": metadata,
         "sources": sources,
     }
 
@@ -308,7 +347,7 @@ def fetch_taiwan_official(configured_url=None, session=None):
 def collect_all(args):
     env = os.environ
     records = {}
-    warnings = []
+    errors = []
     session = make_session()
 
     fetchers = (
@@ -333,12 +372,12 @@ def collect_all(args):
                     records[source] = future.result()
                 except Exception as exc:
                     records[source] = []
-                    warnings.append(f"{source}: {exc}")
+                    errors.append({"code": "fetch_failed", "dataset": source, "message": f"{source}: {exc}"})
     finally:
         if session is not None:
             session.close()
 
-    return build_macro_data(records, warnings=warnings)
+    return build_macro_data(records, errors=errors)
 
 
 def parse_args(argv):
@@ -352,16 +391,14 @@ def main(argv=None):
     output_path = Path(args.output) if args.output else default_output_path()
     data = collect_all(args)
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    atomic_write_json(output_path, data)
 
     print(f"Macro data saved to {output_path}")
-    if data["metadata"]["warnings"]:
-        print("Warnings:")
-        for warning in data["metadata"]["warnings"]:
-            print(f"- {warning}")
-    return 0
+    if data["metadata"]["errors"]:
+        print("Errors:")
+        for error in data["metadata"]["errors"]:
+            print(f"- {error['message']}")
+    return 2 if data["metadata"]["status"] == "blocked" else 0
 
 
 if __name__ == "__main__":

@@ -2,7 +2,6 @@
 """Fetch Yahoo Finance Taiwan profile and financial summary data."""
 
 import argparse
-import json
 import re
 import sys
 from concurrent.futures import ThreadPoolExecutor
@@ -12,6 +11,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from case_paths import CaseResolutionError, case_output_path, validate_explicit_output  # noqa: E402
+from data_contract import (  # noqa: E402
+    atomic_write_json,
+    classify_status,
+    latest_observation_date,
+    metadata_envelope,
+)
+
+PARSER_VERSION = "2"
 
 BASE_URL = "https://tw.stock.yahoo.com/quote"
 PAGE_PATHS = {
@@ -96,19 +103,43 @@ def yahoo_url(stock_id, page_key, suffix="TW"):
     return f"{BASE_URL}/{stock_id}.{suffix}/{PAGE_PATHS[page_key]}"
 
 
-def build_metadata(stock_id, suffix="TW", warnings=None):
-    return {
-        "fetched_at": datetime.now(timezone.utc)
-        .astimezone()
-        .isoformat(timespec="seconds"),
-        "source": "Yahoo Finance Taiwan",
-        "source_urls": {
+def build_metadata(
+    stock_id,
+    suffix="TW",
+    row_counts=None,
+    warnings=None,
+    errors=None,
+    fetched_at=None,
+    source_as_of=None,
+):
+    row_counts = row_counts or {}
+    required_datasets = ["profile"]
+    optional_datasets = ["revenue", "income_statement", "cash_flow_statement"]
+    status = classify_status(
+        required_counts={key: row_counts.get(key, 0) for key in required_datasets},
+        optional_counts={key: row_counts.get(key, 0) for key in optional_datasets},
+        errors=errors or [],
+    )
+    return metadata_envelope(
+        status=status,
+        fetched_at=fetched_at or datetime.now(timezone.utc),
+        source_as_of=source_as_of,
+        expected_source_as_of=None,
+        requested_range={"start": None, "end": None},
+        observed_range={"start": None, "end": None},
+        required_datasets=required_datasets,
+        optional_datasets=optional_datasets,
+        row_counts=row_counts,
+        source_urls={
             key: yahoo_url(stock_id, key, suffix=suffix)
             for key in ("profile", "revenue", "income_statement", "cash_flow_statement")
         },
-        "symbol_suffix": suffix,
-        "warnings": warnings or [],
-    }
+        source_tiers={key: "unofficial_secondary" for key in ("profile", "revenue", "income_statement", "cash_flow_statement")},
+        license_ids={},
+        warnings=warnings or [],
+        errors=errors or [],
+        parser_version=PARSER_VERSION,
+    )
 
 
 def text_between(lines, start_marker, end_markers):
@@ -319,20 +350,37 @@ def fetch_all(stock_id, suffix="TW"):
         pages["cash_flow_statement"],
         CASH_FLOW_ITEMS,
     )
+    row_counts = {
+        "profile": len(profile),
+        "revenue": len(revenue),
+        "income_statement": len(income_statement.get("line_items") or {}),
+        "cash_flow_statement": len(cash_flow_statement.get("line_items") or {}),
+    }
+    errors = []
     warnings = []
 
     if not profile:
-        warnings.append("Yahoo profile returned no parsed fields")
+        errors.append({"code": "no_rows", "dataset": "profile", "message": "Yahoo profile returned no parsed fields"})
     if not revenue:
-        warnings.append("Yahoo revenue returned no parsed rows")
+        warnings.append({"code": "no_rows", "dataset": "revenue", "message": "Yahoo revenue returned no parsed rows"})
     if not income_statement.get("line_items"):
-        warnings.append("Yahoo income statement returned no parsed line items")
+        warnings.append({"code": "no_rows", "dataset": "income_statement", "message": "Yahoo income statement returned no parsed line items"})
     if not cash_flow_statement.get("line_items"):
-        warnings.append("Yahoo cash flow statement returned no parsed line items")
+        warnings.append({"code": "no_rows", "dataset": "cash_flow_statement", "message": "Yahoo cash flow statement returned no parsed line items"})
+
+    source_as_of = latest_observation_date(revenue, field="period")
 
     return {
         "stock_id": stock_id,
-        "metadata": build_metadata(stock_id, suffix=suffix, warnings=warnings),
+        "symbol_suffix": suffix,
+        "metadata": build_metadata(
+            stock_id,
+            suffix=suffix,
+            row_counts=row_counts,
+            warnings=warnings,
+            errors=errors,
+            source_as_of=source_as_of,
+        ),
         "profile": profile,
         "revenue": revenue,
         "income_statement": income_statement,
@@ -363,12 +411,10 @@ def main(argv=None):
 
     data = fetch_all(args.stock_id, suffix=args.suffix)
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    atomic_write_json(output_path, data)
 
     print(f"Yahoo Finance Taiwan data saved to {output_path}")
-    return 0
+    return 2 if data["metadata"]["status"] == "blocked" else 0
 
 
 if __name__ == "__main__":

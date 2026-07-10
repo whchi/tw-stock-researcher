@@ -128,11 +128,32 @@ class LatestReadTests(unittest.TestCase):
             "Yahoo Finance / public market data": [],
         }
 
-        result = build_macro_data(records, warnings=["TAIWAN_MACRO_URL not set"])
+        result = build_macro_data(
+            records,
+            warnings=[{"code": "not_configured", "dataset": "Taiwan official statistics / MOPS context", "message": "TAIWAN_MACRO_URL not set"}],
+        )
 
         self.assertEqual(result["sources"]["TWSE Open API"][0]["indicator"], "TAIEX")
         self.assertEqual(result["sources"]["Yahoo Finance / public market data"], [])
-        self.assertIn("TAIWAN_MACRO_URL not set", result["metadata"]["warnings"])
+        warning_messages = [w["message"] for w in result["metadata"]["warnings"]]
+        self.assertIn("TAIWAN_MACRO_URL not set", warning_messages)
+        self.assertEqual(result["metadata"]["status"], "degraded")
+
+    def test_build_macro_data_is_blocked_when_every_source_is_empty(self):
+        result = build_macro_data({source: [] for source in TEMPLATE_SOURCES})
+
+        self.assertEqual(result["metadata"]["status"], "blocked")
+
+    def test_build_macro_data_is_pass_when_every_source_has_records(self):
+        records = {
+            source: [{"indicator": "x", "latest": {"date": "2026-06-01", "value": 1}}]
+            for source in TEMPLATE_SOURCES
+        }
+
+        result = build_macro_data(records)
+
+        self.assertEqual(result["metadata"]["status"], "pass")
+        self.assertEqual(result["metadata"]["source_as_of"], "2026-06-01")
 
 
 if __name__ == "__main__":

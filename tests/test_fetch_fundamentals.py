@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import scripts.fetch_fundamentals as fetch_fundamentals
 from scripts.fetch_fundamentals import (
+    build_metadata,
     build_monthly_revenue,
     build_quarterly_cash_flow,
     build_quarterly_income,
@@ -68,6 +69,41 @@ def make_per_rows():
     ]
 
 
+class BuildMetadataTests(unittest.TestCase):
+    def test_blocked_when_a_required_dataset_is_empty(self):
+        raw_rows_by_dataset = {dataset: [] for dataset in fetch_fundamentals.DATASETS}
+        raw_rows_by_dataset["TaiwanStockMonthRevenue"] = [{"date": "2026-06-01"}]
+
+        result = build_metadata("2330", "2026-01-01", "2026-07-01", raw_rows_by_dataset)
+
+        self.assertEqual(result["status"], "blocked")
+
+    def test_degraded_when_only_optional_datasets_are_empty(self):
+        raw_rows_by_dataset = {dataset: [] for dataset in fetch_fundamentals.DATASETS}
+        raw_rows_by_dataset["TaiwanStockMonthRevenue"] = [{"date": "2026-06-01"}]
+        raw_rows_by_dataset["TaiwanStockFinancialStatements"] = [{"date": "2026-03-31"}]
+
+        result = build_metadata("2330", "2026-01-01", "2026-07-01", raw_rows_by_dataset)
+
+        self.assertEqual(result["status"], "degraded")
+
+    def test_pass_when_required_and_optional_datasets_have_rows(self):
+        raw_rows_by_dataset = {dataset: [{"date": "2026-06-01"}] for dataset in fetch_fundamentals.DATASETS}
+
+        result = build_metadata("2330", "2026-01-01", "2026-07-01", raw_rows_by_dataset)
+
+        self.assertEqual(result["status"], "pass")
+
+    def test_source_as_of_is_passed_through_unchanged(self):
+        raw_rows_by_dataset = {dataset: [{"date": "2026-06-01"}] for dataset in fetch_fundamentals.DATASETS}
+
+        result = build_metadata(
+            "2330", "2026-01-01", "2026-07-01", raw_rows_by_dataset, source_as_of="2026-06-01"
+        )
+
+        self.assertEqual(result["source_as_of"], "2026-06-01")
+
+
 class MainOutputResolutionTests(unittest.TestCase):
     def test_main_fails_closed_when_case_resolution_raises(self):
         with patch.object(
@@ -88,7 +124,7 @@ class MainOutputResolutionTests(unittest.TestCase):
     def test_main_writes_to_resolved_case_output_path_by_default(self):
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "fundamentals-data.json"
-            fake_data = {"metadata": {"warnings": []}}
+            fake_data = {"metadata": {"warnings": [], "status": "pass"}}
             with patch.object(fetch_fundamentals, "case_output_path", return_value=target) as mock_resolve:
                 with patch.object(fetch_fundamentals, "resolve_token", return_value="tok"):
                     with patch.object(fetch_fundamentals, "fetch_all", return_value=fake_data):
@@ -103,7 +139,7 @@ class MainOutputResolutionTests(unittest.TestCase):
     def test_main_routes_explicit_output_through_validation(self):
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "explicit.json"
-            fake_data = {"metadata": {"warnings": []}}
+            fake_data = {"metadata": {"warnings": [], "status": "pass"}}
             with patch.object(fetch_fundamentals, "validate_explicit_output", return_value=target) as mock_validate:
                 with patch.object(fetch_fundamentals, "resolve_token", return_value="tok"):
                     with patch.object(fetch_fundamentals, "fetch_all", return_value=fake_data):
@@ -262,11 +298,10 @@ class FetchAllTests(unittest.TestCase):
                 "2330", "2021-05-05", "2026-05-05", token="token"
             )
 
-        self.assertIn(
-            "TaiwanStockFinancialStatements returned no rows",
-            result["metadata"]["warnings"],
-        )
+        warning_messages = [w["message"] for w in result["metadata"]["warnings"]]
+        self.assertIn("TaiwanStockFinancialStatements returned no rows", warning_messages)
         self.assertEqual(result["raw"]["financial_statements"], [])
+        self.assertEqual(result["metadata"]["status"], "blocked")
         self.assertEqual(result["derived"]["monthly_revenue_6m"][0]["month"], "2026/04")
         self.assertEqual(result["derived"]["valuation_band"]["current"]["per"], 15.0)
         self.assertEqual(result["derived"]["quarterly_income_8q"], [])

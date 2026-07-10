@@ -7,9 +7,9 @@ fetch_goodinfo.py
 範例：python fetch_goodinfo.py 2317
 """
 
-import json
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
@@ -17,6 +17,9 @@ from bs4 import BeautifulSoup
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from case_paths import CaseResolutionError, case_output_path, validate_explicit_output  # noqa: E402
+from data_contract import atomic_write_json, classify_status, metadata_envelope  # noqa: E402
+
+PARSER_VERSION = "2"
 
 # ─── 抓取層 ───────────────────────────────────────────────
 
@@ -330,20 +333,44 @@ def build_three_statement_coverage(result):
 # ─── 驗證層 A：資料來源標注 ────────────────────────────────
 
 
-def build_metadata(stock_id, years):
+def build_source_context(stock_id, years):
     return {
-        "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%S+08:00"),
-        "source": "Goodinfo.tw",
-        "source_urls": {
-            "income_statement": f"https://goodinfo.tw/tw/StockFinDetail.asp?RPT_CAT=IS_YEAR&STOCK_ID={stock_id}",
-            "balance_sheet": f"https://goodinfo.tw/tw/StockFinDetail.asp?RPT_CAT=BS_YEAR&STOCK_ID={stock_id}",
-            "cash_flow": f"https://goodinfo.tw/tw/StockFinDetail.asp?RPT_CAT=CF_YEAR&STOCK_ID={stock_id}",
-        },
         "mops_url": f"https://mops.twse.com.tw/mops/web/t05st01?step=1&co_id={stock_id}&TYPEK=sii",
         "mops_url_otc": f"https://mops.twse.com.tw/mops/web/t05st01?step=1&co_id={stock_id}&TYPEK=otc",
         "years_covered": years[:3],
         "currency": "TWD 億元",
     }
+
+
+def build_metadata(stock_id, row_counts=None, warnings=None, errors=None, fetched_at=None):
+    row_counts = row_counts or {}
+    required_datasets = ["income_statement", "balance_sheet", "cash_flow"]
+    status = classify_status(
+        required_counts={key: row_counts.get(key, 0) for key in required_datasets},
+        optional_counts={},
+        errors=errors or [],
+    )
+    return metadata_envelope(
+        status=status,
+        fetched_at=fetched_at or datetime.now(timezone.utc),
+        source_as_of=None,
+        expected_source_as_of=None,
+        requested_range={"start": None, "end": None},
+        observed_range={"start": None, "end": None},
+        required_datasets=required_datasets,
+        optional_datasets=[],
+        row_counts=row_counts,
+        source_urls={
+            "income_statement": f"https://goodinfo.tw/tw/StockFinDetail.asp?RPT_CAT=IS_YEAR&STOCK_ID={stock_id}",
+            "balance_sheet": f"https://goodinfo.tw/tw/StockFinDetail.asp?RPT_CAT=BS_YEAR&STOCK_ID={stock_id}",
+            "cash_flow": f"https://goodinfo.tw/tw/StockFinDetail.asp?RPT_CAT=CF_YEAR&STOCK_ID={stock_id}",
+        },
+        source_tiers={key: "unofficial_scrape" for key in required_datasets},
+        license_ids={},
+        warnings=warnings or [],
+        errors=errors or [],
+        parser_version=PARSER_VERSION,
+    )
 
 
 # ─── 驗證層 B：合理性檢查 ──────────────────────────────────
@@ -461,9 +488,23 @@ def fetch_all(stock_id):
         result["cash_flow"] = cf_data
 
     result["three_statement_coverage"] = build_three_statement_coverage(result)
+    result["source_context"] = build_source_context(stock_id, years)
 
     # 驗證層 A：資料標注
-    result["metadata"] = build_metadata(stock_id, years)
+    row_counts = {
+        "income_statement": len(is_data),
+        "balance_sheet": len(bs_data),
+        "cash_flow": len(cf_data),
+    }
+    errors = []
+    if not is_data:
+        errors.append({"code": "no_rows", "dataset": "income_statement", "message": "Goodinfo 損益表未解析到任何項目"})
+    if not bs_data:
+        errors.append({"code": "no_rows", "dataset": "balance_sheet", "message": "Goodinfo 資產負債表未解析到任何項目"})
+    if not cf_data:
+        errors.append({"code": "no_rows", "dataset": "cash_flow", "message": "Goodinfo 現金流量表未解析到任何項目"})
+
+    result["metadata"] = build_metadata(stock_id, row_counts=row_counts, errors=errors)
 
     return result
 
@@ -513,8 +554,8 @@ def run_verification(result, metrics_by_year):
     else:
         print("✅ 合理性檢查通過，所有指標在合理範圍內")
 
-    # 驗證層 C：MOPS 連結（已在 metadata 中）
-    print(f"📋 MOPS 官方申報（上市）：{result['metadata']['mops_url']}")
+    # 驗證層 C：MOPS 連結（已在 source_context 中）
+    print(f"📋 MOPS 官方申報（上市）：{result['source_context']['mops_url']}")
 
     return result
 
@@ -590,11 +631,9 @@ def main(argv=None):
         eps = g(is_d, eps_key, yr) if eps_key else None
         print(f"  {yr}: 營收={rev}億, EPS={eps}元")
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    atomic_write_json(output_path, data)
     print(f"\n原始數據（含驗證結果）已存至 {output_path}")
-    return 0
+    return 2 if data["metadata"]["status"] == "blocked" else 0
 
 
 if __name__ == "__main__":

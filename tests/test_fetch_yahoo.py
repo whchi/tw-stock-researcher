@@ -97,13 +97,26 @@ class YahooParserTests(unittest.TestCase):
     def test_build_metadata_uses_yahoo_urls(self):
         result = build_metadata("2330")
 
-        self.assertEqual(result["source"], "Yahoo Finance Taiwan")
-        self.assertEqual(result["symbol_suffix"], "TW")
         self.assertIn("profile", result["source_urls"])
         self.assertEqual(
             result["source_urls"]["profile"],
             "https://tw.stock.yahoo.com/quote/2330.TW/profile",
         )
+
+    def test_build_metadata_is_blocked_without_profile_rows(self):
+        result = build_metadata("2330", row_counts={"profile": 0})
+
+        self.assertEqual(result["status"], "blocked")
+
+    def test_build_metadata_is_degraded_when_only_optional_datasets_are_missing(self):
+        result = build_metadata("2330", row_counts={"profile": 1, "revenue": 0})
+
+        self.assertEqual(result["status"], "degraded")
+
+    def test_build_metadata_passes_through_source_as_of(self):
+        result = build_metadata("2330", row_counts={"profile": 1}, source_as_of="2026/06")
+
+        self.assertEqual(result["source_as_of"], "2026/06")
 
     def test_build_metadata_can_use_otc_suffix(self):
         result = build_metadata("8299", suffix="TWO")
@@ -132,7 +145,7 @@ class MainOutputResolutionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "yahoo-data.json"
             with patch.object(fetch_yahoo, "case_output_path", return_value=target) as mock_resolve:
-                with patch.object(fetch_yahoo, "fetch_all", return_value={"ok": True}):
+                with patch.object(fetch_yahoo, "fetch_all", return_value={"metadata": {"status": "pass"}}):
                     exit_code = main(["2330"])
 
             mock_resolve.assert_called_once_with(
@@ -145,7 +158,7 @@ class MainOutputResolutionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "explicit.json"
             with patch.object(fetch_yahoo, "validate_explicit_output", return_value=target) as mock_validate:
-                with patch.object(fetch_yahoo, "fetch_all", return_value={"ok": True}):
+                with patch.object(fetch_yahoo, "fetch_all", return_value={"metadata": {"status": "pass"}}):
                     exit_code = main(["2330", "--output", str(target)])
 
             mock_validate.assert_called_once()
