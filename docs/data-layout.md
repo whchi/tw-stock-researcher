@@ -63,3 +63,10 @@ Create one folder per stock under `companies/`, for example `companies/6706-hui-
 1. Run `sh tests/structure/test_templates.sh` after template or workflow-doc changes.
 2. Run `.venv/bin/python -m unittest discover -s tests -p 'test_*.py'` after script or fetcher changes.
 3. Add a focused structure test before changing file ownership, template boundaries, or workflow order.
+4. `.github/workflows/verify.yml` runs steps 1-2 (structure checks plus the full unit-test suite) on every push and pull request, without touching `companies/**` or requiring `FIN_MIND_TOKEN`.
+
+## Case Storage And Read-Only Migration Auditing
+
+See `docs/case-storage-policy.md` for the full policy on why `companies/**` is git-ignored, backup/export/retention guidance, and user-provided position-context handling.
+
+`scripts/migrate_case_metadata.py --all --dry-run` (or `--case CASE_DIR --dry-run`) is a read-only audit that reports, per case: missing/unknown `stock-meta.json` keys, an absent `stage_records` map (a pre-workflow-state case), mixed or dangling `file_references` path conventions, legacy `open-questions.md` table shapes, and legacy or version-mismatched `research-summary-data.json` payloads. It never writes to a case, and there is intentionally no `--apply` in this release.

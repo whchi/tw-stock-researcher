@@ -41,6 +41,14 @@ stock-case-init -> yahoo-profile-financials -> financial-data-fetch -> market-da
 
 The workspace keeps shared market context under `market/`, reusable templates under `templates/`, and per-stock cases under `companies/`. Create shared market files in `market/` by copying the corresponding templates from `templates/` when needed. See `docs/data-layout.md` for the full layout and file ownership rules.
 
+## Case Storage And Migration Audits
+
+Every `companies/<ticker>-<slug>/` case is local, git-ignored session data, not versioned source code — see `docs/case-storage-policy.md` for backup, export, retention, and user-provided position-context handling. `scripts/migrate_case_metadata.py --all --dry-run` (or `--case CASE_DIR --dry-run`) reports metadata/question/HTML-payload drift for existing cases without writing anything; there is intentionally no `--apply` in this release.
+
+## Continuous Integration
+
+`.github/workflows/verify.yml` runs `tests/structure/test_skills.sh`, `tests/structure/test_templates.sh`, and the full `unittest` suite on every push and pull request. CI never touches `companies/**`, never requires `FIN_MIND_TOKEN`, and never calls a live network — it only exercises fixtures under `tests/fixtures/`.
+
 ## HTML Summary Output
 
 Markdown and JSON files remain the source of truth. When the user explicitly asks for a comprehensive research result as HTML, use the `research-html-output` skill and render a derived preview from `templates/research-html-summary.html`.
