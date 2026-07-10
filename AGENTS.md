@@ -71,6 +71,16 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 - **Purpose:** `yahoo-data.json` feeds `company-deep-dive` with company profile, industry, market, business scope, revenue trend, margin snapshot, and cash-flow context.
 - **Role:** Yahoo is a profile and supplemental financial source. Goodinfo + MOPS remain the primary financial-analysis source.
 
+### 1a. Fetching Official Issuer Data (TWSE/TPEx)
+```bash
+# Requires requests. Use the repo-local venv:
+.venv/bin/python scripts/fetch_official_issuer.py <stock_id> --market TWSE --issuer-type general
+```
+- **Endpoint allowlist:** `https://openapi.twse.com.tw/v1/opendata/{dataset}` for `--market TWSE`, `https://www.tpex.org.tw/openapi/v1/{dataset}` for `--market TPEx`. Never string-build a host from untrusted input.
+- **Datasets:** company basic info (`t187ap03_{L,O}`), monthly revenue (`t187ap05_{L,O}`), quarterly income summary (`t187ap14_{L,O}`) — the same TWSE dataset covers `--issuer-type financial` too, with non-applicable fields returned as the literal string `"--"`.
+- **Verified TLS status (2026-07-11, see `docs/source-policy.md`):** TWSE succeeds under strict certificate verification. TPEx's certificate currently fails verification (`Missing Subject Key Identifier`) even with `requests`' bundled CA store — this is treated as a source failure (`status: blocked`), never bypassed with `verify=False`.
+- **Role:** tier `official`; canonical for company identity, monthly revenue, and quarterly income when it succeeds.
+
 ### 2. Fetching Financial Data
 ```bash
 # Requires requests + beautifulsoup4. Use the repo-local venv:
@@ -83,6 +93,7 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 - **Coverage checks:** `raw-data.json` includes `three_statement_coverage` to show whether Goodinfo annual IS / BS / CF fields are sufficient for balance-sheet demand validation and three-statement pattern reads.
 - **Sanity checks:** The script flags gross margin >100%, current ratio <0, debt ratio >100%, ROE >100%, and adjacent-year net margin swings >30pp.
 - **Cross-check:** Always include the MOPS official filing URL in `financial-analysis.md`.
+- **Role:** tier `unofficial_scrape` — temporary annual fallback/cross-check once official (`fetch_official_issuer.py`) or FinMind (`fetch_fundamentals.py`) coverage exists for a metric.
 
 ### 2a. Fetching Fundamentals (FinMind)
 ```bash
@@ -92,7 +103,7 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 - **Datasets:** `TaiwanStockMonthRevenue`, `TaiwanStockFinancialStatements`, `TaiwanStockBalanceSheet`, `TaiwanStockCashFlowsStatement`, `TaiwanStockPER` (5-year window; any dataset failure degrades to a warning).
 - **Auto-detection:** same single-case-folder rule; the repo-root fallback is `<stock_id>_fundamentals_data.json` — **avoid this.**
 - **Derived reads:** `derived.monthly_revenue_6m` (official 6M revenue path with MoM / YoY / cumulative YoY), `derived.quarterly_income_8q` (8 quarters with margins and YoY), `derived.quarterly_balance_key_items`, `derived.quarterly_cash_flow` (CFO / capex / FCF), and `derived.valuation_band` (current P/E / P/B vs 1y / 3y / 5y min / median / max with percentile).
-- **Role:** official monthly + quarterly fundamentals layer. Goodinfo stays the annual baseline, MOPS stays the official cross-check, and `valuation_band` is the required anchor for implied-expectation and pricing-thesis multiples.
+- **Role:** tier `secondary_aggregator` per `docs/source-policy.md` — a normalized monthly + quarterly layer, reconciled against `official-issuer-data.json` (`scripts/reconcile_sources.py:reconcile_metric`) where both cover the same metric and period rather than trusted outright. Goodinfo stays the annual baseline, MOPS stays the official cross-check, and `valuation_band` is the required anchor for implied-expectation and pricing-thesis multiples.
 
 ### 3. Writing Files
 - **Always use `write` or `edit` tools** for markdown/JSON files. Do NOT use bash `echo`, `cat`, or `mv` for file creation.
@@ -117,10 +128,10 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 # Uses the same repo-local venv:
 .venv/bin/python scripts/fetch_tdcc.py <stock_id>
 ```
-- **Source:** TDCC OpenData dataset `id=1-5` is the all-market ownership distribution table, not a stock id.
+- **Source:** TDCC's official OpenAPI dataset `id=1-5` (`https://openapi.tdcc.com.tw/v1/opendata/1-5`) is the all-market ownership distribution table, not a stock id. Migrated from the legacy `smart.tdcc.com.tw` CSV endpoint (broken certificate, previously required `verify=False`) to this JSON endpoint, which succeeds under strict TLS verification — see `docs/source-policy.md`.
 - **Auto-detection:** The script looks for exactly one `companies/<stock_id>-*/` directory. If found, writes `tdcc-data.json` there. If zero or multiple matches, falls back to repo root (`<stock_id>_tdcc_data.json`) — **avoid this.**
 - **Purpose:** `tdcc-data.json` stores the requested stock's holding levels (`持股分級`), people count, shares, and TDCC custody percentage. `fetch_finmind.py` reads this local file for egg-theory holder reads; it does not fetch TDCC directly.
-- **Cache:** the all-market CSV (~2.3MB) is cached at `market/tdcc-holding-distribution.csv` and reused for 72h by default (`--max-age-hours`, `--refresh` to force a re-download), so repeated per-stock runs within a week skip the download.
+- **Cache:** the all-market response (~9.6MB JSON, re-serialized to CSV for the on-disk cache) is cached at `market/tdcc-holding-distribution.csv` and reused for 72h by default (`--max-age-hours`, `--refresh` to force a re-download), so repeated per-stock runs within a week skip the download.
 - **Trend accumulation:** the endpoint serves only the latest weekly snapshot, but each new snapshot date is appended to `tdcc-data.json` under `history`. After a few weekly runs, `fetch_finmind.py` derives holder-count trends from this history (`holder_trend_from_tdcc_weekly`, confidence capped at medium) when FinMind `TaiwanStockHoldingSharesPer` is not accessible.
 
 ### 5. Fetching Shared Macro Data
@@ -254,13 +265,16 @@ When the user explicitly asks for a comprehensive research result as HTML, use t
 - Never leave `*_raw_data.json` in repo root.
 - Never leave `*_market_data.json` in repo root.
 - Never leave `*_fundamentals_data.json` in repo root.
+- Never leave `*_official_issuer_data.json` in repo root.
+- Never disable TLS certificate verification (`verify=False`) in any production fetch path; a TLS failure is a source failure, not something to bypass.
+- Never average conflicting source values; classify the conflict per `docs/source-policy.md` instead.
 
 ## Repo Layout Reference
 ```
 companies/           # Per-stock cases (git-ignored contents)
 market/              # Shared macro/industry context
 templates/           # Canonical file shapes for each skill
-scripts/             # fetch_yahoo.py, fetch_goodinfo.py, fetch_fundamentals.py, fetch_finmind.py, fetch_tdcc.py, fetch_macro.py (use .venv at repo root)
+scripts/             # fetch_yahoo.py, fetch_official_issuer.py, fetch_goodinfo.py, fetch_fundamentals.py, fetch_finmind.py, fetch_tdcc.py, fetch_macro.py, reconcile_sources.py (use .venv at repo root)
 docs/data-layout.md  # Full layout rules
 investment-reasoning-framework.md         # Pricing framework (dual thesis)
 ```

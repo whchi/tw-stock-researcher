@@ -1,0 +1,66 @@
+{
+  "_fixture_note": "Normalized metric records (already shaped for scripts/reconcile_sources.py:reconcile_metric) representing a FinMind-derived revenue figure for TSMC 2330 Q1 2026, compared against the TWSE-official figure in twse-listed-general.json's quarterly_income row. FinMind is a secondary_aggregator per docs/source-policy.md.",
+  "canonical_official": {
+    "value": "989918318",
+    "unit": "TWD_thousand",
+    "currency": "TWD",
+    "period_type": "quarterly",
+    "period_key": "2026Q1",
+    "consolidation": "consolidated",
+    "restated": false
+  },
+  "candidate_matching": {
+    "value": "989918318",
+    "unit": "TWD_thousand",
+    "currency": "TWD",
+    "period_type": "quarterly",
+    "period_key": "2026Q1",
+    "consolidation": "consolidated",
+    "restated": false
+  },
+  "candidate_rounding": {
+    "value": "989918000",
+    "unit": "TWD_thousand",
+    "currency": "TWD",
+    "period_type": "quarterly",
+    "period_key": "2026Q1",
+    "consolidation": "consolidated",
+    "restated": false
+  },
+  "candidate_true_conflict": {
+    "value": "950000000",
+    "unit": "TWD_thousand",
+    "currency": "TWD",
+    "period_type": "quarterly",
+    "period_key": "2026Q1",
+    "consolidation": "consolidated",
+    "restated": false
+  },
+  "candidate_period_mismatch": {
+    "value": "989918318",
+    "unit": "TWD_thousand",
+    "currency": "TWD",
+    "period_type": "quarterly",
+    "period_key": "2025Q4",
+    "consolidation": "consolidated",
+    "restated": false
+  },
+  "candidate_consolidation_mismatch": {
+    "value": "989918318",
+    "unit": "TWD_thousand",
+    "currency": "TWD",
+    "period_type": "quarterly",
+    "period_key": "2026Q1",
+    "consolidation": "individual",
+    "restated": false
+  },
+  "candidate_restatement": {
+    "value": "989918318",
+    "unit": "TWD_thousand",
+    "currency": "TWD",
+    "period_type": "quarterly",
+    "period_key": "2026Q1",
+    "consolidation": "consolidated",
+    "restated": true
+  }
+}

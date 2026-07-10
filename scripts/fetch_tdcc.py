@@ -5,7 +5,6 @@ import argparse
 import csv
 import io
 import json
-import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -21,7 +20,13 @@ from data_contract import (  # noqa: E402
 
 PARSER_VERSION = "2"
 
-TDCC_HOLDING_DISTRIBUTION_URL = "https://smart.tdcc.com.tw/opendata/getOD.ashx?id=1-5"
+# Migrated from the legacy https://smart.tdcc.com.tw/opendata/getOD.ashx?id=1-5
+# endpoint (broken certificate chain, previously required a verify=False
+# workaround) to TDCC's official OpenAPI. Verified live 2026-07-11 under
+# strict TLS certificate verification -- see docs/source-policy.md. Same
+# dataset id (1-5), same field shape, JSON instead of CSV.
+TDCC_HOLDING_DISTRIBUTION_URL = "https://openapi.tdcc.com.tw/v1/opendata/1-5"
+CSV_FIELDNAMES = ("資料日期", "證券代號", "持股分級", "人數", "股數", "占集保庫存數比例%")
 
 # The endpoint returns the all-market table (~2.3MB); TDCC refreshes it weekly,
 # so a shared cache avoids re-downloading it for every stock case.
@@ -126,47 +131,45 @@ def parse_holding_distribution(csv_text, stock_id):
     return rows
 
 
+def _rows_to_csv_text(rows):
+    """Re-serialize the official OpenAPI's JSON rows as CSV text so the
+    existing cache file format and parse_holding_distribution() parser stay
+    unchanged; only the transport and endpoint changed."""
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=CSV_FIELDNAMES)
+    writer.writeheader()
+    for row in rows:
+        writer.writerow(
+            {
+                "資料日期": row.get("﻿資料日期") or row.get("資料日期", ""),
+                "證券代號": row.get("證券代號", ""),
+                "持股分級": row.get("持股分級", ""),
+                "人數": row.get("人數", ""),
+                "股數": row.get("股數", ""),
+                "占集保庫存數比例%": row.get("占集保庫存數比例%", ""),
+            }
+        )
+    return buffer.getvalue()
+
+
 def fetch_holding_distribution_csv():
+    """Fetch the all-market ownership-distribution dataset from TDCC's
+    official OpenAPI. A TLS or HTTP failure here is a source failure; it is
+    never retried with verify=False or a curl subprocess."""
     import requests
-    import urllib3
 
-    try:
-        response = requests.get(TDCC_HOLDING_DISTRIBUTION_URL, timeout=30)
-    except requests.exceptions.SSLError:
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        try:
-            response = requests.get(
-                TDCC_HOLDING_DISTRIBUTION_URL,
-                timeout=30,
-                verify=False,
-            )
-        except requests.exceptions.RequestException:
-            return fetch_holding_distribution_csv_with_curl()
-    except requests.exceptions.RequestException:
-        return fetch_holding_distribution_csv_with_curl()
-
+    response = requests.get(TDCC_HOLDING_DISTRIBUTION_URL, timeout=30)
     if response.status_code != 200:
         raise RuntimeError(
             "TDCCStockHoldingDistribution request failed: "
             f"HTTP {response.status_code}"
         )
-    return response.text
 
+    rows = response.json()
+    if not isinstance(rows, list):
+        raise RuntimeError("TDCCStockHoldingDistribution response was not a JSON array")
 
-def fetch_holding_distribution_csv_with_curl():
-    completed = subprocess.run(
-        [
-            "curl",
-            "-L",
-            "--max-time",
-            "90",
-            TDCC_HOLDING_DISTRIBUTION_URL,
-        ],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    return completed.stdout
+    return _rows_to_csv_text(rows)
 
 
 def merge_history(previous_payload, snapshot_rows):

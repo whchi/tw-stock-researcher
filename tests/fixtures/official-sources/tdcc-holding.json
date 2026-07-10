@@ -1,0 +1,21 @@
+{
+  "_fixture_note": "Real sample rows captured 2026-07-11 from https://openapi.tdcc.com.tw/v1/opendata/1-5 (valid TLS, verified with strict certificate checking). Same field shape as the legacy CSV endpoint (smart.tdcc.com.tw), including the BOM-prefixed 'ï»¿資料日期' key, just JSON-encoded instead of CSV.",
+  "rows": [
+    {
+      "證券代號": "2330",
+      "占集保庫存數比例%": "0.02",
+      "人數": "1500",
+      "﻿資料日期": "20260703",
+      "股數": "5186474",
+      "持股分級": "1"
+    },
+    {
+      "證券代號": "2330",
+      "占集保庫存數比例%": "100.00",
+      "人數": "700000",
+      "﻿資料日期": "20260703",
+      "股數": "25932370067",
+      "持股分級": "17"
+    }
+  ]
+}

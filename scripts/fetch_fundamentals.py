@@ -418,6 +418,9 @@ def build_metadata(
     fetched_at=None,
     source_as_of=None,
 ):
+    # Tier "secondary_aggregator" per docs/source-policy.md: reconciled
+    # against fetch_official_issuer.py's output via reconcile_sources.py
+    # before being treated as canonical for a metric/period both cover.
     source_urls = {
         dataset: (
             f"{BASE_URL}?dataset={dataset}&data_id={stock_id}"

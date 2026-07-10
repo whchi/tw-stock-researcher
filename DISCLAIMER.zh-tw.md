@@ -7,11 +7,15 @@
 ## 2. 資料來源
 
 所有財務數據與市場資訊均來自公開網站與 API，包括但不限於：
+- 證交所 OpenAPI (openapi.twse.com.tw) 與櫃買中心 OpenAPI (www.tpex.org.tw/openapi)
+- 集保結算所 OpenAPI (openapi.tdcc.com.tw)
+- MOPS 公開資訊觀測站 (mops.twse.com.tw)
+- FinMind API
 - Goodinfo.tw
 - Yahoo 股市 (tw.stock.yahoo.com)
-- FinMind API
-- MOPS 公開資訊觀測站 (mops.twse.com.tw)
 - 各公司官方網站與公開財報
+
+各資料來源之階層、分級與衝突處理原則（絕不平均化）請參見 `docs/source-policy.md`。
 
 本專案不擁有、不控制、不保證上述來源資料的即時性、完整性或準確性。
 

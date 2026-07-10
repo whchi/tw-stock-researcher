@@ -316,11 +316,15 @@ The content contained in this project is provided solely for educational, resear
 ## 2. Data Sources
 
 All financial data and market information are sourced from publicly available websites and APIs, including but not limited to:
+- TWSE OpenAPI (openapi.twse.com.tw) and TPEx OpenAPI (www.tpex.org.tw/openapi)
+- TDCC OpenAPI (openapi.tdcc.com.tw)
+- MOPS Market Observation Post System (mops.twse.com.tw)
+- FinMind API
 - Goodinfo.tw
 - Yahoo Finance Taiwan (tw.stock.yahoo.com)
-- FinMind API
-- MOPS Market Observation Post System (mops.twse.com.tw)
 - Official company websites and public filings
+
+See `docs/source-policy.md` for the source hierarchy, tiering, and how conflicting values across sources are handled (never averaged).
 
 This project does not own, control, or guarantee the timeliness, completeness, or accuracy of data from the above sources.
 

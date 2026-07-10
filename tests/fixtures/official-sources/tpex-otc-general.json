@@ -1,0 +1,51 @@
+{
+  "_fixture_note": "UNVERIFIED structural fixture — https://www.tpex.org.tw/openapi's TLS certificate fails verification even with requests/certifi ('Missing Subject Key Identifier'), confirmed 2026-07-11 (see docs/source-policy.md). This fixture mirrors TWSE's documented '_L' -> '_O' dataset-suffix convention for a plausible OTC issuer shape; it has NOT been confirmed against a live TPEx response. fetch_official_issuer('...', market='TPEx', ...) is expected to fail closed (status=blocked) against the real endpoint until TPEx's certificate chain is fixed. Re-verify this shape once that happens.",
+  "basic_info": [
+    {
+      "出表日期": "1150709",
+      "公司代號": "6488",
+      "公司名稱": "環球晶圓股份有限公司",
+      "公司簡稱": "環球晶",
+      "產業別": "24",
+      "成立日期": "20110919",
+      "上櫃日期": "20111219",
+      "實收資本額": "13650000000",
+      "英文簡稱": "GlobalWafers",
+      "網址": "https://www.gwsemi.com"
+    }
+  ],
+  "monthly_revenue": [
+    {
+      "出表日期": "1150610",
+      "資料年月": "11505",
+      "公司代號": "6488",
+      "公司名稱": "環球晶",
+      "產業別": "24",
+      "營業收入-當月營收": "6200000",
+      "營業收入-上月營收": "6000000",
+      "營業收入-去年當月營收": "5900000",
+      "營業收入-上月比較增減(%)": "3.33",
+      "營業收入-去年同月增減(%)": "5.08",
+      "累計營業收入-當月累計營收": "30500000",
+      "累計營業收入-去年累計營收": "29000000",
+      "累計營業收入-前期比較增減(%)": "5.17",
+      "備註": "-"
+    }
+  ],
+  "quarterly_income": [
+    {
+      "出表日期": "1150710",
+      "年度": "115",
+      "季別": "1",
+      "公司代號": "6488",
+      "公司名稱": "環球晶",
+      "產業別": "24",
+      "基本每股盈餘(元)": "3.42",
+      "普通股每股面額": "新台幣                 10.0000元",
+      "營業收入": "18500000",
+      "營業利益": "2600000",
+      "營業外收入及支出": "150000",
+      "稅後淨利": "2100000"
+    }
+  ]
+}

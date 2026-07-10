@@ -112,6 +112,8 @@ def build_metadata(
     fetched_at=None,
     source_as_of=None,
 ):
+    # Tier "unofficial_secondary" per docs/source-policy.md: local profile /
+    # discovery fallback, excluded from shareable research-summary payloads.
     row_counts = row_counts or {}
     required_datasets = ["profile"]
     optional_datasets = ["revenue", "income_statement", "cash_flow_statement"]

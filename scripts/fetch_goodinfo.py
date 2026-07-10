@@ -343,6 +343,9 @@ def build_source_context(stock_id, years):
 
 
 def build_metadata(stock_id, row_counts=None, warnings=None, errors=None, fetched_at=None):
+    # Tier "unofficial_scrape" per docs/source-policy.md: temporary annual
+    # fallback/cross-check, not the primary source once official
+    # (fetch_official_issuer.py) or FinMind coverage exists for a metric.
     row_counts = row_counts or {}
     required_datasets = ["income_statement", "balance_sheet", "cash_flow"]
     status = classify_status(

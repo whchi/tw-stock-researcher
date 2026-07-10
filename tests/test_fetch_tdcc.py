@@ -128,36 +128,65 @@ class TdccHoldingDistributionTests(unittest.TestCase):
             result["metadata"]["row_counts"]["TDCCHoldingDistributionHistoryDates"], 2
         )
         
-    def test_fetch_holding_distribution_retries_without_ssl_verification_for_tdcc_cert_issue(self):
-        import requests
+    def test_fetch_holding_distribution_parses_official_json_endpoint_into_csv_text(self):
+        json_rows = [
+            {
+                "證券代號": "6451  ",
+                "﻿資料日期": "20260605",
+                "持股分級": "17",
+                "人數": "19022",
+                "股數": "113593460",
+                "占集保庫存數比例%": "100.00",
+            }
+        ]
 
         class Response:
             status_code = 200
-            text = "csv"
 
-        with patch(
-            "requests.get",
-            side_effect=[requests.exceptions.SSLError("bad cert"), Response()],
-        ) as get:
-            result = fetch_tdcc.fetch_holding_distribution_csv()
+            def json(self):
+                return json_rows
 
-        self.assertEqual(result, "csv")
-        self.assertEqual(get.call_args_list[0].kwargs["timeout"], 30)
-        self.assertFalse(get.call_args_list[1].kwargs["verify"])
+        with patch("requests.get", return_value=Response()) as get:
+            csv_text = fetch_tdcc.fetch_holding_distribution_csv()
 
-    def test_fetch_holding_distribution_falls_back_to_curl_when_requests_redirects_loop(self):
+        self.assertEqual(get.call_args.args[0], fetch_tdcc.TDCC_HOLDING_DISTRIBUTION_URL)
+        self.assertEqual(get.call_args.kwargs["timeout"], 30)
+        self.assertIn("openapi.tdcc.com.tw", fetch_tdcc.TDCC_HOLDING_DISTRIBUTION_URL)
+
+        rows = fetch_tdcc.parse_holding_distribution(csv_text, "6451")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["date"], "2026-06-05")
+        self.assertEqual(rows[0]["people"], 19022)
+
+    def test_fetch_holding_distribution_does_not_retry_without_verification_on_tls_failure(self):
         import requests
 
-        completed = type("Completed", (), {"stdout": "csv-from-curl"})()
+        with patch("requests.get", side_effect=requests.exceptions.SSLError("bad cert")) as get:
+            with self.assertRaises(requests.exceptions.SSLError):
+                fetch_tdcc.fetch_holding_distribution_csv()
 
-        with patch("requests.get", side_effect=requests.exceptions.TooManyRedirects()):
-            with patch("subprocess.run", return_value=completed) as run:
-                result = fetch_tdcc.fetch_holding_distribution_csv()
+        self.assertEqual(get.call_count, 1)
+        for call in get.call_args_list:
+            self.assertNotIn("verify", call.kwargs)
 
-        self.assertEqual(result, "csv-from-curl")
-        self.assertEqual(run.call_args.args[0][0], "curl")
-        self.assertIn("90", run.call_args.args[0])
-        self.assertIn(fetch_tdcc.TDCC_HOLDING_DISTRIBUTION_URL, run.call_args.args[0])
+    def test_fetch_holding_distribution_raises_on_non_200_status(self):
+        class Response:
+            status_code = 500
+
+        with patch("requests.get", return_value=Response()):
+            with self.assertRaises(RuntimeError):
+                fetch_tdcc.fetch_holding_distribution_csv()
+
+    def test_fetch_holding_distribution_raises_when_response_is_not_a_json_array(self):
+        class Response:
+            status_code = 200
+
+            def json(self):
+                return {"not": "a list"}
+
+        with patch("requests.get", return_value=Response()):
+            with self.assertRaises(RuntimeError):
+                fetch_tdcc.fetch_holding_distribution_csv()
 
 
 class BuildMetadataTests(unittest.TestCase):
