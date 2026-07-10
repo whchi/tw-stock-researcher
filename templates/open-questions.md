@@ -2,15 +2,14 @@
 
 ## Critical Unresolved Question
 
-| Question | Why It Matters | What Evidence Would Resolve It | Next Check |
-| --- | --- | --- | --- |
+Critical ID: _(reference the highest-priority open ID from the Active Questions table below, e.g. `FIN-DATA-VALUATION`; do not duplicate the question text here)_
 
 ## Active Questions
 
-| ID | Question | Why It Matters | What Evidence Would Resolve It | Next Check | Status |
-| --- | --- | --- | --- | --- | --- |
+| ID | Origin Stage | Priority | Status | Blocking Stage | Question | Why It Matters | Resolve When | Evidence Refs | Next Check | Last Checked |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 
 ## Resolved Questions
 
-| ID | Resolution | Closed On |
-| --- | --- | --- |
+| ID | Resolution | Evidence Refs | Evidence As Of | Resolved By Stage | Closed On | Reopen Trigger |
+| --- | --- | --- | --- | --- | --- | --- |

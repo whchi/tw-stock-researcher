@@ -132,7 +132,11 @@ reject_line "templates/active-decisions.md" "## Recent 6M Tracking"
 reject_line "templates/active-decisions.md" "## Validation Window"
 
 require_line "templates/open-questions.md" "## Critical Unresolved Question"
-require_line "templates/open-questions.md" "| Question | Why It Matters | What Evidence Would Resolve It | Next Check |"
+require_line "templates/open-questions.md" "## Active Questions"
+require_line "templates/open-questions.md" "| ID | Origin Stage | Priority | Status | Blocking Stage | Question | Why It Matters | Resolve When | Evidence Refs | Next Check | Last Checked |"
+require_line "templates/open-questions.md" "## Resolved Questions"
+require_line "templates/open-questions.md" "| ID | Resolution | Evidence Refs | Evidence As Of | Resolved By Stage | Closed On | Reopen Trigger |"
+reject_line "templates/open-questions.md" "| Question | Why It Matters | What Evidence Would Resolve It | Next Check |"
 
 require_line "templates/signal-log.md" "| Date | Signal Layer | Signal Type | Claim Type | Classification | Source | Summary | Price Reaction | Revenue/Earnings Validation | Thesis Impact | Next Action |"
 

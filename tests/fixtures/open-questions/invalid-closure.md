@@ -13,3 +13,4 @@ Critical ID: _(none yet)_
 
 | ID | Resolution | Evidence Refs | Evidence As Of | Resolved By Stage | Closed On | Reopen Trigger |
 | --- | --- | --- | --- | --- | --- | --- |
+| FIN-DATA-VALUATION | Assumed complete without checking. |  |  | session-wrap | 2026-07-09 |  |

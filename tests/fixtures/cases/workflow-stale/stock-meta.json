@@ -30,9 +30,9 @@
   "market": "TWSE",
   "stage_records": {
     "company-deep-dive": {
-      "checked_at": "2026-07-10T16:20:35Z",
+      "checked_at": "2026-07-10T16:31:14Z",
       "input_hashes": {
-        "stock-meta.json": "a03a207a0ef373f5304f34efe03ac2dadaac6a523b925156c3176b0839b1ce1c",
+        "stock-meta.json": "924ac8b71b843f85119bc643836877aaaa0aff57965bf43b2276ebe3d521ba71",
         "yahoo-data.json": "c00d8220f9f6b3c322aafa30b7dd99788229c658a04328a980b70c6d561ae9ce"
       },
       "issues": [],
@@ -43,7 +43,7 @@
       "status": "pass"
     },
     "financial-analysis": {
-      "checked_at": "2026-07-10T16:20:35Z",
+      "checked_at": "2026-07-10T16:31:14Z",
       "input_hashes": {
         "company-analysis.md": "43a7fe72d6aa246c55a9bb0fe12d284bc6c3b987cc7873c1376400be35348364",
         "fundamentals-data.json": "e9513f6269afa3067a35fc9014eb8e91f37079798bc3c58cfb5545d337847690"
@@ -56,9 +56,9 @@
       "status": "pass"
     },
     "financial-data-fetch": {
-      "checked_at": "2026-07-10T16:20:35Z",
+      "checked_at": "2026-07-10T16:31:14Z",
       "input_hashes": {
-        "stock-meta.json": "c831d87eccd3970a587bf1d783fe1c4b0da7be571fcae7827542b9713d620a6b"
+        "stock-meta.json": "415cbf346f354b8be74aad8c5e02f19874eeb5a0792eeb6404f318197a7dbc06"
       },
       "issues": [],
       "output_hashes": {
@@ -70,7 +70,7 @@
       "status": "pass"
     },
     "industry-transmission-analysis": {
-      "checked_at": "2026-07-10T16:20:35Z",
+      "checked_at": "2026-07-10T16:31:14Z",
       "input_hashes": {
         "company-analysis.md": "43a7fe72d6aa246c55a9bb0fe12d284bc6c3b987cc7873c1376400be35348364"
       },
@@ -82,7 +82,7 @@
       "status": "pass"
     },
     "investment-thesis": {
-      "checked_at": "2026-07-10T16:20:35Z",
+      "checked_at": "2026-07-10T16:31:14Z",
       "input_hashes": {
         "company-analysis.md": "43a7fe72d6aa246c55a9bb0fe12d284bc6c3b987cc7873c1376400be35348364",
         "financial-analysis.md": "d2fd5e0e11deecfa141d553879aebe31cc24006ec8f555a8c2dc58f38fe125a1",
@@ -99,7 +99,7 @@
       "status": "pass"
     },
     "macro-impact-analysis": {
-      "checked_at": "2026-07-10T16:20:35Z",
+      "checked_at": "2026-07-10T16:31:14Z",
       "input_hashes": {
         "company-analysis.md": "43a7fe72d6aa246c55a9bb0fe12d284bc6c3b987cc7873c1376400be35348364"
       },
@@ -111,7 +111,7 @@
       "status": "pass"
     },
     "market-action-read": {
-      "checked_at": "2026-07-10T16:20:35Z",
+      "checked_at": "2026-07-10T16:31:14Z",
       "input_hashes": {
         "market-data.json": "fda343650556bd6a622f72df07721c8402328161cf6a035559c7c128276e819a"
       },
@@ -123,9 +123,9 @@
       "status": "pass"
     },
     "market-data-fetch": {
-      "checked_at": "2026-07-10T16:20:35Z",
+      "checked_at": "2026-07-10T16:31:14Z",
       "input_hashes": {
-        "stock-meta.json": "9d0b8a9e3f67053600a64669f662380b6bc41c3e8163afb95c2ebb803a8026b5"
+        "stock-meta.json": "aa65b363b427df4e97d97b37b0c5a9521519347f1530f916fc6acb1add5f37df"
       },
       "issues": [],
       "output_hashes": {
@@ -136,7 +136,7 @@
       "status": "pass"
     },
     "quality-and-valuation-check": {
-      "checked_at": "2026-07-10T16:20:35Z",
+      "checked_at": "2026-07-10T16:31:14Z",
       "input_hashes": {
         "financial-analysis.md": "d2fd5e0e11deecfa141d553879aebe31cc24006ec8f555a8c2dc58f38fe125a1",
         "fundamentals-data.json": "e9513f6269afa3067a35fc9014eb8e91f37079798bc3c58cfb5545d337847690",
@@ -150,10 +150,10 @@
       "status": "pass"
     },
     "session-wrap": {
-      "checked_at": "2026-07-10T16:20:35Z",
+      "checked_at": "2026-07-10T16:31:14Z",
       "input_hashes": {
         "investment-memo.md": "ef15bc2fdca8d4785c68abf419bd1380db33bc22d313c8ffad9cf902ef840579",
-        "open-questions.md": "695b74a2db12f5737a4b41ea35ac4f7dc8c09d05ff37f5001876625fa1740c7c"
+        "open-questions.md": "6be66a47a418291f989cb5338a0c907e39126aed74e9f1c2758aedd1988e648f"
       },
       "issues": [],
       "output_hashes": {
@@ -163,11 +163,11 @@
       "status": "pass"
     },
     "stock-case-init": {
-      "checked_at": "2026-07-10T16:20:35Z",
+      "checked_at": "2026-07-10T16:31:14Z",
       "input_hashes": {},
       "issues": [],
       "output_hashes": {
-        "open-questions.md": "695b74a2db12f5737a4b41ea35ac4f7dc8c09d05ff37f5001876625fa1740c7c",
+        "open-questions.md": "6be66a47a418291f989cb5338a0c907e39126aed74e9f1c2758aedd1988e648f",
         "research-questions.md": "216c0e7ad9e78f896b20853b2bf68df8b223d5ba6903f7e9a93c9ba31595ad4d",
         "stock-meta.json": "4b55a8c183f579cd13167e44353bb30ebe03b1708cc1c09f6a6f1d2c4557dff9"
       },
@@ -175,9 +175,9 @@
       "status": "pass"
     },
     "yahoo-profile-financials": {
-      "checked_at": "2026-07-10T16:20:35Z",
+      "checked_at": "2026-07-10T16:31:14Z",
       "input_hashes": {
-        "stock-meta.json": "7ede68249adfcd3bef2e8eae112bbafb1ccda027388e9c7b34d47f5257968afe"
+        "stock-meta.json": "2334bf53cf34016a8a452d1c37f8f04ea6698438ee96d1191115239ba1c1216e"
       },
       "issues": [],
       "output_hashes": {

@@ -1,0 +1,427 @@
+#!/usr/bin/env python3
+"""Evidence-backed open-question ledger.
+
+Validates, upserts, and resolves rows in a case's open-questions.md against
+the canonical stage/question-namespace contract in workflow-contract.json.
+A stage may only create, update, or resolve questions in its own namespace;
+session-wrap may never resolve a question. Closing a question requires
+evidence, a source as-of date, and a reopen trigger — an agent writing a
+resolution sentence is not, by itself, a closure.
+"""
+
+import argparse
+import json
+import os
+import re
+import sys
+import tempfile
+from datetime import date
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from markdown_contract import (  # noqa: E402
+    MarkdownContractError,
+    extract_table_under_heading,
+    normalize_text,
+    render_pipe_table,
+)
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+CONTRACT_PATH = REPO_ROOT / "workflow-contract.json"
+
+STATUSES = ("open", "waiting_external", "blocked", "resolved", "superseded")
+ACTIVE_HEADING = "Active Questions"
+RESOLVED_HEADING = "Resolved Questions"
+ACTIVE_HEADERS = [
+    "ID", "Origin Stage", "Priority", "Status", "Blocking Stage", "Question",
+    "Why It Matters", "Resolve When", "Evidence Refs", "Next Check", "Last Checked",
+]
+RESOLVED_HEADERS = [
+    "ID", "Resolution", "Evidence Refs", "Evidence As Of", "Resolved By Stage",
+    "Closed On", "Reopen Trigger",
+]
+PRIORITY_RANK = {"high": 0, "medium": 1, "low": 2}
+
+
+def _load_contract():
+    with open(CONTRACT_PATH, encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def _stages_by_id(contract):
+    return {stage["id"]: stage for stage in contract["stages"]}
+
+
+def _namespaces(contract):
+    return {
+        stage["question_namespace"]: stage["id"]
+        for stage in contract["stages"]
+        if stage.get("question_namespace")
+    }
+
+
+def _namespace_of(question_id, namespaces):
+    for namespace in sorted(namespaces, key=len, reverse=True):
+        if question_id == namespace or question_id.startswith(namespace + "-"):
+            return namespace
+    return None
+
+
+def _own_namespace(stage, namespaces):
+    for namespace, owning_stage in namespaces.items():
+        if owning_stage == stage:
+            return namespace
+    return None
+
+
+def _sort_key(row):
+    priority = row.get("Priority", "").strip().lower()
+    return (PRIORITY_RANK.get(priority, 99), row.get("ID", ""))
+
+
+def validate_ledger(text, contract):
+    text = normalize_text(text)
+    issues = []
+    stage_ids = set(_stages_by_id(contract))
+    namespaces = _namespaces(contract)
+
+    try:
+        active_headers, active_rows = extract_table_under_heading(text, ACTIVE_HEADING)
+    except MarkdownContractError as exc:
+        issues.append(str(exc))
+        active_rows = []
+    else:
+        if active_headers != ACTIVE_HEADERS:
+            issues.append(f"active table headers do not match the canonical shape: {active_headers}")
+
+    try:
+        resolved_headers, resolved_rows = extract_table_under_heading(text, RESOLVED_HEADING)
+    except MarkdownContractError as exc:
+        issues.append(str(exc))
+        resolved_rows = []
+    else:
+        if resolved_headers != RESOLVED_HEADERS:
+            issues.append(f"resolved table headers do not match the canonical shape: {resolved_headers}")
+
+    seen_ids = set()
+
+    for row in active_rows:
+        qid = row.get("ID", "").strip()
+        if not qid:
+            issues.append("active row missing ID")
+            continue
+        if qid in seen_ids:
+            issues.append(f"duplicate id: {qid}")
+        seen_ids.add(qid)
+        if _namespace_of(qid, namespaces) is None:
+            issues.append(f"unknown namespace for id: {qid}")
+        origin = row.get("Origin Stage", "").strip()
+        if origin not in stage_ids:
+            issues.append(f"unknown origin stage for {qid}: {origin!r}")
+        status_value = row.get("Status", "").strip()
+        if status_value not in STATUSES:
+            issues.append(f"unknown status for {qid}: {status_value!r}")
+        blocking = row.get("Blocking Stage", "").strip()
+        if blocking and blocking not in stage_ids:
+            issues.append(f"unknown blocking stage for {qid}: {blocking!r}")
+
+    for row in resolved_rows:
+        qid = row.get("ID", "").strip()
+        if not qid:
+            issues.append("resolved row missing ID")
+            continue
+        if qid in seen_ids:
+            issues.append(f"duplicate id: {qid}")
+        seen_ids.add(qid)
+        if _namespace_of(qid, namespaces) is None:
+            issues.append(f"unknown namespace for id: {qid}")
+        if not row.get("Evidence Refs", "").strip():
+            issues.append(f"missing resolution evidence for {qid}")
+        if not row.get("Evidence As Of", "").strip():
+            issues.append(f"missing evidence as-of for {qid}")
+        if not row.get("Reopen Trigger", "").strip():
+            issues.append(f"missing reopen trigger for {qid}")
+        resolver = row.get("Resolved By Stage", "").strip()
+        if resolver == "session-wrap":
+            issues.append(f"session-wrap may not resolve questions: {qid}")
+        elif resolver not in stage_ids:
+            issues.append(f"unknown resolver stage for {qid}: {resolver!r}")
+
+    return issues
+
+
+def _atomic_write_text(path, text):
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(text)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp_name, path)
+    except BaseException:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
+
+
+def _replace_table(text, heading, headers, rows, level=2):
+    marker = "#" * level + " " + heading
+    lines = text.splitlines(keepends=True)
+    start = None
+    for i, line in enumerate(lines):
+        if line.rstrip("\n") == marker:
+            start = i + 1
+            break
+    if start is None:
+        raise MarkdownContractError(f"heading not found: {marker!r}")
+
+    heading_re = re.compile(r"^#{1,%d}\s" % level)
+    section_end = len(lines)
+    for i in range(start, len(lines)):
+        if heading_re.match(lines[i]):
+            section_end = i
+            break
+
+    table_start = None
+    for i in range(start, section_end):
+        if lines[i].lstrip().startswith("|"):
+            table_start = i
+            break
+    if table_start is None:
+        raise MarkdownContractError(f"no table found under heading: {marker!r}")
+
+    table_end = section_end
+    for i in range(table_start, section_end):
+        if not lines[i].lstrip().startswith("|"):
+            table_end = i
+            break
+
+    new_table_text = render_pipe_table(headers, rows)
+    new_lines = lines[:table_start] + [new_table_text] + lines[table_end:]
+    return "".join(new_lines)
+
+
+def upsert_question(
+    case_dir,
+    *,
+    contract,
+    question_id,
+    stage,
+    priority,
+    question,
+    resolve_when,
+    next_check,
+    why_it_matters="",
+    blocking_stage="",
+    evidence_refs="",
+    as_of=None,
+):
+    case_dir = Path(case_dir)
+    path = case_dir / "open-questions.md"
+    text = normalize_text(path.read_text(encoding="utf-8"))
+
+    namespaces = _namespaces(contract)
+    own_namespace = _own_namespace(stage, namespaces)
+    if own_namespace is None:
+        raise ValueError(f"unknown stage: {stage!r}")
+    if _namespace_of(question_id, namespaces) != own_namespace:
+        raise ValueError(
+            f"stage {stage!r} may only upsert questions in its own namespace "
+            f"{own_namespace!r}, got id {question_id!r}"
+        )
+
+    _, active_rows = extract_table_under_heading(text, ACTIVE_HEADING)
+    _, resolved_rows = extract_table_under_heading(text, RESOLVED_HEADING)
+
+    if any(row["ID"] == question_id for row in resolved_rows):
+        raise ValueError(f"question {question_id!r} is already resolved")
+
+    existing = next((row for row in active_rows if row["ID"] == question_id), None)
+    if existing is not None and existing["Origin Stage"] != stage:
+        raise ValueError(
+            f"question {question_id!r} was created by {existing['Origin Stage']!r}; "
+            f"{stage!r} may not change its origin stage"
+        )
+
+    as_of = as_of or date.today().isoformat()
+    new_row = {
+        "ID": question_id,
+        "Origin Stage": stage,
+        "Priority": priority,
+        "Status": existing["Status"] if existing else "open",
+        "Blocking Stage": blocking_stage or (existing.get("Blocking Stage", "") if existing else ""),
+        "Question": question,
+        "Why It Matters": why_it_matters or (existing.get("Why It Matters", "") if existing else ""),
+        "Resolve When": resolve_when,
+        "Evidence Refs": evidence_refs or (existing.get("Evidence Refs", "") if existing else ""),
+        "Next Check": next_check,
+        "Last Checked": as_of,
+    }
+
+    active_rows = [row for row in active_rows if row["ID"] != question_id]
+    active_rows.append(new_row)
+    active_rows.sort(key=_sort_key)
+
+    new_text = _replace_table(text, ACTIVE_HEADING, ACTIVE_HEADERS, active_rows)
+
+    issues = validate_ledger(new_text, contract)
+    if issues:
+        raise ValueError(f"upsert would produce an invalid ledger: {issues}")
+
+    _atomic_write_text(path, new_text)
+    return new_row
+
+
+def resolve_question(
+    case_dir,
+    *,
+    contract,
+    question_id,
+    stage,
+    evidence,
+    as_of,
+    resolution,
+    reopen_trigger,
+):
+    if stage == "session-wrap":
+        raise ValueError("session-wrap may not resolve questions")
+
+    case_dir = Path(case_dir)
+    path = case_dir / "open-questions.md"
+    text = normalize_text(path.read_text(encoding="utf-8"))
+
+    namespaces = _namespaces(contract)
+    own_namespace = _own_namespace(stage, namespaces)
+    if own_namespace is None:
+        raise ValueError(f"unknown stage: {stage!r}")
+    if _namespace_of(question_id, namespaces) != own_namespace:
+        raise ValueError(
+            f"stage {stage!r} may only resolve questions in its own namespace {own_namespace!r}"
+        )
+
+    _, active_rows = extract_table_under_heading(text, ACTIVE_HEADING)
+    _, resolved_rows = extract_table_under_heading(text, RESOLVED_HEADING)
+
+    if not any(row["ID"] == question_id for row in active_rows):
+        raise ValueError(f"unknown active question id: {question_id!r}")
+
+    remaining_active = [row for row in active_rows if row["ID"] != question_id]
+
+    new_resolved_row = {
+        "ID": question_id,
+        "Resolution": resolution,
+        "Evidence Refs": evidence,
+        "Evidence As Of": as_of,
+        "Resolved By Stage": stage,
+        "Closed On": date.today().isoformat(),
+        "Reopen Trigger": reopen_trigger,
+    }
+    resolved_rows = resolved_rows + [new_resolved_row]
+    resolved_rows.sort(key=lambda row: row["ID"])
+
+    new_text = _replace_table(text, ACTIVE_HEADING, ACTIVE_HEADERS, remaining_active)
+    new_text = _replace_table(new_text, RESOLVED_HEADING, RESOLVED_HEADERS, resolved_rows)
+
+    issues = validate_ledger(new_text, contract)
+    if issues:
+        raise ValueError(f"resolve would produce an invalid ledger: {issues}")
+
+    _atomic_write_text(path, new_text)
+    return new_resolved_row
+
+
+def parse_args(argv):
+    parser = argparse.ArgumentParser(description=__doc__)
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    validate_parser = subparsers.add_parser("validate")
+    validate_parser.add_argument("path")
+
+    upsert_parser = subparsers.add_parser("upsert")
+    upsert_parser.add_argument("case_dir")
+    upsert_parser.add_argument("--id", dest="question_id", required=True)
+    upsert_parser.add_argument("--stage", required=True)
+    upsert_parser.add_argument("--priority", required=True)
+    upsert_parser.add_argument("--question", required=True)
+    upsert_parser.add_argument("--why-it-matters", default="")
+    upsert_parser.add_argument("--resolve-when", required=True)
+    upsert_parser.add_argument("--next-check", required=True)
+    upsert_parser.add_argument("--blocking-stage", default="")
+    upsert_parser.add_argument("--evidence-refs", default="")
+    upsert_parser.add_argument("--as-of")
+
+    resolve_parser = subparsers.add_parser("resolve")
+    resolve_parser.add_argument("case_dir")
+    resolve_parser.add_argument("--id", dest="question_id", required=True)
+    resolve_parser.add_argument("--stage", required=True)
+    resolve_parser.add_argument("--evidence", required=True)
+    resolve_parser.add_argument("--as-of", required=True)
+    resolve_parser.add_argument("--resolution", required=True)
+    resolve_parser.add_argument("--reopen-trigger", required=True)
+
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    args = parse_args(argv or sys.argv[1:])
+    contract = _load_contract()
+
+    if args.command == "validate":
+        text = normalize_text(Path(args.path).read_text(encoding="utf-8"))
+        issues = validate_ledger(text, contract)
+        if issues:
+            for issue in issues:
+                print(f"- {issue}", file=sys.stderr)
+            return 1
+        print("valid")
+        return 0
+
+    if args.command == "upsert":
+        try:
+            row = upsert_question(
+                args.case_dir,
+                contract=contract,
+                question_id=args.question_id,
+                stage=args.stage,
+                priority=args.priority,
+                question=args.question,
+                why_it_matters=args.why_it_matters,
+                resolve_when=args.resolve_when,
+                next_check=args.next_check,
+                blocking_stage=args.blocking_stage,
+                evidence_refs=args.evidence_refs,
+                as_of=args.as_of,
+            )
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(row, ensure_ascii=False))
+        return 0
+
+    if args.command == "resolve":
+        try:
+            row = resolve_question(
+                args.case_dir,
+                contract=contract,
+                question_id=args.question_id,
+                stage=args.stage,
+                evidence=args.evidence,
+                as_of=args.as_of,
+                resolution=args.resolution,
+                reopen_trigger=args.reopen_trigger,
+            )
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+        print(json.dumps(row, ensure_ascii=False))
+        return 0
+
+    raise ValueError(f"unknown command: {args.command}")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

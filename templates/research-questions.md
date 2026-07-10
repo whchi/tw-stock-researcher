@@ -1,5 +1,11 @@
 # Research Questions
 
+> This file is free-form exploratory notes. The evidence-backed, ID-tracked
+> question ledger with status/closure lives in `open-questions.md`; promote
+> anything below into that ledger with `scripts/open_questions.py upsert
+> --stage stock-case-init --id CASE-...` once it needs to be tracked to
+> resolution.
+
 ## Recent 6M Questions
 
 - 近 6 個月月營收發生了什麼？
