@@ -14,15 +14,17 @@ Write the business fact layer: what the company sells, who pays, why it matters,
 
 ## Workflow
 
-1. Read `stock-meta.json`, `research-questions.md`, and `yahoo-data.json` if available.
-2. Separate verified facts, management claims, market inference, and speculation to verify.
-3. Cover business model, product mix, technical bottleneck, customer dependency, switching cost, monetization path, and margin drivers.
-4. Keep unresolved items in `open-questions.md` when they affect the thesis but are not verifiable yet.
+1. Preflight: `.venv/bin/python scripts/workflow_state.py gate <case_dir> company-deep-dive --as-of <YYYY-MM-DD> --json`; if `ready` is false, run `yahoo-profile-financials` first.
+2. Read `stock-meta.json`, `research-questions.md`, and `yahoo-data.json`.
+3. Separate verified facts, management claims, market inference, and speculation to verify.
+4. Cover business model, product mix, technical bottleneck, customer dependency, switching cost, monetization path, and margin drivers.
+5. Keep unresolved items in `open-questions.md` when they affect the thesis but are not verifiable yet.
+6. Record: `.venv/bin/python scripts/workflow_state.py record <case_dir> company-deep-dive`.
+7. Track unresolved business-fact questions under question namespace `COMPANY` only via `scripts/open_questions.py upsert <case_dir> --stage company-deep-dive --id COMPANY-<slug> ...`.
 
 ## Output
 
 - `company-analysis.md`
-- Optional updates to `open-questions.md`
 
 ## Verification
 

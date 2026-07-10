@@ -5,7 +5,7 @@ description: Use when writing or refreshing market-action-read.md from market-da
 
 # Market Action Read
 
-Turn refreshed market data into a neutral read, not a trading decision.
+Turn refreshed market data into a neutral read, not a trading decision. This skill owns only `market-action-read.md`; it never edits `investment-memo.md` — `investment-thesis` reads this file directly and writes the whole memo once.
 
 ## Source Of Truth
 
@@ -14,27 +14,29 @@ Turn refreshed market data into a neutral read, not a trading decision.
 
 ## Workflow
 
-1. Read `market-data.json`; read `tdcc-data.json` when present.
-2. Cover 1D/3D/5D price-volume and institutional-flow windows.
-3. Add egg-theory reads for `1m`, `3m`, and `6m` when `derived.egg_theory_read` exists.
-4. Surface holder-distribution limits clearly: `snapshot_only`, missing `TaiwanStockHoldingSharesPer`, or insufficient holder trend means confidence cannot be high.
-5. Use neutral labels such as `market confirmation`, `price-in risk`, `thesis validation trigger`, `assumption failure signal`, and `wait_for_confirmation`.
-6. If `investment-memo.md` exists and its Evidence Support Summary market-action row is empty, stale, or marked 待查, backfill that row (and only that row) from the new read.
+1. Preflight: `.venv/bin/python scripts/workflow_state.py gate <case_dir> market-action-read --as-of <YYYY-MM-DD> --json`; if `ready` is false, run `market-data-fetch` first.
+2. Read `market-data.json`; read `tdcc-data.json` when present.
+3. Cover 1D/3D/5D price-volume and institutional-flow windows.
+4. Add egg-theory reads for `1m`, `3m`, and `6m` when `derived.egg_theory_read` exists.
+5. Surface holder-distribution limits clearly: `snapshot_only`, missing `TaiwanStockHoldingSharesPer`, or insufficient holder trend means confidence cannot be high.
+6. Use neutral labels such as `market confirmation`, `price-in risk`, `thesis validation trigger`, `assumption failure signal`, and `wait_for_confirmation`.
+7. Record: `.venv/bin/python scripts/workflow_state.py record <case_dir> market-action-read`.
+8. Track unresolved market-data gaps under question namespace `MKT` only via `scripts/open_questions.py upsert <case_dir> --stage market-action-read --id MKT-<slug> ...`.
 
 ## Output
 
 - `market-action-read.md`
-- Optional backfill of the market-action evidence row in `investment-memo.md`
 
 ## Verification
 
 - Confirm the file cites `market-data.json` and TDCC/FinMind datasets used.
-- Confirm the memo's market-action evidence row is no longer empty or 待查 when `investment-memo.md` exists.
+- Confirm this run did not write to `investment-memo.md`.
 - Confirm no direct entry, exit, stop-loss, position-sizing, target-price, or buy/sell instruction language was introduced.
 - Confirm egg-theory labels are research labels: `supply_demand_favorable`, `wait_for_confirmation`, or `supply_demand_risk`.
 
 ## Red Lines
 
+- Do not write or backfill any row in `investment-memo.md`; that ownership belongs to `investment-thesis` alone.
 - Do not convert A1/B3 into direct purchase advice.
 - Do not hide missing holder history.
 - Do not use action-like labels such as `Avoid`.

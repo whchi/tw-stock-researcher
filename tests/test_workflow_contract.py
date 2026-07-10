@@ -114,5 +114,53 @@ class WorkflowContractTests(unittest.TestCase):
                 self.assertIn(dep, self.stages_by_id, f"{stage['id']} depends on unknown stage {dep}")
 
 
+def _extract_order_chain(text: str):
+    for line in text.splitlines():
+        line = line.strip()
+        if line.startswith("stock-case-init") and "->" in line:
+            return [token.strip().strip("`") for token in line.split("->")]
+    return None
+
+
+DOCS_WITH_DAG_ORDER = ("AGENTS.md", "README.md", "FIRST_RUN.md")
+
+
+class DocumentedOrderMatchesContractTests(unittest.TestCase):
+    """Keeps the human-readable DAG prose in AGENTS.md/README.md/FIRST_RUN.md
+    honest against workflow-contract.json instead of letting docs and code drift."""
+
+    def setUp(self):
+        self.contract = load_contract(CONTRACT_PATH)
+        self.stages_by_id = {stage["id"]: stage for stage in self.contract["stages"]}
+
+    def test_every_doc_has_an_extractable_order_chain(self):
+        for doc_name in DOCS_WITH_DAG_ORDER:
+            text = (ROOT / doc_name).read_text(encoding="utf-8")
+            chain = _extract_order_chain(text)
+            self.assertIsNotNone(chain, f"{doc_name} has no 'stock-case-init -> ...' order line")
+
+    def test_every_documented_stage_is_a_real_contract_stage(self):
+        for doc_name in DOCS_WITH_DAG_ORDER:
+            text = (ROOT / doc_name).read_text(encoding="utf-8")
+            chain = _extract_order_chain(text)
+            for stage_id in chain:
+                self.assertIn(stage_id, self.stages_by_id, f"{doc_name} lists unknown stage {stage_id!r}")
+
+    def test_every_documented_order_respects_contract_dependencies(self):
+        for doc_name in DOCS_WITH_DAG_ORDER:
+            text = (ROOT / doc_name).read_text(encoding="utf-8")
+            chain = _extract_order_chain(text)
+            position = {stage_id: index for index, stage_id in enumerate(chain)}
+            for stage_id in chain:
+                for dep in self.stages_by_id[stage_id]["depends_on"]:
+                    if dep not in position:
+                        continue
+                    self.assertLess(
+                        position[dep],
+                        position[stage_id],
+                        f"{doc_name}: {dep} must precede {stage_id}",
+                    )
+
+
 if __name__ == "__main__":
     unittest.main()

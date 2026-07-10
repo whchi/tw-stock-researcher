@@ -5,20 +5,34 @@
 - Never auto-generate trade orders, direct buy/sell instructions, or guaranteed returns.
 
 ## Workflow Order (Mandatory)
+
+Canonical order — the DAG in `workflow-contract.json` is the source of truth; this line must match it (`tests/test_workflow_contract.py` checks this document against the contract):
+
 ```
-stock-case-init
-  → yahoo-profile-financials    # Uses fetch_yahoo.py / yahoo-data.json
-  → company-deep-dive
-  → financial-analysis          # Must run fetch_goodinfo.py + fetch_fundamentals.py FIRST
-  → industry-transmission-analysis
-  → macro-impact-analysis       # Must run fetch_macro.py FIRST when macro data is stale/missing
-  → quality-and-valuation-check # Business quality, implied expectations, margin of safety
-  → investment-thesis
-  → market-data-fetch           # Runs fetch_tdcc.py then fetch_finmind.py (FIN_MIND_TOKEN required)
-  → market-action-read          # Reads market-data.json / tdcc-data.json
+stock-case-init -> yahoo-profile-financials -> financial-data-fetch -> market-data-fetch -> company-deep-dive -> financial-analysis -> industry-transmission-analysis -> macro-impact-analysis -> market-action-read -> quality-and-valuation-check -> investment-thesis -> session-wrap -> research-html-output
 ```
-- **Return visit:** `case-revisit` → `session-wrap`
+
+The three fetch stages (`yahoo-profile-financials`, `financial-data-fetch`, `market-data-fetch`) may run concurrently once `stock-case-init` completes; the line above is one valid linearization, not a claim that each stage must wait for the previous one specifically.
+
+| Stage | Notes |
+| --- | --- |
+| `stock-case-init` | Creates the case shell: `stock-meta.json`, `research-questions.md`, `open-questions.md`. |
+| `yahoo-profile-financials` | Uses `fetch_yahoo.py` / `yahoo-data.json`. |
+| `financial-data-fetch` | Runs `fetch_fundamentals.py` (official monthly/quarterly layer) and `fetch_goodinfo.py` (annual fallback); owns all network fetching for this layer. |
+| `market-data-fetch` | Runs `fetch_tdcc.py` then `fetch_finmind.py` (`FIN_MIND_TOKEN` required). |
+| `company-deep-dive` | Depends on `yahoo-profile-financials`. |
+| `financial-analysis` | Depends on `company-deep-dive` and `financial-data-fetch`; consumes already-fetched artifacts, does not fetch data itself. |
+| `industry-transmission-analysis` | Depends on `company-deep-dive`. |
+| `macro-impact-analysis` | Depends on `company-deep-dive`; run `fetch_macro.py` first when macro data is stale or missing. |
+| `market-action-read` | Depends on `market-data-fetch`; reads `market-data.json` / `tdcc-data.json`; never edits `investment-memo.md`. |
+| `quality-and-valuation-check` | Depends on `financial-analysis` and `market-data-fetch`; business quality, implied expectations, margin of safety. |
+| `investment-thesis` | Depends on `company-deep-dive`, `financial-analysis`, `industry-transmission-analysis`, `macro-impact-analysis`, `quality-and-valuation-check`, and `market-action-read`; writes the whole memo once. |
+| `session-wrap` | Terminal gate for both first visits and return visits; depends on `investment-thesis`. |
+| `research-html-output` | Optional, explicit-request-only; requires a passing `session-wrap` gate. |
+
+- **Return visit:** `case-revisit` -> affected stages -> their invalidated downstream stages (per `scripts/workflow_state.py` staleness cascade) -> `session-wrap`
 - **New event:** `signal-update` (appends to `signal-log.md`, may update `thesis-updates.md`)
+- Every stage above follows `preflight (gate) -> work -> record -> question transition` using `scripts/workflow_state.py` and `scripts/open_questions.py`; see each skill's `SKILL.md` for exact commands.
 
 ## File Structure & Ownership
 
@@ -31,7 +45,7 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 | `raw-data.json` | `fetch_goodinfo.py` | Goodinfo scraped data plus three-statement coverage check (auto-detected by script). |
 | `fundamentals-data.json` | `fetch_fundamentals.py` | FinMind official monthly revenue, quarterly IS / BS / CF, and P/E / P/B valuation band with derived 6M / 8Q reads. |
 | `research-questions.md` | `stock-case-init` | Core questions, facts to establish, disconfirming evidence to seek. |
-| `open-questions.md` | `case-revisit` / `session-wrap` | Unresolved items to carry forward; closed questions logged here. |
+| `open-questions.md` | `stock-case-init` (creation); each stage upserts/resolves only its own `question_namespace` via `scripts/open_questions.py` | Evidence-backed Active/Resolved question ledger. `case-revisit` and `session-wrap` report on it but never write to it. |
 | `active-decisions.md` | `session-wrap` | Current research stance, expected evidence timeline, thesis kill criteria, user-provided position context, observation ranges, structure-break conditions, next review triggers. |
 | `company-analysis.md` | `company-deep-dive` | Business model, product mix, revenue structure, margin analysis. |
 | `financial-analysis.md` | `financial-analysis` | 3D analysis: 經營分析 / 獲利分析 / 財務健全度. |

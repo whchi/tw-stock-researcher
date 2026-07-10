@@ -23,10 +23,12 @@ Use `--suffix TWO` only when Yahoo requires the OTC `.TWO` symbol.
 
 ## Workflow
 
-1. Confirm a single matching case folder exists before running the script.
+1. Preflight: `.venv/bin/python scripts/workflow_state.py gate <case_dir> yahoo-profile-financials --as-of <YYYY-MM-DD> --json`; if `ready` is false, run `stock-case-init` first.
 2. Run the fetcher with the repo-local virtualenv.
 3. Read `yahoo-data.json` and note data freshness, missing fields, warning flags, and market suffix used.
 4. Use the data only as verified or source-labeled support in downstream markdown.
+5. Record: `.venv/bin/python scripts/workflow_state.py record <case_dir> yahoo-profile-financials`.
+6. Track unresolved profile gaps under question namespace `PROFILE` only via `scripts/open_questions.py upsert <case_dir> --stage yahoo-profile-financials --id PROFILE-<slug> ...`.
 
 ## Output
 
@@ -38,6 +40,7 @@ Use `--suffix TWO` only when Yahoo requires the OTC `.TWO` symbol.
 - Confirm no `<stock_id>_yahoo_data.json` remains in repo root.
 - Confirm the fetch did not write to repo root because of zero or multiple matching case folders.
 - Confirm any missing profile, revenue, income, or cash-flow fields are surfaced before analysis.
+- Confirm `workflow_state.py record` was run for this stage.
 
 ## Red Lines
 

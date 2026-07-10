@@ -5,7 +5,7 @@ description: Use when returning to an existing stock case to summarize current s
 
 # Case Revisit
 
-Re-enter a case from repo files rather than memory.
+Re-enter a case from repo files rather than memory. This is not a DAG stage in `workflow-contract.json` and owns no question namespace: it reconciles and reports on `open-questions.md`, but it may never call `open_questions.py upsert` or `resolve` itself — only the stage that owns a question's namespace may create or close it.
 
 ## Source Of Truth
 
@@ -16,23 +16,25 @@ Re-enter a case from repo files rather than memory.
 
 1. Locate the single matching case folder.
 2. Read `stock-meta.json`, `active-decisions.md`, `open-questions.md`, `signal-log.md`, and the latest core analysis files.
-3. Summarize current research stance, unresolved questions, data freshness, and evidence timeline.
-4. Identify which fetchers or skills should run next, but do not refresh data unless the user asked for an update.
-5. Carry forward closed and unresolved questions into `open-questions.md` when needed.
+3. Run `.venv/bin/python scripts/workflow_state.py status <case_dir> --json` to see which stages are current, stale, or blocked, and `preflight` to see which stage should run next.
+4. Summarize current research stance, unresolved questions, data freshness, and evidence timeline.
+5. Identify which fetchers or stages should run next: `case-revisit → affected stages → their invalidated downstream stages → session-wrap`. Do not refresh data unless the user asked for an update.
+6. If a question genuinely needs to be opened or closed, name which owning stage should run `open_questions.py upsert`/`resolve` — do not write to the ledger directly from this skill.
 
 ## Output
 
 - A file-grounded status summary
-- Optional updates to `open-questions.md`
 
 ## Verification
 
 - Confirm every status claim is grounded in a case file or explicitly labeled as missing.
 - Confirm stale data is reported with dates when available.
 - Confirm no direct trade instruction language was introduced.
+- Confirm this run did not call `open_questions.py upsert` or `resolve` directly.
 
 ## Red Lines
 
 - Do not rely on chat memory as the source of truth.
 - Do not auto-refresh all data without user intent.
 - Do not collapse unresolved questions into conclusions.
+- Do not close or create ledger questions from this skill; only an owning stage's resolver may.

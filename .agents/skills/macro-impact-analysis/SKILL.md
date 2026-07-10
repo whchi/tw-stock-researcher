@@ -22,11 +22,14 @@ Run this when `market/shared-macro-data.json` is missing or stale.
 
 ## Workflow
 
-1. Check `market/shared-macro-data.json` freshness; refresh shared macro data when it is missing, stale, or the user asked for a fresh macro read.
-2. Read the company case to identify revenue, margin, cash-flow, valuation, and narrative sensitivities.
-3. Include only macro variables with a clear transmission path.
-4. Explicitly exclude popular but immaterial variables and state what evidence would make them relevant.
-5. Keep investment themes in `investment-memo.md`, not in `macro-map.md`.
+1. Preflight: `.venv/bin/python scripts/workflow_state.py gate <case_dir> macro-impact-analysis --as-of <YYYY-MM-DD> --json`; if `ready` is false, run `company-deep-dive` first.
+2. Check `market/shared-macro-data.json` freshness; refresh shared macro data when it is missing, stale, or the user asked for a fresh macro read.
+3. Read the company case to identify revenue, margin, cash-flow, valuation, and narrative sensitivities.
+4. Include only macro variables with a clear transmission path.
+5. Explicitly exclude popular but immaterial variables and state what evidence would make them relevant.
+6. Keep investment themes in `investment-memo.md`, not in `macro-map.md`.
+7. Record: `.venv/bin/python scripts/workflow_state.py record <case_dir> macro-impact-analysis`.
+8. Track unresolved macro-variable questions under question namespace `MAC` only via `scripts/open_questions.py upsert <case_dir> --stage macro-impact-analysis --id MAC-<slug> ...`; close them only when `resolve_macro_variable_readiness` confirms the source actually has a populated latest read.
 
 ## Output
 

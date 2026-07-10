@@ -99,7 +99,7 @@ require_line "templates/research-html-summary.html" "{{EGG_THEORY_ROWS}}"
 require_line "templates/research-html-summary.html" "{{EVIDENCE_TIMELINE_ROWS}}"
 require_line "templates/research-html-summary.html" "{{KILL_CRITERIA_ROWS}}"
 
-require_line "AGENTS.md" "→ quality-and-valuation-check"
+require_line "AGENTS.md" "-> quality-and-valuation-check"
 require_line "AGENTS.md" "### 2a. Fetching Fundamentals (FinMind)"
 require_line "AGENTS.md" "fundamentals-data.json"
 require_line "docs/data-layout.md" "fundamentals-data.json"
@@ -156,7 +156,8 @@ fi
 
 require_line ".agents/skills/research-html-output/SKILL.md" "name: research-html-output"
 require_line ".agents/skills/research-html-output/SKILL.md" "companies/<ticker-slug>/research-summary.html"
-require_line ".agents/skills/financial-analysis/SKILL.md" "scripts/fetch_fundamentals.py <stock_id>"
+require_line ".agents/skills/financial-data-fetch/SKILL.md" "scripts/fetch_fundamentals.py <stock_id>"
+require_line ".agents/skills/financial-data-fetch/SKILL.md" "name: financial-data-fetch"
 require_line ".agents/skills/market-data-fetch/SKILL.md" "scripts/fetch_tdcc.py <stock_id>"
 require_line ".agents/skills/market-data-fetch/SKILL.md" "scripts/fetch_finmind.py <stock_id>"
 require_line ".agents/skills/market-action-read/SKILL.md" "egg-theory"

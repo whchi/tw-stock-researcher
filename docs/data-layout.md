@@ -25,6 +25,7 @@ Create one folder per stock under `companies/`, for example `companies/6706-hui-
 | `fundamentals-data.json` | FinMind official monthly revenue, quarterly IS / BS / CF, and P/E / P/B valuation band with derived 6M / 8Q reads | `fetch_fundamentals.py` |
 | `research-questions.md` | core questions and unknowns | `stock-case-init` |
 | `company-analysis.md` | business facts, inference, and open questions | `company-deep-dive` |
+| `financial-analysis.md` | financial fact layer: operating, profitability, and balance-sheet analysis; a pure consumer of `financial-data-fetch`'s output | `financial-analysis` |
 | `industry-transmission.md` | transmission chain and indicators | `industry-transmission-analysis` |
 | `macro-map.md` | included and excluded macro variables | `macro-impact-analysis` |
 | `quality-and-valuation-check.md` | value-investor quality layer: ROIC, owner earnings, working-capital quality, capital allocation, implied expectations, and margin of safety | `quality-and-valuation-check` |
@@ -34,7 +35,7 @@ Create one folder per stock under `companies/`, for example `companies/6706-hui-
 | `market-action-read.md` | neutral market-state read using price/volume and institutional flow evidence, without trading instructions | `market-action-read` |
 | `signal-log.md` | append-only event log with signal classification | `signal-update` |
 | `thesis-updates.md` | explicit thesis changes | `signal-update` |
-| `open-questions.md` | unresolved questions to carry forward | `case-revisit`, `session-wrap` |
+| `open-questions.md` | evidence-backed Active/Resolved question ledger; created by `stock-case-init`, then upserted/resolved only by the owning stage of each row's `question_namespace` via `scripts/open_questions.py` | `stock-case-init` (creation); `case-revisit` and `session-wrap` report on it but never write to it |
 | `active-decisions.md` | current research stance, expected evidence timeline, thesis kill criteria, review triggers, and follow-ups | `session-wrap` |
 | `research-summary-data.json` | typed, validated render payload built from the canonical case files above | `build_research_summary.py` |
 | `research-summary.html` | deterministic HTML rendered from `research-summary-data.json` | `render_research_html.py` |

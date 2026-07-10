@@ -5,13 +5,14 @@ description: Use when the user asks to output a stock research synthesis, compre
 
 # Research HTML Output
 
-Use this only for an explicit HTML output request. Markdown and JSON case files remain the source of truth.
+Use this only for an explicit HTML output request. Markdown and JSON case files remain the source of truth. This stage requires a passing `session-wrap` gate — HTML is never built from an incomplete or stale case.
 
 ## Workflow
 
-1. Read the case files needed for the synthesis, especially `investment-memo.md`, `active-decisions.md`, `quality-and-valuation-check.md`, and `market-action-read.md`.
-2. Build a JSON payload whose keys match placeholders in `templates/research-html-summary.html`.
-3. Render with string replacement:
+1. Preflight: `.venv/bin/python scripts/workflow_state.py gate <case_dir> research-html-output --as-of <YYYY-MM-DD> --json`; if `ready` is false (most commonly because `session-wrap` has not passed), run or finish `session-wrap` first instead of rendering from stale evidence.
+2. Read the case files needed for the synthesis, especially `investment-memo.md`, `active-decisions.md`, `quality-and-valuation-check.md`, and `market-action-read.md`.
+3. Build a JSON payload whose keys match placeholders in `templates/research-html-summary.html`.
+4. Render with string replacement:
 
 ```bash
 .venv/bin/python scripts/render_research_html.py \
@@ -19,9 +20,11 @@ Use this only for an explicit HTML output request. Markdown and JSON case files 
   --output companies/<ticker-slug>/research-summary.html
 ```
 
-4. Keep the output in the company folder as `companies/<ticker-slug>/research-summary.html`.
-5. Preserve disclaimer language and avoid buy/sell, entry/exit, stop-loss, or target-price wording.
-6. Verify the rendered HTML exists and contains no unresolved `{{PLACEHOLDER}}` values.
+5. Keep the output in the company folder as `companies/<ticker-slug>/research-summary.html`.
+6. Preserve disclaimer language and avoid buy/sell, entry/exit, stop-loss, or target-price wording.
+7. Verify the rendered HTML exists and contains no unresolved `{{PLACEHOLDER}}` values.
+8. Record: `.venv/bin/python scripts/workflow_state.py record <case_dir> research-html-output`.
+9. Track unresolved rendering gaps under question namespace `HTML` only via `scripts/open_questions.py upsert <case_dir> --stage research-html-output --id HTML-<slug> ...`.
 
 ## Payload Rules
 
