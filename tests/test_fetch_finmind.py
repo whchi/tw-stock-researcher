@@ -303,6 +303,19 @@ class MarketConfirmationMetricsWiringTests(unittest.TestCase):
         )
         self.assertEqual(result["days_to_cover"]["state"], "unavailable")
 
+    def test_emits_explicit_non_values_for_unfetched_market_metric_inputs(self):
+        result = fetch_finmind.build_market_confirmation_metrics([], [])
+
+        expected = {
+            "normalized_short_pressure",
+            "sector_relative_return_63d",
+            "sector_relative_return_126d",
+            "tdcc_concentration_change_4w",
+            "tdcc_concentration_change_13w",
+        }
+        self.assertTrue(expected.issubset(result))
+        self.assertTrue(all(result[key]["state"] == "unavailable" for key in expected))
+
 
 class MarketActionReadTests(unittest.TestCase):
     def test_build_market_action_read_calculates_5d_price_volume_and_state(self):

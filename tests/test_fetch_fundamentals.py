@@ -211,6 +211,27 @@ class QuarterlyCashFlowTests(unittest.TestCase):
 
 
 class FinancialQualityMetricsWiringTests(unittest.TestCase):
+    def test_emits_explicit_non_values_for_metrics_without_extracted_inputs(self):
+        quarterly_income = [{"quarter": "2026Q1", "date": "2026-03-31", "revenue": 100, "gross_profit": 40, "net_income": 10}]
+        quarterly_balance = [{"quarter": "2026Q1", "total_assets": 200}]
+        quarterly_cash_flow = [{"quarter": "2026Q1", "operating_cash_flow": 12, "depreciation": 2, "free_cash_flow": 8}]
+
+        row = fetch_fundamentals.build_financial_quality_metrics(
+            quarterly_income, quarterly_balance, quarterly_cash_flow
+        )[0]
+
+        expected = {
+            "incremental_roic_3y",
+            "interest_coverage",
+            "net_debt_to_ebitda",
+            "diluted_share_growth",
+            "dilution_adjusted_owner_earnings_cagr",
+            "governance_disclosure",
+        }
+        self.assertTrue(expected.issubset(row))
+        self.assertEqual(row["incremental_roic_3y"]["state"], "unavailable")
+        self.assertTrue(all(value["state"] == "unavailable" for value in row["governance_disclosure"].values()))
+
     def test_computes_dso_dio_dpo_and_cash_metrics_per_quarter(self):
         quarterly_income = [
             {"quarter": "2026Q1", "date": "2026-03-31", "revenue": 1000.0, "gross_profit": 400.0, "net_income": 200.0},

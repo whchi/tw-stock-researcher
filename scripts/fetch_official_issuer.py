@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """TWSE/TPEx official issuer adapter: company master, monthly revenue, and
-quarterly income summary.
+industry-specific quarterly income-statement and balance-sheet summaries.
 
 See docs/source-policy.md for verified endpoint findings: TWSE's OpenAPI
 succeeds under strict TLS verification with `requests`' bundled CA store;
 TPEx's certificate genuinely fails verification today (confirmed live,
 2026-07-11) and is therefore treated as a source failure (status=blocked),
-never bypassed with verify=False. The same TWSE dataset code covers both
-"general" and "financial" industry issuers; financial issuers simply
-report certain fields as the literal sentinel "--".
+never bypassed with verify=False. Statement dataset variants are selected
+explicitly from issuer type rather than treating an industry EPS table as a
+company financial statement.
 """
 
 import argparse
@@ -28,11 +28,6 @@ ENDPOINT_TEMPLATES = {
     "TPEx": "https://www.tpex.org.tw/openapi/v1/{dataset}",
 }
 MARKET_SUFFIX = {"TWSE": "L", "TPEx": "O"}
-DATASET_CODES = {
-    "basic_info": "t187ap03_{suffix}",
-    "monthly_revenue": "t187ap05_{suffix}",
-    "quarterly_income": "t187ap14_{suffix}",
-}
 ISSUER_TYPES = ("general", "financial")
 
 
@@ -40,11 +35,27 @@ class OfficialIssuerError(RuntimeError):
     pass
 
 
-def _dataset_url(market, dataset_key):
+def _dataset_codes(issuer_type):
+    statement_variants = ("ci",) if issuer_type == "general" else ("basi", "bd", "fh", "ins")
+    return {
+        "basic_info": ("t187ap03_{suffix}",),
+        "monthly_revenue": ("t187ap05_{suffix}",),
+        "income_statement": tuple(f"t187ap06_{{suffix}}_{variant}" for variant in statement_variants),
+        "balance_sheet": tuple(f"t187ap07_{{suffix}}_{variant}" for variant in statement_variants),
+        "material_events": ("t187ap04_{suffix}",),
+        "major_shareholders": ("t187ap02_{suffix}",),
+        "director_holdings": ("t187ap11_{suffix}",),
+        "director_pledges": ("t187ap09_{suffix}",),
+        "insider_transfers": ("t187ap12_{suffix}",),
+        "dividends": ("t187ap45_{suffix}",),
+    }
+
+
+def _dataset_url(market, dataset_code):
     if market not in ENDPOINT_TEMPLATES:
         raise OfficialIssuerError(f"unknown market: {market!r}")
     suffix = MARKET_SUFFIX[market]
-    dataset_code = DATASET_CODES[dataset_key].format(suffix=suffix)
+    dataset_code = dataset_code.format(suffix=suffix)
     return ENDPOINT_TEMPLATES[market].format(dataset=dataset_code), dataset_code
 
 
@@ -71,26 +82,34 @@ def fetch_official_issuer(stock_id, market, issuer_type, client):
     raw = {}
     errors = []
     source_urls = {}
-    for dataset_key in DATASET_CODES:
-        url, dataset_code = _dataset_url(market, dataset_key)
-        source_urls[dataset_key] = url
-        try:
-            response = client.get(url, timeout=30)
-            response.raise_for_status()
-            rows = response.json()
-        except Exception as exc:
-            errors.append({"code": "fetch_failed", "dataset": dataset_code, "message": str(exc)})
-            raw[dataset_key] = []
-            continue
-        if not isinstance(rows, list):
-            errors.append({"code": "unexpected_shape", "dataset": dataset_code, "message": "expected a JSON array"})
-            raw[dataset_key] = []
-            continue
-        raw[dataset_key] = [row for row in rows if row.get("公司代號") == stock_id]
+    dataset_codes = _dataset_codes(issuer_type)
+    for dataset_key, dataset_patterns in dataset_codes.items():
+        raw[dataset_key] = []
+        attempted_urls = []
+        for dataset_pattern in dataset_patterns:
+            url, dataset_code = _dataset_url(market, dataset_pattern)
+            attempted_urls.append(url)
+            try:
+                response = client.get(url, timeout=30)
+                response.raise_for_status()
+                rows = response.json()
+            except Exception as exc:
+                errors.append({"code": "fetch_failed", "dataset": dataset_code, "message": str(exc)})
+                continue
+            if not isinstance(rows, list):
+                errors.append({"code": "unexpected_shape", "dataset": dataset_code, "message": "expected a JSON array"})
+                continue
+            matched_rows = [row for row in rows if row.get("公司代號") == stock_id]
+            if matched_rows:
+                raw[dataset_key] = matched_rows
+                source_urls[dataset_key] = url
+                break
+        if dataset_key not in source_urls:
+            source_urls[dataset_key] = attempted_urls[0]
 
     row_counts = {key: len(rows) for key, rows in raw.items()}
-    required_datasets = ["basic_info"]
-    optional_datasets = ["monthly_revenue", "quarterly_income"]
+    required_datasets = ["basic_info", "income_statement", "balance_sheet"]
+    optional_datasets = ["monthly_revenue"]
     status = classify_status(
         required_counts={key: row_counts[key] for key in required_datasets},
         optional_counts={key: row_counts[key] for key in optional_datasets},
@@ -98,12 +117,15 @@ def fetch_official_issuer(stock_id, market, issuer_type, client):
     )
 
     source_as_of = None
-    for row in raw.get("monthly_revenue") or []:
-        try:
-            _, _, source_as_of = normalize_period(row)
+    for dataset_key in ("monthly_revenue", "income_statement", "balance_sheet"):
+        for row in raw.get(dataset_key) or []:
+            try:
+                _, _, source_as_of = normalize_period(row)
+                break
+            except OfficialIssuerError:
+                continue
+        if source_as_of is not None:
             break
-        except OfficialIssuerError:
-            continue
 
     metadata = metadata_envelope(
         status=status,
@@ -116,7 +138,7 @@ def fetch_official_issuer(stock_id, market, issuer_type, client):
         optional_datasets=optional_datasets,
         row_counts=row_counts,
         source_urls=source_urls,
-        source_tiers={key: "official" for key in DATASET_CODES},
+        source_tiers={key: "official" for key in dataset_codes},
         license_ids={},
         warnings=[],
         errors=errors,

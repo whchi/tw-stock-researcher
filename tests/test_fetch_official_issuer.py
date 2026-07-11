@@ -72,7 +72,8 @@ class FetchOfficialIssuerTests(unittest.TestCase):
             {
                 "t187ap03_L": fixture["basic_info"],
                 "t187ap05_L": fixture["monthly_revenue"],
-                "t187ap14_L": fixture["quarterly_income"],
+                "t187ap06_L_ci": fixture["quarterly_income"],
+                "t187ap07_L_ci": [{"公司代號": "2330", "年度": "115", "季別": "1", "資產總額": "100"}],
             }
         )
 
@@ -82,6 +83,18 @@ class FetchOfficialIssuerTests(unittest.TestCase):
         self.assertEqual(len(result["raw"]["basic_info"]), 1)
         self.assertEqual(result["raw"]["basic_info"][0]["公司代號"], "2330")
         self.assertEqual(result["metadata"]["source_as_of"], "2026-05")
+        self.assertEqual(len(result["raw"]["income_statement"]), 1)
+        self.assertEqual(len(result["raw"]["balance_sheet"]), 1)
+        self.assertTrue(
+            {
+                "material_events",
+                "major_shareholders",
+                "director_holdings",
+                "director_pledges",
+                "insider_transfers",
+                "dividends",
+            }.issubset(result["raw"])
+        )
 
     def test_financial_issuer_tolerates_not_applicable_sentinel_fields(self):
         fixture = load_fixture("twse-listed-financial.json")
@@ -89,15 +102,44 @@ class FetchOfficialIssuerTests(unittest.TestCase):
             {
                 "t187ap03_L": fixture["basic_info"],
                 "t187ap05_L": fixture["monthly_revenue"],
-                "t187ap14_L": fixture["quarterly_income"],
+                "t187ap06_L_fh": fixture["quarterly_income"],
+                "t187ap07_L_fh": [{"公司代號": "2891", "年度": "115", "季別": "1", "資產總額": "100"}],
             }
         )
 
         result = fetch_official_issuer("2891", "TWSE", "financial", client)
 
         self.assertEqual(result["metadata"]["status"], "degraded")  # monthly_revenue optional dataset is empty
-        income_row = result["raw"]["quarterly_income"][0]
-        self.assertEqual(income_row["營業利益"], "--")
+        self.assertEqual(result["metadata"]["source_as_of"], "2026Q1")
+        income_row = result["raw"]["income_statement"][0]
+        self.assertEqual(income_row["基本每股盈餘（元）"], "1.18")
+
+    def test_sibling_variant_failure_is_not_erased_by_a_later_matching_variant(self):
+        fixture = load_fixture("twse-listed-financial.json")
+        client = FakeClient(
+            {
+                "t187ap03_L": fixture["basic_info"],
+                "t187ap05_L": fixture["monthly_revenue"],
+                "t187ap06_L_basi": [],
+                "t187ap06_L_fh": fixture["quarterly_income"],
+                "t187ap07_L_fh": [{"公司代號": "2891", "年度": "115", "季別": "1", "資產總額": "100"}],
+            },
+            fail_datasets={"t187ap06_L_basi"},
+        )
+
+        result = fetch_official_issuer("2891", "TWSE", "financial", client)
+
+        # basi (tried before fh) genuinely failed; fh matched afterwards.
+        # The genuine basi failure must survive in errors/status even though
+        # the search overall found the company's income-statement row.
+        self.assertEqual(result["metadata"]["status"], "degraded")
+        self.assertTrue(
+            any(
+                error["dataset"] == "t187ap06_L_basi" and error["code"] == "fetch_failed"
+                for error in result["metadata"]["errors"]
+            )
+        )
+        self.assertEqual(len(result["raw"]["income_statement"]), 1)
 
     def test_tpex_endpoint_failure_is_blocked_not_bypassed(self):
         fixture = load_fixture("tpex-otc-general.json")
@@ -105,9 +147,10 @@ class FetchOfficialIssuerTests(unittest.TestCase):
             {
                 "t187ap03_O": fixture["basic_info"],
                 "t187ap05_O": fixture["monthly_revenue"],
-                "t187ap14_O": fixture["quarterly_income"],
+                "t187ap06_O_ci": fixture["quarterly_income"],
+                "t187ap07_O_ci": [{"公司代號": "6488", "年度": "115", "季別": "1"}],
             },
-            fail_datasets={"t187ap03_O", "t187ap05_O", "t187ap14_O"},
+            fail_datasets={"t187ap03_O", "t187ap05_O", "t187ap06_O_ci", "t187ap07_O_ci"},
         )
 
         result = fetch_official_issuer("6488", "TPEx", "general", client)
@@ -122,7 +165,8 @@ class FetchOfficialIssuerTests(unittest.TestCase):
             {
                 "t187ap03_L": fixture["basic_info"],
                 "t187ap05_L": fixture["monthly_revenue"],
-                "t187ap14_L": fixture["quarterly_income"],
+                "t187ap06_L_ci": fixture["quarterly_income"],
+                "t187ap07_L_ci": [{"公司代號": "2330", "年度": "115", "季別": "1"}],
             }
         )
 

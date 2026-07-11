@@ -823,7 +823,7 @@ No field contains HTML. A displayed numeric fact uses `{value, unit, period, sta
 - Disclaimer: `DISCLAIMER.md`.
 - Source quality/freshness: JSON metadata and workflow stage records.
 
-Missing required source => fixed error code. Do not consult old `research-summary-data.json` or HTML as builder inputs. Canonical JSON uses Unicode NFC, UTF-8, sorted keys, fixed list ordering, two-space indent and trailing newline. `source_manifest` stores case-relative path and SHA-256; omit wall-clock `generated_at`.
+Missing required source => fixed error code. Do not consult old `research-summary-data.json` or HTML as builder inputs. Canonical JSON uses Unicode NFC, UTF-8, sorted keys, fixed list ordering, two-space indent and trailing newline. `source_manifest` stores paths relative to the case by default; repo-owned inputs such as `DISCLAIMER.md` declare `root: repo`. Every entry stores SHA-256 and must remain inside its declared root. Omit wall-clock `generated_at`.
 
 - [ ] **Step 5: Rewrite rendering around typed arrays**
 

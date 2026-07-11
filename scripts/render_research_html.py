@@ -18,6 +18,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from atomic_io import atomic_write_text  # noqa: E402
 from research_summary_contract import validate_summary  # noqa: E402
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -262,27 +263,6 @@ def _validate_case_dir(case_dir):
     return resolved
 
 
-def _atomic_write_text(path, text):
-    import os
-    import tempfile
-
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            handle.write(text)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(tmp_name, path)
-    except BaseException:
-        try:
-            os.unlink(tmp_name)
-        except OSError:
-            pass
-        raise
-
-
 def parse_args(argv):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--case", required=True)
@@ -321,7 +301,7 @@ def main(argv=None):
         print(f"research-summary.html for {case_dir} would be valid (--check, not written)")
         return 0
 
-    _atomic_write_text(output_path, rendered)
+    atomic_write_text(output_path, rendered)
     print(f"Research HTML saved to {output_path}")
     return 0
 

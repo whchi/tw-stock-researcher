@@ -15,11 +15,20 @@ def resolve_case_dir(stock_id: str, repo_root: Path) -> Path:
     if not stock_id.isdigit():
         raise CaseResolutionError(f"invalid Taiwan stock id: {stock_id!r}")
     root = _root(repo_root)
-    matches = sorted(
-        path.resolve()
+    companies_root = (root / "companies").resolve()
+    candidates = sorted(
+        path
         for path in (root / "companies").glob(f"{stock_id}-*")
         if path.is_dir()
     )
+    unsafe = [path for path in candidates if path.is_symlink()]
+    if unsafe:
+        names = ", ".join(path.name for path in unsafe)
+        raise CaseResolutionError(f"case directories must not be symlinks: {names}")
+    matches = [path.resolve() for path in candidates]
+    escaped = [path for path in matches if path != companies_root and companies_root not in path.parents]
+    if escaped:
+        raise CaseResolutionError(f"case directory escapes companies/: {escaped[0]}")
     if len(matches) != 1:
         names = ", ".join(path.name for path in matches) or "none"
         raise CaseResolutionError(

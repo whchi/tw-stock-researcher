@@ -26,6 +26,16 @@ def _hash_file(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _manifest_source_path(case_dir, entry):
+    root_name = entry.get("root", "case")
+    root = ROOT_DIR if root_name == "repo" else Path(case_dir)
+    source_path = (root / entry["path"]).resolve()
+    resolved_root = root.resolve()
+    if source_path != resolved_root and resolved_root not in source_path.parents:
+        raise ValueError(f"manifest path escapes {root_name} root: {entry['path']}")
+    return source_path
+
+
 def audit_case(case_dir):
     case_dir = Path(case_dir)
     data_path = case_dir / "research-summary-data.json"
@@ -60,7 +70,11 @@ def audit_case(case_dir):
 
     stale_entries = []
     for entry in payload.get("source_manifest", []):
-        source_path = case_dir / entry["path"]
+        try:
+            source_path = _manifest_source_path(case_dir, entry)
+        except ValueError as exc:
+            stale_entries.append(str(exc))
+            continue
         if not source_path.exists():
             stale_entries.append(f"{entry['path']}: missing")
             continue

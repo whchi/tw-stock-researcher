@@ -59,6 +59,18 @@ class ResolveCaseDirTests(unittest.TestCase):
             with self.assertRaises(CaseResolutionError):
                 resolve_case_dir("../etc", repo_root)
 
+    def test_rejects_matching_case_symlink_that_resolves_outside_companies(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp) / "repo"
+            companies = repo_root / "companies"
+            outside = Path(tmp) / "outside"
+            companies.mkdir(parents=True)
+            outside.mkdir()
+            (companies / "2330-link").symlink_to(outside, target_is_directory=True)
+
+            with self.assertRaises(CaseResolutionError):
+                resolve_case_dir("2330", repo_root)
+
 
 class CaseOutputPathTests(unittest.TestCase):
     def test_joins_filename_onto_resolved_case_dir(self):

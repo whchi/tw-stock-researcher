@@ -191,6 +191,11 @@
     {
       "path": "tdcc-data.json",
       "sha256": "636f288fa286c3629270c595cba1b5077f05096084d2ecf515d54b0982bad442"
+    },
+    {
+      "path": "DISCLAIMER.md",
+      "root": "repo",
+      "sha256": "0785eae87768b86c2543fe674b834466c0a509ed7c75cd6fea274309c9cd0597"
     }
   ],
   "sources": [

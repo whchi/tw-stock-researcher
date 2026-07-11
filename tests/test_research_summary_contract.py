@@ -103,6 +103,22 @@ class ValidateSummaryTests(unittest.TestCase):
         issues = validate_summary(payload)
         self.assertTrue(any("identity" in issue.message for issue in issues))
 
+    def test_rejects_unknown_manifest_root(self):
+        payload = valid_payload()
+        payload["source_manifest"][0]["root"] = "filesystem"
+
+        issues = validate_summary(payload)
+
+        self.assertTrue(any("source_manifest" in issue.path and "root" in issue.path for issue in issues))
+
+    def test_rejects_manifest_path_escape(self):
+        payload = valid_payload()
+        payload["source_manifest"][0]["path"] = "../secret"
+
+        issues = validate_summary(payload)
+
+        self.assertTrue(any("source_manifest" in issue.path and "path" in issue.path for issue in issues))
+
     def test_rejects_none_in_scalar_position(self):
         payload = valid_payload()
         payload["current_view"]["headline"] = None

@@ -27,8 +27,19 @@ class BuildSummaryGoldenTests(unittest.TestCase):
 
         payload = build_summary(FIXTURE_CASE)
         for entry in payload["source_manifest"]:
-            actual = hashlib.sha256((FIXTURE_CASE / entry["path"]).read_bytes()).hexdigest()
+            root = REPO_ROOT if entry.get("root") == "repo" else FIXTURE_CASE
+            actual = hashlib.sha256((root / entry["path"]).read_bytes()).hexdigest()
             self.assertEqual(entry["sha256"], actual)
+
+    def test_source_manifest_includes_repo_disclaimer_used_by_payload(self):
+        payload = build_summary(FIXTURE_CASE)
+
+        disclaimers = [
+            entry for entry in payload["source_manifest"]
+            if entry.get("root") == "repo" and entry["path"] == "DISCLAIMER.md"
+        ]
+        self.assertEqual(len(disclaimers), 1)
+        self.assertEqual(len(disclaimers[0]["sha256"]), 64)
 
     def test_scenario_probabilities_sum_to_100_in_the_fixture(self):
         payload = build_summary(FIXTURE_CASE)

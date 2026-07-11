@@ -11,14 +11,13 @@ resolution sentence is not, by itself, a closure.
 
 import argparse
 import json
-import os
 import re
 import sys
-import tempfile
 from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from atomic_io import atomic_write_text  # noqa: E402
 from markdown_contract import (  # noqa: E402
     MarkdownContractError,
     extract_table_under_heading,
@@ -150,24 +149,6 @@ def validate_ledger(text, contract):
     return issues
 
 
-def _atomic_write_text(path, text):
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            handle.write(text)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(tmp_name, path)
-    except BaseException:
-        try:
-            os.unlink(tmp_name)
-        except OSError:
-            pass
-        raise
-
-
 def _replace_table(text, heading, headers, rows, level=2):
     marker = "#" * level + " " + heading
     lines = text.splitlines(keepends=True)
@@ -272,7 +253,7 @@ def upsert_question(
     if issues:
         raise ValueError(f"upsert would produce an invalid ledger: {issues}")
 
-    _atomic_write_text(path, new_text)
+    atomic_write_text(path, new_text)
     return new_row
 
 
@@ -330,7 +311,7 @@ def resolve_question(
     if issues:
         raise ValueError(f"resolve would produce an invalid ledger: {issues}")
 
-    _atomic_write_text(path, new_text)
+    atomic_write_text(path, new_text)
     return new_resolved_row
 
 

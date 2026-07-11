@@ -56,7 +56,7 @@ Create one folder per stock under `companies/`, for example `companies/6706-hui-
 
 - `scripts/build_research_summary.py` builds the payload from a fixed source map only (`stock-meta.json`, `active-decisions.md`, `investment-memo.md`, `market-data.json` + `tdcc-data.json`, validated `open-questions.md`, `DISCLAIMER.md`) and requires the `research-html-output` workflow gate to be ready first. It never reads an existing `research-summary-data.json` or `research-summary.html` as an input.
 - `scripts/render_research_html.py` renders `research-summary.html` from that payload only, escaping every scalar with `html.escape(..., quote=True)` and accepting only `http`/`https` source URLs. Both scripts support `--check` to validate without writing, and both write atomically.
-- `scripts/validate_research_summary.py --all` is a read-only audit of every existing case's `research-summary-data.json` (legacy `v0`, version mismatch, invalid shape, or a source-manifest hash that no longer matches the file on disk). It never writes; rebuilding a specific case requires the user to explicitly approve that case.
+- `scripts/validate_research_summary.py --all` is a read-only audit of every existing case's `research-summary-data.json` (legacy `v0`, version mismatch, invalid shape, or a source-manifest hash that no longer matches the file on disk). Manifest paths are case-relative unless an entry explicitly declares `root: repo`; both roots reject path escape. It never writes; rebuilding a specific case requires the user to explicitly approve that case.
 
 ## Validation Workflow
 

@@ -10,13 +10,12 @@ inputs present) before building.
 
 import argparse
 import json
-import os
 import sys
-import tempfile
 from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from atomic_io import atomic_write_text  # noqa: E402
 from markdown_contract import extract_table_under_heading, extract_text_under_heading, normalize_text  # noqa: E402
 from open_questions import ACTIVE_HEADING, validate_ledger  # noqa: E402
 from research_summary_contract import SCHEMA_VERSION, TEMPLATE_VERSION, canonical_json, validate_summary  # noqa: E402
@@ -293,7 +292,8 @@ def build_summary(case_dir, distribution="local", as_of=None):
     sources, manifest = _build_sources_and_manifest(case_dir, ["market-data.json", "tdcc-data.json"])
     for filename in ("stock-meta.json",) + REQUIRED_MARKDOWN_SOURCES:
         manifest.append({"path": filename, "sha256": hash_file(case_dir / filename)})
-    manifest.sort(key=lambda entry: entry["path"])
+    manifest.append({"root": "repo", "path": "DISCLAIMER.md", "sha256": hash_file(REPO_ROOT / "DISCLAIMER.md")})
+    manifest.sort(key=lambda entry: (entry.get("root", "case"), entry["path"]))
     sources.sort(key=lambda entry: entry["name"])
 
     resolved_as_of = as_of or _latest_source_as_of([market_data, tdcc_data]) or date.today().isoformat()
@@ -322,24 +322,6 @@ def build_summary(case_dir, distribution="local", as_of=None):
     }
 
 
-def _atomic_write_text(path, text):
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            handle.write(text)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(tmp_name, path)
-    except BaseException:
-        try:
-            os.unlink(tmp_name)
-        except OSError:
-            pass
-        raise
-
-
 def write_summary(case_dir, check=False, distribution="local"):
     case_dir = Path(case_dir)
     payload = build_summary(case_dir, distribution=distribution)
@@ -351,7 +333,7 @@ def write_summary(case_dir, check=False, distribution="local"):
     if check:
         return output_path
 
-    _atomic_write_text(output_path, canonical_json(payload))
+    atomic_write_text(output_path, canonical_json(payload))
     return output_path
 
 

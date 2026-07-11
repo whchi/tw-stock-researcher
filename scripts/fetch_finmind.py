@@ -19,7 +19,12 @@ from data_contract import (  # noqa: E402
     metadata_envelope,
 )
 from metrics.common import metric_result_to_dict  # noqa: E402
-from metrics.market_confirmation import days_to_cover  # noqa: E402
+from metrics.market_confirmation import (  # noqa: E402
+    days_to_cover,
+    normalized_short_pressure,
+    sector_relative_total_return,
+    tdcc_concentration_change,
+)
 
 PARSER_VERSION = "2"
 
@@ -577,12 +582,12 @@ def build_market_confirmation_metrics(price_rows, margin_purchase_short_sale_row
     """Wire scripts/metrics/market_confirmation.py's pure functions using
     only fields already fetched here.
 
-    Not wired here (pure functions exist and are tested, but the required
-    inputs are not currently fetched): NormalizedShortPressure (needs a
+    Metrics whose required inputs are not currently fetched are emitted with
+    state=unavailable rather than omitted: NormalizedShortPressure needs a
     securities-lending-sold balance, which is a separate FinMind dataset not
     in DATASETS, and a genuine free-float share count rather than total
     issued shares) and TDCCConcentrationChange (needs a defined "large
-    holder" custody-tier threshold that isn't derived anywhere yet).
+    holder" custody-tier threshold that isn't derived anywhere yet.
     """
     sorted_price = sorted(price_rows, key=lambda row: row.get("date", ""))
     recent_volumes = [
@@ -597,8 +602,25 @@ def build_market_confirmation_metrics(price_rows, margin_purchase_short_sale_row
     period = sorted_margin[-1].get("date") if sorted_margin else ""
 
     input_refs = ["market-data.json#/raw/margin_purchase_short_sale", "market-data.json#/raw/price"]
-    result = days_to_cover(latest_short_balance, median_20d_volume, period, input_refs)
-    return {"days_to_cover": metric_result_to_dict(result)}
+    results = {
+        "days_to_cover": days_to_cover(latest_short_balance, median_20d_volume, period, input_refs),
+        "normalized_short_pressure": normalized_short_pressure(
+            latest_short_balance, None, None, period, input_refs
+        ),
+        "sector_relative_return_63d": sector_relative_total_return(
+            None, None, 63, period, input_refs, False
+        ),
+        "sector_relative_return_126d": sector_relative_total_return(
+            None, None, 126, period, input_refs, False
+        ),
+        "tdcc_concentration_change_4w": tdcc_concentration_change(
+            None, None, 4, period, input_refs, False
+        ),
+        "tdcc_concentration_change_13w": tdcc_concentration_change(
+            None, None, 13, period, input_refs, False
+        ),
+    }
+    return {key: metric_result_to_dict(value) for key, value in results.items()}
 
 
 def build_egg_theory_read(

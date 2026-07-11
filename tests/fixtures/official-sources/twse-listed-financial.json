@@ -1,5 +1,5 @@
 {
-  "_fixture_note": "Real sample row captured 2026-07-11 from https://openapi.twse.com.tw/v1/opendata/t187ap14_L for stock 2891 (CTBC Financial Holding), a financial-industry TWSE-listed issuer. Confirms the SAME dataset covers financial issuers, with operating-income-style fields returned as the literal sentinel '--' since they do not apply to a financial holding company's report format.",
+  "_fixture_note": "Real sample row captured 2026-07-11 from https://openapi.twse.com.tw/v1/opendata/t187ap06_L_fh for stock 2891 (CTBC Financial Holding), demonstrating that financial issuers must be searched across the basi/bd/fh/ins statement variants.",
   "basic_info": [
     {
       "出表日期": "1150709",
@@ -17,18 +17,15 @@
   "monthly_revenue": [],
   "quarterly_income": [
     {
-      "出表日期": "1150710",
+      "出表日期": "1150711",
       "年度": "115",
       "季別": "1",
       "公司代號": "2891",
       "公司名稱": "中國信託金融控股股份有限公司",
-      "產業別": "金融保險業",
-      "基本每股盈餘(元)": "1.18",
-      "普通股每股面額": "新台幣                 10.0000元",
-      "營業收入": "59859484",
-      "營業利益": "--",
-      "營業外收入及支出": "--",
-      "稅後淨利": "23608252"
+      "基本每股盈餘（元）": "1.18",
+      "利息淨收益": "41556941.00",
+      "利息以外淨收益": "59859484.00",
+      "本期稅後淨利（淨損）": "23608252.00"
     }
   ]
 }

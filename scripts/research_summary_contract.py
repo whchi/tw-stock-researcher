@@ -10,6 +10,7 @@ to scripts/build_research_summary.py, not this module.
 import json
 import unicodedata
 from dataclasses import dataclass
+from pathlib import PurePosixPath
 
 SCHEMA_VERSION = 1
 TEMPLATE_VERSION = 1
@@ -138,6 +139,25 @@ def validate_summary(payload):
                         f"restricted source not allowed in shareable distribution: {source.get('name')!r}",
                     )
                 )
+
+    for index, entry in enumerate(payload.get("source_manifest") or []):
+        path = f"$.source_manifest[{index}]"
+        if not isinstance(entry, dict):
+            issues.append(ValidationIssue(path, "manifest entry must be an object"))
+            continue
+        unknown = set(entry) - {"root", "path", "sha256"}
+        for key in sorted(unknown):
+            issues.append(ValidationIssue(f"{path}.{key}", f"unknown field: {key}"))
+        root = entry.get("root", "case")
+        if root not in ("case", "repo"):
+            issues.append(ValidationIssue(f"{path}.root", "root must be 'case' or 'repo'"))
+        source_path = entry.get("path")
+        if not isinstance(source_path, str) or not source_path:
+            issues.append(ValidationIssue(f"{path}.path", "path must be a non-empty string"))
+        else:
+            pure_path = PurePosixPath(source_path)
+            if pure_path.is_absolute() or ".." in pure_path.parts:
+                issues.append(ValidationIssue(f"{path}.path", "path must stay relative to its declared root"))
 
     return issues
 

@@ -27,7 +27,9 @@ no `verify=False`, no bypass. Results are facts, not assumptions:
 | `https://openapi.twse.com.tw/v1/exchangeReport/FMTQIK` | **OK** — strict TLS succeeds with `requests`' bundled CA store |
 | `https://openapi.twse.com.tw/v1/opendata/t187ap03_L` (company basic info) | **OK** |
 | `https://openapi.twse.com.tw/v1/opendata/t187ap05_L` (monthly revenue) | **OK** |
-| `https://openapi.twse.com.tw/v1/opendata/t187ap14_L` (quarterly income summary, covers both general and financial-industry issuers) | **OK** |
+| `https://openapi.twse.com.tw/v1/opendata/t187ap06_L_ci` / `t187ap07_L_ci` (general-industry income statement / balance sheet) | **OK; required for a general issuer** |
+| `t187ap06/07_{L,O}_{basi,bd,fh,ins}` (financial-industry income statement / balance sheet variants) | **Required for a financial issuer; search the allowlisted variants and retain the one matching the company code** |
+| `t187ap04/02/11/09/12/45_{L,O}` (material events, >10% shareholders, director holdings/pledges, insider transfer declarations, dividends) | **Contextual official evidence; zero matched rows is a valid no-event/no-disclosure result, while endpoint failure is recorded as a source error** |
 | `https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O` (TPEx company basic info) | **FAILS** — `SSLError: CERTIFICATE_VERIFY_FAILED: Missing Subject Key Identifier`, confirmed with both Python's raw `ssl` module and `requests`/certifi |
 | `https://openapi.tdcc.com.tw/v1/opendata/1-5` (TDCC ownership distribution) | **OK** — same field shape as the legacy CSV endpoint, just JSON-encoded, valid cert |
 | `https://smart.tdcc.com.tw/opendata/getOD.ashx?id=1-5` (legacy TDCC endpoint) | Known broken cert (pre-existing `verify=False` workaround in `fetch_tdcc.py`, now replaced) |

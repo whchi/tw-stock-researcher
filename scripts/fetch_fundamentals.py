@@ -30,9 +30,15 @@ from metrics.financial_quality import (  # noqa: E402
     cash_conversion,
     cash_conversion_cycle,
     cash_flow_accrual,
+    diluted_share_growth,
+    dilution_adjusted_owner_earnings_cagr,
     dio,
     dpo,
     dso,
+    governance_disclosure_vector,
+    incremental_roic,
+    interest_coverage,
+    net_debt_to_ebitda,
     owner_earnings,
 )
 
@@ -479,8 +485,8 @@ def build_financial_quality_metrics(quarterly_income, quarterly_balance, quarter
     fields already extracted above (cost of goods sold is derived from
     revenue - gross_profit, a standard identity, not a new extraction).
 
-    Not wired here (pure functions exist and are tested, but the required
-    inputs are not yet extracted by this fetcher): IncrementalROIC3Y (needs
+    Metrics whose inputs are not yet extracted are emitted with an explicit
+    unavailable state rather than omitted: IncrementalROIC3Y needs
     an effective tax rate and a 3-year/12-quarter lookback beyond the 8Q
     window kept here), InterestCoverage / NetDebtToEBITDA (interest expense
     and net debt come from Goodinfo's raw-data.json, not FinMind),
@@ -524,6 +530,18 @@ def build_financial_quality_metrics(quarterly_income, quarterly_balance, quarter
         cash_conversion_result = cash_conversion(
             cash_row.get("free_cash_flow"), income_row.get("net_income"), quarter, input_refs
         )
+        unavailable_metrics = {
+            "incremental_roic_3y": incremental_roic(None, None, None, None, None, quarter, input_refs),
+            "interest_coverage": interest_coverage(None, None, quarter, input_refs),
+            "net_debt_to_ebitda": net_debt_to_ebitda(None, None, quarter, input_refs),
+            "diluted_share_growth": diluted_share_growth(None, None, None, quarter, input_refs),
+            "dilution_adjusted_owner_earnings_cagr": dilution_adjusted_owner_earnings_cagr(
+                None, None, None, quarter, input_refs
+            ),
+        }
+        governance_results = governance_disclosure_vector(
+            None, None, None, None, None, quarter, input_refs
+        )
 
         cash_flow_accrual_result = None
         if index >= 3:
@@ -551,6 +569,10 @@ def build_financial_quality_metrics(quarterly_income, quarterly_balance, quarter
                 "owner_earnings": metric_result_to_dict(owner_earnings_result),
                 "cash_conversion": metric_result_to_dict(cash_conversion_result),
                 "cash_flow_accrual": metric_result_to_dict(cash_flow_accrual_result) if cash_flow_accrual_result else None,
+                **{key: metric_result_to_dict(value) for key, value in unavailable_metrics.items()},
+                "governance_disclosure": {
+                    key: metric_result_to_dict(value) for key, value in governance_results.items()
+                },
             }
         )
     return results

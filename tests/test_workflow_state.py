@@ -128,6 +128,16 @@ class RecordStageTests(unittest.TestCase):
             self.assertIn("stock-case-init", meta["stage_records"])
             self.assertEqual(meta["stage_records"]["stock-case-init"]["status"], "pass")
 
+    def test_record_is_blocked_when_required_upstream_stage_is_not_recorded(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._init_case(tmp)
+            write_json(tmp, "yahoo-data.json", {"metadata": {"status": "pass"}})
+
+            record = record_stage(tmp, "yahoo-profile-financials", CONTRACT)
+
+            self.assertEqual(record["status"], "blocked")
+            self.assertTrue(any("stock-case-init" in issue for issue in record["issues"]))
+
 
 class InvalidateDownstreamTests(unittest.TestCase):
     def _recorded_meta(self):
@@ -184,6 +194,49 @@ class InvalidateDownstreamTests(unittest.TestCase):
 
 
 class GateStageTests(unittest.TestCase):
+    def test_rejects_when_upstream_output_hash_changed_without_re_recording(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_json(tmp, "stock-meta.json", {"file_references": {}, "stage_records": {}})
+            write(tmp, "research-questions.md", "# Research Questions")
+            record_stage(tmp, "stock-case-init", CONTRACT)
+            write_json(tmp, "yahoo-data.json", {"metadata": {"status": "pass"}, "version": 1})
+            record_stage(tmp, "yahoo-profile-financials", CONTRACT)
+
+            write_json(tmp, "yahoo-data.json", {"metadata": {"status": "pass"}, "version": 2})
+            result = gate_stage(tmp, "company-deep-dive", CONTRACT, date(2026, 7, 10))
+
+            self.assertFalse(result["ready"])
+            self.assertTrue(any("output hash changed" in reason for reason in result["blocking_reasons"]))
+
+    def test_rejects_when_direct_dependency_consumed_input_has_hash_drift(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self._init_three_stage_case(tmp)
+            write(tmp, "a.txt", "v2")
+
+            result = gate_stage(tmp, "stage-c", self._three_stage_contract(), date(2026, 7, 10))
+
+            self.assertFalse(result["ready"])
+            self.assertTrue(any("input hash changed" in reason for reason in result["blocking_reasons"]))
+
+    @staticmethod
+    def _three_stage_contract():
+        return {
+            "consumable_statuses": ["pass", "degraded"],
+            "stages": [
+                {"id": "stage-a", "depends_on": [], "required_inputs": [], "optional_inputs": [], "outputs": ["a.txt"]},
+                {"id": "stage-b", "depends_on": ["stage-a"], "required_inputs": ["a.txt"], "optional_inputs": [], "outputs": ["b.txt"]},
+                {"id": "stage-c", "depends_on": ["stage-b"], "required_inputs": ["a.txt", "b.txt"], "optional_inputs": [], "outputs": ["c.txt"]},
+            ],
+        }
+
+    def _init_three_stage_case(self, tmp):
+        contract = self._three_stage_contract()
+        write_json(tmp, "stock-meta.json", {"stage_records": {}})
+        write(tmp, "a.txt", "v1")
+        record_stage(tmp, "stage-a", contract)
+        write(tmp, "b.txt", "b")
+        record_stage(tmp, "stage-b", contract)
+
     def test_rejects_when_required_upstream_stage_not_recorded(self):
         with tempfile.TemporaryDirectory() as tmp:
             write_json(tmp, "stock-meta.json", {"file_references": {}, "stage_records": {}})

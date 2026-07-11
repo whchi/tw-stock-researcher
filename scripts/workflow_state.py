@@ -98,6 +98,23 @@ def gate_stage(case_dir, stage_id, contract, as_of):
             continue
         if dep_record["status"] not in consumable:
             blocking_reasons.append(f"upstream stage {dep_id} is {dep_record['status']}")
+            continue
+        for filename, recorded_hash in dep_record.get("output_hashes", {}).items():
+            current_hash = hash_file(case_dir / filename)
+            if current_hash != recorded_hash:
+                blocking_reasons.append(
+                    f"upstream stage {dep_id} output hash changed: {filename}"
+                )
+        for filename, recorded_hash in dep_record.get("input_hashes", {}).items():
+            # stock-meta.json contains the stage records themselves, so every
+            # successful record operation intentionally changes its hash.
+            if filename == "stock-meta.json":
+                continue
+            current_hash = hash_file(case_dir / filename)
+            if current_hash != recorded_hash:
+                blocking_reasons.append(
+                    f"upstream stage {dep_id} input hash changed: {filename}"
+                )
 
     for filename in stage["required_inputs"]:
         path = case_dir / filename
@@ -149,7 +166,8 @@ def record_stage(case_dir, stage_id, contract, as_of=None):
     consumable = set(contract["consumable_statuses"])
 
     input_hashes = {}
-    issues = []
+    gate = gate_stage(case_dir, stage_id, contract, as_of or date.today())
+    issues = list(gate["blocking_reasons"])
     for filename in stage["required_inputs"]:
         path = case_dir / filename
         file_hash = hash_file(path)

@@ -199,6 +199,7 @@
       "additionalProperties": false,
       "required": ["path", "sha256"],
       "properties": {
+        "root": { "enum": ["case", "repo"] },
         "path": { "type": "string" },
         "sha256": { "type": "string" }
       }
