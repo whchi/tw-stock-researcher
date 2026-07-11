@@ -27,12 +27,11 @@ Use `--market TPEx` only for OTC issuers, and expect `status: blocked` until TPE
 ## Workflow
 
 1. Confirm exactly one matching case folder exists.
-2. Preflight: `.venv/bin/python scripts/workflow_state.py gate <case_dir> financial-data-fetch --as-of <YYYY-MM-DD> --json`; stop if `ready` is false and report `blocking_reasons`.
+2. Confirm the case folder exists; if not, run `stock-case-init` first.
 3. Run the official-issuer adapter first (canonical when it succeeds), then the fundamentals fetcher (official monthly/quarterly layer), then Goodinfo as the annual fallback.
-4. Read each output's `metadata.status`; a `blocked` required dataset (see `workflow-contract.json` → `financial-data-fetch`) means this stage's own status is `blocked`, not silently `pass`.
+4. Read each output's `metadata.status`; a `blocked` required dataset means this fetch failed — report it, do not treat it as a silent pass.
 5. Where `official-issuer-data.json` and `fundamentals-data.json` cover the same metric and period, reconcile with `scripts/reconcile_sources.py:reconcile_metric` before treating either as final. A `true_conflict` on a required metric opens a `FIN-DATA-CONFLICT-<slug>` question and blocks `financial-analysis`/`investment-thesis` from refreshing; other classifications (`rounding`, `period_mismatch`, `consolidation_mismatch`, `restatement`) are informational per `docs/source-policy.md` and never averaged.
-6. Record: `.venv/bin/python scripts/workflow_state.py record <case_dir> financial-data-fetch`.
-7. Track unresolved data gaps under question namespace `FIN-DATA` only: `.venv/bin/python scripts/open_questions.py upsert <case_dir> --stage financial-data-fetch --id FIN-DATA-<slug> ...`; close them only when a deterministic resolver predicate (`scripts/open_questions.py` → `resolve_three_statement_coverage`, `resolve_monthly_revenue_period`, `resolve_valuation_band_readiness`) is actually true.
+6. Add unresolved data gaps to `open-questions.md`; close them only when the fetched data actually answers them.
 
 ## Output
 
@@ -44,8 +43,7 @@ Use `--market TPEx` only for OTC issuers, and expect `status: blocked` until TPE
 
 - Confirm no `<stock_id>_raw_data.json` or `<stock_id>_fundamentals_data.json` remains in repo root.
 - Confirm the fetch did not write to repo root because of zero or multiple matching case folders.
-- Confirm `workflow_state.py record` was run and the stage record's `status` matches what the fetch outputs actually report.
-- Confirm any `FIN-DATA` question closed via `open_questions.py resolve` cites a deterministic evidence ref, not prose alone.
+- Confirm any data-gap question closed this run cites the evidence that answered it.
 
 ## Red Lines
 

@@ -67,26 +67,6 @@ class BuildSummaryRejectionTests(unittest.TestCase):
             with self.assertRaises(BuildError):
                 build_summary(case_dir)
 
-    def test_rejects_when_session_wrap_has_not_passed(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            case_dir = self._copy_case(tmp)
-            meta = json.loads((case_dir / "stock-meta.json").read_text(encoding="utf-8"))
-            meta["stage_records"] = {}
-            (case_dir / "stock-meta.json").write_text(json.dumps(meta), encoding="utf-8")
-
-            with self.assertRaises(BuildError):
-                build_summary(case_dir)
-
-    def test_rejects_when_session_wrap_is_stale(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            case_dir = self._copy_case(tmp)
-            meta = json.loads((case_dir / "stock-meta.json").read_text(encoding="utf-8"))
-            meta["stage_records"]["session-wrap"]["status"] = "stale"
-            (case_dir / "stock-meta.json").write_text(json.dumps(meta), encoding="utf-8")
-
-            with self.assertRaises(BuildError):
-                build_summary(case_dir)
-
     def test_rejects_malformed_table_shape_in_source_markdown(self):
         with tempfile.TemporaryDirectory() as tmp:
             case_dir = self._copy_case(tmp)

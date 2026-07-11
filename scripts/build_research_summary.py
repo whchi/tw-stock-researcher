@@ -3,12 +3,11 @@
 
 Reads only the fixed set of canonical source files documented in
 docs/data-layout.md; never consults an existing research-summary-data.json
-or research-summary.html as an input. Requires the research-html-output
-stage's gate to be ready (session-wrap passed/degraded and its required
-inputs present) before building.
+or research-summary.html as an input.
 """
 
 import argparse
+import hashlib
 import json
 import sys
 from datetime import date
@@ -16,10 +15,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from atomic_io import atomic_write_text  # noqa: E402
-from markdown_contract import extract_table_under_heading, extract_text_under_heading, normalize_text  # noqa: E402
-from open_questions import ACTIVE_HEADING, validate_ledger  # noqa: E402
+from markdown_contract import MarkdownContractError, extract_table_under_heading, extract_text_under_heading, normalize_text  # noqa: E402
 from research_summary_contract import SCHEMA_VERSION, TEMPLATE_VERSION, canonical_json, validate_summary  # noqa: E402
-from workflow_state import gate_stage, hash_file, load_contract  # noqa: E402
+
+
+def hash_file(path):
+    path = Path(path)
+    if not path.exists():
+        return None
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -213,11 +217,8 @@ def _build_egg_theory(market_data, tdcc_data):
     return rows
 
 
-def _build_open_questions(questions_text, contract):
-    issues = validate_ledger(questions_text, contract)
-    if issues:
-        raise BuildError(f"open-questions.md failed validation: {issues}")
-    _, rows = extract_table_under_heading(questions_text, ACTIVE_HEADING)
+def _build_open_questions(questions_text):
+    _, rows = extract_table_under_heading(questions_text, "Active Questions")
     return [
         {
             "id": row.get("ID", ""),
@@ -265,11 +266,6 @@ REQUIRED_MARKDOWN_SOURCES = (
 
 def build_summary(case_dir, distribution="local", as_of=None):
     case_dir = Path(case_dir)
-    contract = load_contract()
-
-    gate = gate_stage(case_dir, "research-html-output", contract, date.today())
-    if not gate["ready"]:
-        raise BuildError(f"research-html-output is not ready: {gate['blocking_reasons']}")
 
     meta = _read_json(case_dir / "stock-meta.json")
     if meta is None:
@@ -302,7 +298,16 @@ def build_summary(case_dir, distribution="local", as_of=None):
 
     resolved_as_of = as_of or _latest_source_as_of([market_data, tdcc_data]) or date.today().isoformat()
 
-    return {
+    missing_sections = []
+
+    def _section(source_file, builder, *args):
+        try:
+            return builder(*args)
+        except MarkdownContractError as exc:
+            missing_sections.append(f"{source_file}: {exc}")
+            return None
+
+    payload = {
         "schema_version": SCHEMA_VERSION,
         "template_version": TEMPLATE_VERSION,
         "case_id": case_dir.name,
@@ -311,19 +316,26 @@ def build_summary(case_dir, distribution="local", as_of=None):
         "as_of": resolved_as_of,
         "distribution": distribution,
         "identity": _build_identity(meta),
-        "current_view": _build_current_view(active_text, DISCLAIMER_SUMMARY),
-        "kpis": _build_kpis(active_text),
-        "expectation_gaps": _build_expectation_gaps(memo_text),
-        "pricing_stage": _build_pricing_stage(memo_text),
+        "current_view": _section("active-decisions.md", _build_current_view, active_text, DISCLAIMER_SUMMARY),
+        "kpis": _section("active-decisions.md", _build_kpis, active_text),
+        "expectation_gaps": _section("investment-memo.md", _build_expectation_gaps, memo_text),
+        "pricing_stage": _section("investment-memo.md", _build_pricing_stage, memo_text),
         "egg_theory": _build_egg_theory(market_data, tdcc_data),
-        "evidence_timeline": _build_evidence_timeline(active_text),
-        "kill_criteria": _build_kill_criteria(active_text),
-        "scenarios": _build_scenarios(memo_text),
-        "watch_items": _build_watch_items(active_text),
-        "open_questions": _build_open_questions(questions_text, contract),
+        "evidence_timeline": _section("active-decisions.md", _build_evidence_timeline, active_text),
+        "kill_criteria": _section("active-decisions.md", _build_kill_criteria, active_text),
+        "scenarios": _section("investment-memo.md", _build_scenarios, memo_text),
+        "watch_items": _section("active-decisions.md", _build_watch_items, active_text),
+        "open_questions": _section("open-questions.md", _build_open_questions, questions_text),
         "sources": sources,
         "source_manifest": manifest,
     }
+
+    if missing_sections:
+        raise BuildError(
+            "source files are missing required template sections: " + "; ".join(missing_sections)
+        )
+
+    return payload
 
 
 def write_summary(case_dir, check=False, distribution="local"):

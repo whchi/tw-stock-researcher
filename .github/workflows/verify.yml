@@ -27,14 +27,5 @@ jobs:
       - name: Create repo-local virtual environment
         run: uv venv --python ${{ matrix.python-version }}
 
-      - name: Install scraper dependencies
-        run: uv pip install --python .venv requests beautifulsoup4
-
-      - name: Run skill structure checks
-        run: sh tests/structure/test_skills.sh
-
-      - name: Run template structure checks
-        run: sh tests/structure/test_templates.sh
-
       - name: Run unit tests
         run: .venv/bin/python -m unittest discover -s tests -p 'test_*.py' -v

@@ -15,15 +15,14 @@ Write the judgment layer that sits between financial facts and the investment me
 
 ## Workflow
 
-1. Preflight: `.venv/bin/python scripts/workflow_state.py gate <case_dir> quality-and-valuation-check --as-of <YYYY-MM-DD> --json`; if `ready` is false, run `financial-analysis` and/or `market-data-fetch` first.
+1. Confirm `financial-analysis.md` and `market-data.json` exist; if missing, run `financial-analysis` / `market-data-fetch` first.
 2. Start from verified financial facts and coverage limitations.
 3. Assess business quality using ROIC, owner earnings, cash conversion, working-capital quality, and capex productivity.
 4. Evaluate capital allocation and shareholder value accrual.
 5. Separate current price implied expectations from verified evidence, anchoring P/E and P/B reads to `derived.valuation_band` (current value vs 1y/3y/5y min / median / max and percentile) instead of remembered multiples.
 6. Frame margin of safety as scenario evidence and assumption sensitivity, not as an instruction.
 7. List better-source checks where public data is insufficient.
-8. Record: `.venv/bin/python scripts/workflow_state.py record <case_dir> quality-and-valuation-check`.
-9. Track unresolved quality/valuation questions under question namespace `QUAL` only via `scripts/open_questions.py upsert <case_dir> --stage quality-and-valuation-check --id QUAL-<slug> ...`.
+8. Add unresolved quality/valuation questions to `open-questions.md`.
 
 ## Output
 

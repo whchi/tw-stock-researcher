@@ -16,7 +16,7 @@ This repository is a markdown-first workspace template for researching one stock
 
 ## Standard Workflow
 
-The canonical order lives in `workflow-contract.json` and is checked against this document by `tests/test_workflow_contract.py`:
+The canonical order:
 
 ```
 stock-case-init -> yahoo-profile-financials -> financial-data-fetch -> market-data-fetch -> company-deep-dive -> financial-analysis -> industry-transmission-analysis -> macro-impact-analysis -> market-action-read -> quality-and-valuation-check -> investment-thesis -> session-wrap -> research-html-output
@@ -33,7 +33,7 @@ stock-case-init -> yahoo-profile-financials -> financial-data-fetch -> market-da
 9. Add the market-state layer with `market-action-read`.
 10. Add the value-investor quality layer with `quality-and-valuation-check`.
 11. Write the current thesis with `investment-thesis`, which reads a current `market-action-read.md` and writes the whole memo once.
-12. Use `session-wrap` before ending a session; it is the terminal gate both for a first pass and for a return visit.
+12. Use `session-wrap` before ending a session — the last step both for a first pass and for a return visit.
 13. Use `signal-update` for new filings, revenue releases, or news.
 14. Use `case-revisit` when returning to the case later.
 
@@ -47,7 +47,7 @@ Every `companies/<ticker>-<slug>/` case is local, git-ignored session data, not 
 
 ## Continuous Integration
 
-`.github/workflows/verify.yml` runs `tests/structure/test_skills.sh`, `tests/structure/test_templates.sh`, and the full `unittest` suite on every push and pull request. CI never touches `companies/**`, never requires `FIN_MIND_TOKEN`, and never calls a live network — it only exercises fixtures under `tests/fixtures/`.
+`.github/workflows/verify.yml` runs the `unittest` suite (HTML render pipeline: payload build, schema validation, template render) on every push and pull request. CI never touches `companies/**`, never requires `FIN_MIND_TOKEN`, and never calls a live network — it only exercises fixtures under `tests/fixtures/`.
 
 ## HTML Summary Output
 
@@ -84,8 +84,8 @@ These project-local workflow skills live under `.agents/skills/<skill-name>/SKIL
 - `market-action-read`: summarize market state, institutional flow, and egg-theory evidence without trading instructions; never edits `investment-memo.md`.
 - `quality-and-valuation-check`: assess ROIC, owner earnings, working-capital quality, capital allocation, implied expectations, and margin of safety.
 - `investment-thesis`: produce the current memo with assumptions and disconfirming evidence; the sole writer of `investment-memo.md`.
-- `session-wrap`: preserve unresolved questions, expected evidence, thesis kill criteria, decisions, and next follow-ups; the terminal gate for both first visits and return visits.
-- `research-html-output`: render an explicit HTML summary request from `templates/research-html-summary.html` using `scripts/render_research_html.py`; requires a passing `session-wrap` gate.
+- `session-wrap`: preserve unresolved questions, expected evidence, thesis kill criteria, decisions, and next follow-ups; the last step for both first visits and return visits.
+- `research-html-output`: render an explicit HTML summary request from `templates/research-html-summary.html` using `scripts/render_research_html.py`; run after `session-wrap`.
 - `signal-update`: append new events and decide whether the thesis changed.
 - `case-revisit`: re-enter an existing case with a file-grounded summary.
 
@@ -115,7 +115,7 @@ These project-local workflow skills live under `.agents/skills/<skill-name>/SKIL
 9. `market-action-read` writes `market-action-read.md` with 1D/3D/5D price-volume, institutional flow, holder distribution, and egg-theory evidence
 10. `quality-and-valuation-check` writes `quality-and-valuation-check.md` with business quality, implied expectations, and margin-of-safety evidence
 11. `investment-thesis` reads the current `market-action-read.md` and writes `investment-memo.md` once, with Bull/Base/Bear scenarios using the `investment-reasoning-framework.md` pricing framework
-12. `session-wrap` records expected evidence timeline and thesis kill criteria in `active-decisions.md` — the terminal gate for this pass
+12. `session-wrap` records expected evidence timeline and thesis kill criteria in `active-decisions.md` — the last step for this pass
 13. Updates `stock-meta.json` with all file references and stage records
 
 **Files created:**

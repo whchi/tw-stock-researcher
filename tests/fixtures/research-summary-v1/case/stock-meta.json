@@ -8,16 +8,5 @@
   "created_at": "2026-07-01",
   "updated_at": "2026-07-09",
   "current_status": "researching",
-  "workflow_contract_version": 1,
-  "file_references": {},
-  "stage_records": {
-    "session-wrap": {
-      "status": "pass",
-      "checked_at": "2026-07-09T00:00:00Z",
-      "source_as_of": null,
-      "input_hashes": {},
-      "output_hashes": {},
-      "issues": []
-    }
-  }
+  "file_references": {}
 }

@@ -1,10 +1,7 @@
 # Research Questions
 
-> This file is free-form exploratory notes. The evidence-backed, ID-tracked
-> question ledger with status/closure lives in `open-questions.md`; promote
-> anything below into that ledger with `scripts/open_questions.py upsert
-> --stage stock-case-init --id CASE-...` once it needs to be tracked to
-> resolution.
+> This file is free-form exploratory notes. Questions that need to be
+> tracked to resolution across sessions live in `open-questions.md`.
 
 ## Recent 6M Questions
 

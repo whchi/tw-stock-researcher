@@ -16,9 +16,9 @@ uv pip add requests beautifulsoup4
 
    `requests` is required by the fetch scripts, and `beautifulsoup4` provides `bs4` for Goodinfo scraping.
 3. Pick one stock and create a case.
-4. Run the workflow in this order (matches `workflow-contract.json`; checked by `tests/test_workflow_contract.py`):
+4. Run the workflow in this order:
    stock-case-init -> yahoo-profile-financials -> financial-data-fetch -> market-data-fetch -> company-deep-dive -> financial-analysis -> industry-transmission-analysis -> macro-impact-analysis -> market-action-read -> quality-and-valuation-check -> investment-thesis -> session-wrap -> research-html-output
 5. Use signal-update for new events.
-6. Use case-revisit when you return later, then session-wrap to close the session — session-wrap is the terminal gate before HTML output.
+6. Use case-revisit when you return later, then session-wrap to close the session — session-wrap is the last step before HTML output.
 
 Use public and free sources first. Keep source notes in the case files as you go so later updates stay grounded.

@@ -14,13 +14,12 @@ Explain how industry demand becomes company revenue, margin, cash flow, and narr
 
 ## Workflow
 
-1. Preflight: `.venv/bin/python scripts/workflow_state.py gate <case_dir> industry-transmission-analysis --as-of <YYYY-MM-DD> --json`; if `ready` is false, run `company-deep-dive` first.
+1. Confirm `company-analysis.md` exists; if missing, run `company-deep-dive` first.
 2. Identify the company's position in the value chain.
 3. Map upstream inputs, customers, channel inventory, end-demand drivers, and cycle risks.
 4. Separate leading indicators from lagging indicators and popular but weak signals.
 5. Link each indicator to the specific company-level transmission path.
-6. Record: `.venv/bin/python scripts/workflow_state.py record <case_dir> industry-transmission-analysis`.
-7. Track unresolved industry evidence under question namespace `IND` only via `scripts/open_questions.py upsert <case_dir> --stage industry-transmission-analysis --id IND-<slug> ...`.
+6. Add unresolved industry evidence to `open-questions.md`.
 
 ## Output
 

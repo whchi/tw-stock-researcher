@@ -14,15 +14,14 @@ Synthesize the case without collapsing evidence, judgment, and market pricing in
 
 ## Workflow
 
-1. Preflight: `.venv/bin/python scripts/workflow_state.py gate <case_dir> investment-thesis --as-of <YYYY-MM-DD> --json`; if `ready` is false, run or wait on the listed upstream stages (company-deep-dive, financial-analysis, industry-transmission-analysis, macro-impact-analysis, quality-and-valuation-check, market-action-read) instead of writing a memo from stale evidence.
+1. Confirm the upstream analysis files exist (`company-analysis.md`, `financial-analysis.md`, `industry-transmission.md`, `macro-map.md`, `quality-and-valuation-check.md`, `market-action-read.md`); run any missing stage first instead of writing a memo from stale evidence.
 2. Read the current company, financial, industry, macro, quality, and market-action layers.
 3. Write the dual framework: Business Thesis and Pricing Thesis.
 4. Include Bull/Base/Bear scenarios with probability weights, EPS or driver assumptions, and scenario-derived price ranges; anchor scenario multiples to the `fundamentals-data.json` valuation band rather than remembered multiples.
 5. Explain expectation gaps: market belief, verified evidence, narrative-only claims, and verification needed.
 6. Summarize evidence support without duplicating raw tables from other layers, including the current market-action read.
 7. Capture critical unresolved questions and non-portable claims.
-8. Record: `.venv/bin/python scripts/workflow_state.py record <case_dir> investment-thesis`.
-9. Track unresolved thesis questions under question namespace `THESIS` only via `scripts/open_questions.py upsert <case_dir> --stage investment-thesis --id THESIS-<slug> ...`.
+8. Add unresolved thesis questions to `open-questions.md`.
 
 ## Output
 

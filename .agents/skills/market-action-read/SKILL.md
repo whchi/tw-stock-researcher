@@ -14,14 +14,13 @@ Turn refreshed market data into a neutral read, not a trading decision. This ski
 
 ## Workflow
 
-1. Preflight: `.venv/bin/python scripts/workflow_state.py gate <case_dir> market-action-read --as-of <YYYY-MM-DD> --json`; if `ready` is false, run `market-data-fetch` first.
+1. Confirm `market-data.json` exists; if missing, run `market-data-fetch` first.
 2. Read `market-data.json`; read `tdcc-data.json` when present.
 3. Cover 1D/3D/5D price-volume and institutional-flow windows.
 4. Add egg-theory reads for `1m`, `3m`, and `6m` when `derived.egg_theory_read` exists.
 5. Surface holder-distribution limits clearly: `snapshot_only`, missing `TaiwanStockHoldingSharesPer`, or insufficient holder trend means confidence cannot be high.
 6. Use neutral labels such as `market confirmation`, `price-in risk`, `thesis validation trigger`, `assumption failure signal`, and `wait_for_confirmation`.
-7. Record: `.venv/bin/python scripts/workflow_state.py record <case_dir> market-action-read`.
-8. Track unresolved market-data gaps under question namespace `MKT` only via `scripts/open_questions.py upsert <case_dir> --stage market-action-read --id MKT-<slug> ...`.
+7. Add unresolved market-read gaps to `open-questions.md`.
 
 ## Output
 

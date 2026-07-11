@@ -1,1 +1,0 @@
-# Market Action Read (fixture)

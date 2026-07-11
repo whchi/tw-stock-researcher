@@ -41,11 +41,9 @@ automated backup mechanism. Recommended practice:
   file over copying raw case JSON/Markdown if the goal is to share
   findings with someone else.
 - **Retention**: there is no enforced expiry. A case is stale evidence,
-  not wrong evidence — `scripts/workflow_state.py`'s `stage_records`
-  already marks a stage `stale` when an upstream input changes, and
-  `open-questions.md` tracks `Next Check` dates per open question. Delete
-  a case folder only by explicit user request (see Red Lines below); this
-  project does not auto-delete old cases.
+  not wrong evidence — `open-questions.md` tracks `Next Check` dates per
+  open question. Delete a case folder only by explicit user request (see
+  Red Lines below); this project does not auto-delete old cases.
 
 ## User-Provided Position Context
 

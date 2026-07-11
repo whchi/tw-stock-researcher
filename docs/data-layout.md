@@ -18,7 +18,7 @@ Create one folder per stock under `companies/`, for example `companies/6706-hui-
 
 | File | Purpose | Primary owner |
 | --- | --- | --- |
-| `stock-meta.json` | current status, case file index, and workflow state (`stage_records`); each `file_references` value is `null` or a repo-relative case path | `stock-case-init` |
+| `stock-meta.json` | current status and case file index; each `file_references` value is `null` or a repo-relative case path | `stock-case-init` |
 | `yahoo-data.json` | Yahoo Finance Taiwan profile, revenue, income statement, cash flow, and derived summary for company deep-dive input | `fetch_yahoo.py` |
 | `official-issuer-data.json` | TWSE/TPEx official issuer, monthly revenue, and IS/BS summary data | `fetch_official_issuer.py` |
 | `raw-data.json` | Goodinfo scraped annual statements plus three-statement coverage check | `fetch_goodinfo.py` |
@@ -35,35 +35,23 @@ Create one folder per stock under `companies/`, for example `companies/6706-hui-
 | `market-action-read.md` | neutral market-state read using price/volume and institutional flow evidence, without trading instructions | `market-action-read` |
 | `signal-log.md` | append-only event log with signal classification | `signal-update` |
 | `thesis-updates.md` | explicit thesis changes | `signal-update` |
-| `open-questions.md` | evidence-backed Active/Resolved question ledger; created by `stock-case-init`, then upserted/resolved only by the owning stage of each row's `question_namespace` via `scripts/open_questions.py` | `stock-case-init` (creation); `case-revisit` and `session-wrap` report on it but never write to it |
+| `open-questions.md` | Active/Resolved question ledger carried across sessions; created by `stock-case-init`, updated by the analysis stages | `stock-case-init` (creation); analysis stages add and resolve their own items |
 | `active-decisions.md` | current research stance, expected evidence timeline, thesis kill criteria, review triggers, and follow-ups | `session-wrap` |
 | `research-summary-data.json` | typed, validated render payload built from the canonical case files above | `build_research_summary.py` |
 | `research-summary.html` | deterministic HTML rendered from `research-summary-data.json` | `render_research_html.py` |
-
-## Workflow State
-
-`workflow-contract.json` at the repo root is the canonical stage DAG: dependencies, required/optional inputs, outputs, and question namespaces per stage. `scripts/workflow_state.py` reads it and tracks per-stage status inside each case's `stock-meta.json` under `stage_records`:
-
-- `preflight`, `gate`, and `status` are read-only. `record` is the only command that writes `stock-meta.json`, and it does so atomically.
-- Each stage record holds `status` (one of `workflow-contract.json`'s `stage_statuses`), `checked_at`, `source_as_of`, `input_hashes`, `output_hashes`, and `issues`. Hashes are keyed by case-relative filename, never absolute paths.
-- `record` compares a stage's newly hashed outputs against its previously recorded outputs. If they differ, every transitive downstream consumer's stage record is marked `stale` — their artifacts are left untouched, but they must be re-run before a further downstream stage may consume them.
-- `gate_stage` rejects a stage when any upstream dependency's last recorded status is not in `consumable_statuses` (`pass`/`degraded`), or when a required input file is missing or itself carries a non-consumable embedded `metadata.status`. Missing or degraded **optional** inputs never block readiness.
-- A case is "complete" only when the terminal stage (`session-wrap`) has a stage record with a consumable status. A file existing on disk is not evidence that its producing stage passed — only a recorded stage status is.
 
 ## Research Summary Rendering
 
 `templates/research-summary-data.schema.json` documents the typed payload shape; `scripts/research_summary_contract.py` enforces it in code (`validate_summary`, `canonical_json`) without adding a schema-validator runtime dependency.
 
-- `scripts/build_research_summary.py` builds the payload from a fixed source map only (`stock-meta.json`, `active-decisions.md`, `investment-memo.md`, `market-data.json` + `tdcc-data.json`, validated `open-questions.md`, `DISCLAIMER.md`) and requires the `research-html-output` workflow gate to be ready first. It never reads an existing `research-summary-data.json` or `research-summary.html` as an input.
+- `scripts/build_research_summary.py` builds the payload from a fixed source map only (`stock-meta.json`, `active-decisions.md`, `investment-memo.md`, `market-data.json` + `tdcc-data.json`, `open-questions.md`, `DISCLAIMER.md`). It never reads an existing `research-summary-data.json` or `research-summary.html` as an input, and it fails closed with a full list of missing template sections when a source file does not match the template shape.
 - `scripts/render_research_html.py` renders `research-summary.html` from that payload only, escaping every scalar with `html.escape(..., quote=True)` and accepting only `http`/`https` source URLs. Both scripts support `--check` to validate without writing, and both write atomically.
 - `scripts/validate_research_summary.py --all` is a read-only audit of every existing case's current `research-summary-data.json`. Non-current or invalid shapes and source-manifest hash drift are invalid. Every manifest entry explicitly declares `root: case` or `root: repo`; both roots reject path escape.
 
 ## Validation Workflow
 
-1. Run `sh tests/structure/test_templates.sh` after template or workflow-doc changes.
-2. Run `.venv/bin/python -m unittest discover -s tests -p 'test_*.py'` after script or fetcher changes.
-3. Add a focused structure test before changing file ownership, template boundaries, or workflow order.
-4. `.github/workflows/verify.yml` runs steps 1-2 (structure checks plus the full unit-test suite) on every push and pull request, without touching `companies/**` or requiring `FIN_MIND_TOKEN`.
+1. Run `.venv/bin/python -m unittest discover -s tests -p 'test_*.py'` after changing the HTML render pipeline.
+2. `.github/workflows/verify.yml` runs the same suite on every push and pull request, without touching `companies/**` or requiring `FIN_MIND_TOKEN`.
 
 ## Case Storage
 

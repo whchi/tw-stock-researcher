@@ -5,12 +5,12 @@ description: Use when the user asks to output a stock research synthesis, compre
 
 # Research HTML Output
 
-Use this only for an explicit HTML output request. Markdown and JSON case files remain the source of truth. This stage requires a passing `session-wrap` gate — HTML is never built from an incomplete or stale case. The payload is built deterministically by `scripts/build_research_summary.py` from fixed source files; do not hand-write `research-summary-data.json`.
+Use this only for an explicit HTML output request. Markdown and JSON case files remain the source of truth; run `session-wrap` first so the HTML reflects a wrapped-up case. The payload is built deterministically by `scripts/build_research_summary.py` from fixed source files; do not hand-write `research-summary-data.json`.
 
 ## Source Of Truth
 
 - Follow `AGENTS.md`, `docs/data-layout.md`, and `templates/research-summary-data.schema.json` (the payload shape; enforced in code by `scripts/research_summary_contract.py`).
-- The fixed source map: identity from `stock-meta.json`; headline/summary/stance/KPIs/evidence timeline/kill criteria/watch items from `active-decisions.md`; expectation gaps/pricing stage/scenarios from `investment-memo.md`; egg theory from `market-data.json` (`derived.egg_theory_read`) with a TDCC caveat from `tdcc-data.json`; open questions from validated `open-questions.md`; disclaimer text from `DISCLAIMER.md`. Never consult an existing `research-summary-data.json` or `research-summary.html` as a builder input.
+- The fixed source map: identity from `stock-meta.json`; headline/summary/stance/KPIs/evidence timeline/kill criteria/watch items from `active-decisions.md`; expectation gaps/pricing stage/scenarios from `investment-memo.md`; egg theory from `market-data.json` (`derived.egg_theory_read`) with a TDCC caveat from `tdcc-data.json`; open questions from `open-questions.md`; disclaimer text from `DISCLAIMER.md`. Never consult an existing `research-summary-data.json` or `research-summary.html` as a builder input.
 
 ## Commands
 
@@ -25,11 +25,10 @@ Use this only for an explicit HTML output request. Markdown and JSON case files 
 
 ## Workflow
 
-1. Preflight: `.venv/bin/python scripts/workflow_state.py gate <case_dir> research-html-output --as-of <YYYY-MM-DD> --json`; if `ready` is false (most commonly because `session-wrap` has not passed, or a required input like `market-action-read.md` is missing), run or finish the listed upstream stage first instead of rendering from stale evidence.
-2. Run `build_research_summary.py --case <case_dir>` to produce a fresh, validated `research-summary-data.json`. It fails closed (non-zero exit, nothing written) on a missing required source, a malformed table, an invalid payload shape, or a stage that is not actually gate-ready.
+1. Confirm the case markdown files are current (`session-wrap` has run for this session); if a required source like `active-decisions.md` or `investment-memo.md` is missing or stale, finish that stage first instead of rendering from stale evidence.
+2. Run `build_research_summary.py --case <case_dir>` to produce a fresh, validated `research-summary-data.json`. It fails closed (non-zero exit, nothing written) on a missing required source, a missing template section (it lists every missing heading at once), a malformed table, or an invalid payload shape.
 3. Run `render_research_html.py --case <case_dir>` to render `research-summary.html` from that payload. Every value is HTML-escaped; the renderer never trusts pre-formatted HTML from a case file.
-4. Record: `.venv/bin/python scripts/workflow_state.py record <case_dir> research-html-output`.
-5. Track unresolved rendering gaps under question namespace `HTML` only via `scripts/open_questions.py upsert <case_dir> --stage research-html-output --id HTML-<slug> ...`.
+4. Add unresolved rendering gaps to `open-questions.md`.
 
 ## Verification
 

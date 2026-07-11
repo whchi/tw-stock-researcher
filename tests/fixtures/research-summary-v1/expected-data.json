@@ -186,12 +186,12 @@
     {
       "path": "open-questions.md",
       "root": "case",
-      "sha256": "88ca47b29f5cc39334ae15aa30404600fe37368dce709ce0b03de6a1bf1ffb14"
+      "sha256": "1c05b94c25fb84e99abad09c8490868da2427cbe2ac0553cf1210700ac1ec640"
     },
     {
       "path": "stock-meta.json",
       "root": "case",
-      "sha256": "cb35fd43c11478ea9a2366e149d8027d5e6dc1aa126e144212f45c5a1146dd7d"
+      "sha256": "5acee190acb47a157f0b5ca59f9c8a4f70a5c79b666dc61cc8155d9b842b14cd"
     },
     {
       "path": "tdcc-data.json",

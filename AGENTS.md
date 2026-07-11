@@ -6,7 +6,7 @@
 
 ## Workflow Order (Mandatory)
 
-Canonical order — the DAG in `workflow-contract.json` is the source of truth; this line must match it (`tests/test_workflow_contract.py` checks this document against the contract):
+Canonical order:
 
 ```
 stock-case-init -> yahoo-profile-financials -> financial-data-fetch -> market-data-fetch -> company-deep-dive -> financial-analysis -> industry-transmission-analysis -> macro-impact-analysis -> market-action-read -> quality-and-valuation-check -> investment-thesis -> session-wrap -> research-html-output
@@ -27,12 +27,11 @@ The three fetch stages (`yahoo-profile-financials`, `financial-data-fetch`, `mar
 | `market-action-read` | Depends on `market-data-fetch`; reads `market-data.json` / `tdcc-data.json`; never edits `investment-memo.md`. |
 | `quality-and-valuation-check` | Depends on `financial-analysis` and `market-data-fetch`; business quality, implied expectations, margin of safety. |
 | `investment-thesis` | Depends on `company-deep-dive`, `financial-analysis`, `industry-transmission-analysis`, `macro-impact-analysis`, `quality-and-valuation-check`, and `market-action-read`; writes the whole memo once. |
-| `session-wrap` | Terminal gate for both first visits and return visits; depends on `investment-thesis`. |
-| `research-html-output` | Optional, explicit-request-only; requires a passing `session-wrap` gate. |
+| `session-wrap` | Last step of every session, first visit or return visit; depends on `investment-thesis`. |
+| `research-html-output` | Optional, explicit-request-only; run after `session-wrap`. |
 
-- **Return visit:** `case-revisit` -> affected stages -> their invalidated downstream stages (per `scripts/workflow_state.py` staleness cascade) -> `session-wrap`
+- **Return visit:** `case-revisit` -> affected stages -> `session-wrap`
 - **New event:** `signal-update` (appends to `signal-log.md`, may update `thesis-updates.md`)
-- Every stage above follows `preflight (gate) -> work -> record -> question transition` using `scripts/workflow_state.py` and `scripts/open_questions.py`; see each skill's `SKILL.md` for exact commands.
 
 ## File Structure & Ownership
 
@@ -45,7 +44,7 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 | `raw-data.json` | `fetch_goodinfo.py` | Goodinfo scraped data plus three-statement coverage check (auto-detected by script). |
 | `fundamentals-data.json` | `fetch_fundamentals.py` | FinMind official monthly revenue, quarterly IS / BS / CF, and P/E / P/B valuation band with derived 6M / 8Q reads. |
 | `research-questions.md` | `stock-case-init` | Core questions, facts to establish, disconfirming evidence to seek. |
-| `open-questions.md` | `stock-case-init` (creation); each stage upserts/resolves only its own `question_namespace` via `scripts/open_questions.py` | Evidence-backed Active/Resolved question ledger. `case-revisit` and `session-wrap` report on it but never write to it. |
+| `open-questions.md` | `stock-case-init` (creation); analysis stages add and resolve their own items | Active/Resolved question ledger carried across sessions. |
 | `active-decisions.md` | `session-wrap` | Current research stance, expected evidence timeline, thesis kill criteria, user-provided position context, observation ranges, structure-break conditions, next review triggers. |
 | `company-analysis.md` | `company-deep-dive` | Business model, product mix, revenue structure, margin analysis. |
 | `financial-analysis.md` | `financial-analysis` | 3D analysis: 經營分析 / 獲利分析 / 財務健全度. |
@@ -160,7 +159,7 @@ When the user explicitly asks for a comprehensive research result as HTML, use t
 .venv/bin/python scripts/build_research_summary.py --case companies/<ticker-slug>
 .venv/bin/python scripts/render_research_html.py --case companies/<ticker-slug>
 ```
-- Both commands accept `--check` to validate without writing. `build_research_summary.py` fails closed (non-zero exit) when a required source is missing, a source table is malformed, the built payload fails validation, or `research-html-output`'s workflow gate is not ready (most commonly because `session-wrap` has not passed).
+- Both commands accept `--check` to validate without writing. `build_research_summary.py` fails closed (non-zero exit) when a required source is missing, a source table is malformed, or the built payload fails validation.
 - Never hand-write `research-summary-data.json` and never consult an existing `research-summary-data.json` or `research-summary.html` as a builder input — every field is re-derived from the canonical markdown/JSON case files each time.
 - The output HTML must live in the company folder as `companies/<ticker-slug>/research-summary.html`.
 - HTML is a derived preview, not a replacement for `investment-memo.md`, `active-decisions.md`, or other case artifacts.

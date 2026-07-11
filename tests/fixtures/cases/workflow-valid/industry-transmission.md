@@ -1,1 +1,0 @@
-# Industry Transmission (fixture)
