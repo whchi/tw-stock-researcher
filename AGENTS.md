@@ -15,7 +15,7 @@ stock-case-init
   → quality-and-valuation-check # Business quality, implied expectations, margin of safety
   → investment-thesis
   → market-data-fetch           # Runs fetch_tdcc.py then fetch_finmind.py (FIN_MIND_TOKEN required)
-  → market-action-read          # Reads market-data.json / tdcc-data.json
+  → market-action-read          # Reads market-data.json / tdcc-data.json, then auto-renders summary HTML
 ```
 - **Return visit:** `case-revisit` → `session-wrap`
 - **New event:** `signal-update` (appends to `signal-log.md`, may update `thesis-updates.md`)
@@ -126,7 +126,7 @@ companies/**/*.json
 **All case files are git-ignored by default.** This is intentional — case files are session artifacts, not repo source code. Only root-level docs, scripts, templates, and market context are version controlled.
 
 ### 7. HTML Summary Output
-When the user explicitly asks for a comprehensive research result as HTML, use the `research-html-output` skill from `.agents/skills/research-html-output/SKILL.md`.
+When the user explicitly asks for a comprehensive research result as HTML, or when the standard workflow finishes `market-action-read`, use the `research-html-output` skill from `.agents/skills/research-html-output/SKILL.md`.
 
 - Keep markdown / JSON case files as the source of truth.
 - Use `templates/research-html-summary.html` as the shared template.
@@ -137,6 +137,7 @@ When the user explicitly asks for a comprehensive research result as HTML, use t
   --output companies/<ticker-slug>/research-summary.html
 ```
 - The output HTML must live in the company folder as `companies/<ticker-slug>/research-summary.html`.
+- The final `market-action-read` step should automatically refresh this derived HTML preview after its markdown evidence layer is verified.
 - HTML is a derived preview, not a replacement for `investment-memo.md`, `active-decisions.md`, or other case artifacts.
 - Preserve disclaimer discipline and never introduce buy/sell, entry/exit, stop-loss, or target-price language.
 

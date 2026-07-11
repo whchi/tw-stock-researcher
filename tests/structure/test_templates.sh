@@ -151,10 +151,13 @@ if git check-ignore -q "$ROOT_DIR/.claude/skills/research-html-output/SKILL.md";
 fi
 
 require_line ".agents/skills/research-html-output/SKILL.md" "name: research-html-output"
+require_line ".agents/skills/research-html-output/SKILL.md" "standard workflow finishes"
 require_line ".agents/skills/research-html-output/SKILL.md" "companies/<ticker-slug>/research-summary.html"
 require_line ".agents/skills/financial-analysis/SKILL.md" "scripts/fetch_fundamentals.py <stock_id>"
 require_line ".agents/skills/market-data-fetch/SKILL.md" "scripts/fetch_tdcc.py <stock_id>"
 require_line ".agents/skills/market-data-fetch/SKILL.md" "scripts/fetch_finmind.py <stock_id>"
 require_line ".agents/skills/market-action-read/SKILL.md" "egg-theory"
+require_line ".agents/skills/market-action-read/SKILL.md" "automatically run research-html-output"
+require_line ".agents/skills/market-action-read/SKILL.md" "research-summary.html"
 
 printf 'All template structure checks passed.\n'

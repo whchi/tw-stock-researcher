@@ -25,7 +25,7 @@ This repository is a markdown-first workspace template for researching one stock
 7. Add the value-investor quality layer with `quality-and-valuation-check`.
 8. Write the current thesis with `investment-thesis`.
 9. Refresh TDCC and FinMind market data with `market-data-fetch`.
-10. Add the market-state layer with `market-action-read`.
+10. Add the market-state layer with `market-action-read`; after this final evidence layer is complete, automatically refresh the derived HTML summary with `research-html-output`.
 11. Record expected evidence, thesis kill criteria, and tracking triggers in `active-decisions.md`.
 12. Use `signal-update` for new filings, revenue releases, or news.
 13. Use `case-revisit` when returning to the case later.
@@ -37,7 +37,7 @@ The workspace keeps shared market context under `market/`, reusable templates un
 
 ## HTML Summary Output
 
-Markdown and JSON files remain the source of truth. When the user explicitly asks for a comprehensive research result as HTML, use the `research-html-output` skill and render a derived preview from `templates/research-html-summary.html`.
+Markdown and JSON files remain the source of truth. When the user explicitly asks for a comprehensive research result as HTML, or when the standard workflow finishes `market-action-read`, use the `research-html-output` skill and render a derived preview from `templates/research-html-summary.html`.
 
 The HTML output is produced by string replacement, not by changing the canonical case files:
 
@@ -47,7 +47,7 @@ The HTML output is produced by string replacement, not by changing the canonical
   --output companies/<ticker-slug>/research-summary.html
 ```
 
-Build the JSON payload from the case files in the same company folder, then let `scripts/render_research_html.py` replace the template placeholders. The HTML output should stay in that company folder as `companies/<ticker-slug>/research-summary.html`. The 6706 惠特 and 6741 91APP preview layouts are represented by the shared template structure: research snapshot, expectation gap, expected evidence timeline, thesis kill criteria, scenario summary, watch items, source quality, and sources.
+Build the JSON payload from the case files in the same company folder, then let `scripts/render_research_html.py` replace the template placeholders. The HTML output should stay in that company folder as `companies/<ticker-slug>/research-summary.html`. The final `market-action-read` step refreshes this derived preview automatically after the markdown evidence layer is verified. The 6706 惠特 and 6741 91APP preview layouts are represented by the shared template structure: research snapshot, expectation gap, expected evidence timeline, thesis kill criteria, scenario summary, watch items, source quality, and sources.
 
 ### Rendered HTML Preview
 
@@ -68,7 +68,7 @@ These project-local workflow skills live under `.agents/skills/<skill-name>/SKIL
 - `quality-and-valuation-check`: assess ROIC, owner earnings, working-capital quality, capital allocation, implied expectations, and margin of safety.
 - `investment-thesis`: produce the current memo with assumptions and disconfirming evidence.
 - `market-data-fetch`: refresh TDCC ownership distribution and FinMind market data for the requested stock id.
-- `market-action-read`: summarize market state, institutional flow, and egg-theory evidence without trading instructions.
+- `market-action-read`: summarize market state, institutional flow, and egg-theory evidence without trading instructions, then automatically render the summary HTML preview.
 - `research-html-output`: render an explicit HTML summary request from `templates/research-html-summary.html` using `scripts/render_research_html.py`.
 - `signal-update`: append new events and decide whether the thesis changed.
 - `case-revisit`: re-enter an existing case with a file-grounded summary.
@@ -102,8 +102,9 @@ These project-local workflow skills live under `.agents/skills/<skill-name>/SKIL
 11. Writes `investment-memo.md` with Bull/Base/Bear scenarios using the `investment-reasoning-framework.md` pricing framework
 12. `market-data-fetch` runs TDCC then FinMind with `FIN_MIND_TOKEN` when needed → saves `tdcc-data.json` and `market-data.json` in the case directory
 13. Writes `market-action-read.md` with 1D/3D/5D price-volume, institutional flow, holder distribution, and egg-theory evidence
-14. Records expected evidence timeline and thesis kill criteria in `active-decisions.md`
-15. Updates `stock-meta.json` with all file references
+14. Refreshes `research-summary-data.json` and renders `research-summary.html`
+15. Records expected evidence timeline and thesis kill criteria in `active-decisions.md`
+16. Updates `stock-meta.json` with all file references
 
 **Files created:**
 ```
@@ -124,6 +125,8 @@ companies/3105-awsc/
 ├── investment-memo.md      # Investment thesis (dual framework)
 ├── market-data.json        # FinMind price/volume, institutional, margin, and egg-theory data
 ├── market-action-read.md   # Neutral market-state read
+├── research-summary-data.json # HTML summary payload
+├── research-summary.html   # Derived summary preview
 └── signal-log.md           # Decision history
 ```
 

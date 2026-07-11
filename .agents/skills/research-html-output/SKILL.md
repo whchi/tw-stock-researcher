@@ -5,7 +5,7 @@ description: Use when the user asks to output a stock research synthesis, compre
 
 # Research HTML Output
 
-Use this only for an explicit HTML output request. Markdown and JSON case files remain the source of truth.
+Use this for an explicit HTML output request, or when the standard workflow finishes `market-action-read` and needs the derived summary preview refreshed. Markdown and JSON case files remain the source of truth.
 
 ## Workflow
 
