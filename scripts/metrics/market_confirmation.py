@@ -7,7 +7,7 @@ fabricated zeroes.
 
 from decimal import Decimal
 
-from scripts.metrics.common import not_meaningful, ready, safe_divide, to_decimal, unavailable
+from metrics.common import not_meaningful, ready, safe_divide, to_decimal, unavailable
 
 FORMULA_VERSION = "1"
 
