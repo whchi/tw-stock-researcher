@@ -11,7 +11,7 @@ Read [DISCLAIMER.md](DISCLAIMER.md)
 ```bash
 uv venv
 source .venv/bin/activate
-uv pip add requests beautifulsoup4
+uv pip install requests beautifulsoup4
 ```
 
    `requests` is required by the fetch scripts, and `beautifulsoup4` provides `bs4` for Goodinfo scraping.
