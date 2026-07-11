@@ -7,8 +7,6 @@ findings.md
 
 # Personal tooling
 docs/superpowers/*
-!docs/superpowers/plans/
-!docs/superpowers/plans/*.md
 
 # Secrets & environment
 .env

@@ -175,13 +175,17 @@ def render_source_quality_rows(sources):
 
 
 def render_source_manifest_rows(manifest):
-    return "\n".join(
-        "<tr>"
-        f"<td>{_escape(entry.get('path', ''))}</td>"
-        f"<td>{_escape(entry.get('sha256', ''))}</td>"
-        "</tr>"
-        for entry in manifest
-    )
+    rows = []
+    for entry in manifest:
+        full_hash = entry.get("sha256", "")
+        short_hash = f"{full_hash[:12]}…" if len(full_hash) > 12 else full_hash
+        rows.append(
+            "<tr>"
+            f"<td>{_escape(entry.get('path', ''))}</td>"
+            f'<td class="hash" title="{_escape(full_hash)}">{_escape(short_hash)}</td>'
+            "</tr>"
+        )
+    return "\n".join(rows)
 
 
 def render_source_tags(sources):
@@ -209,6 +213,7 @@ def _build_values(payload):
         "SIDEBAR_TITLE": identity["company_name"],
         "SIDEBAR_DESCRIPTION": current_view["summary"],
         "DISCLAIMER": current_view["disclaimer"],
+        "DISCLAIMER_LINK": "../../DISCLAIMER.md",
         "HERO_HEADLINE": current_view["headline"],
         "HERO_SUMMARY": current_view["summary"],
         "STANCE": current_view["stance"],

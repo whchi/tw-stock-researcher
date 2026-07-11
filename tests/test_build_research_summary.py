@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.build_research_summary import BuildError, build_summary, write_summary
+from scripts.build_research_summary import DISCLAIMER_SUMMARY, BuildError, build_summary, write_summary
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 FIXTURE_CASE = REPO_ROOT / "tests" / "fixtures" / "research-summary-v1" / "case"
@@ -40,6 +40,12 @@ class BuildSummaryGoldenTests(unittest.TestCase):
         ]
         self.assertEqual(len(disclaimers), 1)
         self.assertEqual(len(disclaimers[0]["sha256"]), 64)
+
+    def test_current_view_disclaimer_is_the_short_summary_not_the_raw_file(self):
+        payload = build_summary(FIXTURE_CASE)
+
+        self.assertEqual(payload["current_view"]["disclaimer"], DISCLAIMER_SUMMARY)
+        self.assertNotIn("Limitation of Liability", payload["current_view"]["disclaimer"])
 
     def test_scenario_probabilities_sum_to_100_in_the_fixture(self):
         payload = build_summary(FIXTURE_CASE)

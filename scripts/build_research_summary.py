@@ -23,6 +23,10 @@ from workflow_state import gate_stage, hash_file, load_contract  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
+DISCLAIMER_SUMMARY = (
+    "免責聲明：本文件僅供研究參考，不構成投資建議、買賣推薦或任何形式之邀約。"
+)
+
 
 class BuildError(RuntimeError):
     pass
@@ -307,7 +311,7 @@ def build_summary(case_dir, distribution="local", as_of=None):
         "as_of": resolved_as_of,
         "distribution": distribution,
         "identity": _build_identity(meta),
-        "current_view": _build_current_view(active_text, disclaimer_text),
+        "current_view": _build_current_view(active_text, DISCLAIMER_SUMMARY),
         "kpis": _build_kpis(active_text),
         "expectation_gaps": _build_expectation_gaps(memo_text),
         "pricing_stage": _build_pricing_stage(memo_text),

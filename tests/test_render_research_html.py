@@ -80,6 +80,24 @@ class RenderSummarySecurityTests(unittest.TestCase):
 
         self.assertIn("{{TOKEN}}", html)
 
+    def test_source_manifest_hash_is_truncated_with_full_hash_in_title(self):
+        payload = load_expected_payload()
+        full_hash = "a" * 64
+        payload["source_manifest"] = [{"root": "repo", "path": "DISCLAIMER.md", "sha256": full_hash}]
+
+        html = render_summary(payload, DEFAULT_TEMPLATE.read_text(encoding="utf-8"))
+
+        self.assertIn(f'title="{full_hash}"', html)
+        self.assertNotIn(f">{full_hash}<", html)
+        self.assertIn(f">{full_hash[:12]}…<", html)
+
+    def test_disclaimer_banner_links_to_disclaimer_file(self):
+        payload = load_expected_payload()
+
+        html = render_summary(payload, DEFAULT_TEMPLATE.read_text(encoding="utf-8"))
+
+        self.assertIn('href="../../DISCLAIMER.md"', html)
+
     def test_rejects_non_http_source_url(self):
         payload = load_expected_payload()
         payload["sources"] = payload["sources"] + [

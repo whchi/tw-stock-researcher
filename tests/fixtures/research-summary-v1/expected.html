@@ -88,13 +88,27 @@
       margin-right: auto;
     }
     .notice {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 10px;
       margin-bottom: 18px;
-      padding: 12px 16px;
-      border: 1px solid var(--line);
-      background: rgba(255, 254, 250, 0.78);
-      color: var(--muted);
-      font-size: 13px;
+      padding: 14px 18px;
+      border: 1px solid #efd596;
+      border-left: 4px solid var(--warn);
+      background: #fff8e7;
+      color: #6b4b0a;
+      font-size: 13.5px;
+      line-height: 1.6;
     }
+    .notice strong { font-weight: 750; }
+    .notice a.notice-link {
+      color: var(--accent-2);
+      font-weight: 750;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .notice a.notice-link:hover { text-decoration: underline; }
     .hero {
       margin-bottom: 22px;
       padding: 28px;
@@ -261,6 +275,18 @@
       gap: 8px;
       margin-top: 10px;
     }
+    .hash {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    details summary {
+      cursor: pointer;
+      font-weight: 750;
+      color: var(--accent-2);
+      padding: 4px 0;
+    }
+    details[open] summary { margin-bottom: 8px; }
     footer {
       margin-top: 18px;
       color: var(--muted);
@@ -307,43 +333,10 @@ next two monthly releases.</p>
       </nav>
     </aside>
     <main>
-      <div class="notice"># Disclaimer
-
-## 1. Educational and Research Purposes Only
-
-The content contained in this project is provided solely for educational, research, and reference purposes. Any stock market indices, financial instruments, data analysis, or research reports covered herein **do not constitute any form of investment advice, purchase recommendation, price target, or solicitation to buy or sell**.
-
-## 2. Data Sources
-
-All financial data and market information are sourced from publicly available websites and APIs, including but not limited to:
-- TWSE OpenAPI (openapi.twse.com.tw) and TPEx OpenAPI (www.tpex.org.tw/openapi)
-- TDCC OpenAPI (openapi.tdcc.com.tw)
-- MOPS Market Observation Post System (mops.twse.com.tw)
-- FinMind API
-- Goodinfo.tw
-- Yahoo Finance Taiwan (tw.stock.yahoo.com)
-- Official company websites and public filings
-
-See `docs/source-policy.md` for the source hierarchy, tiering, and how conflicting values across sources are handled (never averaged).
-
-This project does not own, control, or guarantee the timeliness, completeness, or accuracy of data from the above sources.
-
-## 3. Risk Disclosure
-
-Investing involves high risk and you may lose your principal. Past performance does not guarantee future results. Users should exercise due diligence and bear their own risks before making any investment decisions.
-
-## 4. Limitation of Liability
-
-The authors, software developers, or platform **shall not be liable for any direct, indirect, or consequential losses arising from any trading activities conducted by users based on the content of this project**. Users bear ultimate responsibility for their own financial decisions.
-
-## 5. Seek Independent Professional Advice
-
-Users are advised to consult a licensed financial advisor before making any financial investment, to evaluate whether such investment is suitable for their personal financial situation and investment objectives.
-
----
-
-**By using this project, you acknowledge that you have read, understood, and agree to the above disclaimer.**
-</div>
+      <div class="notice">
+        <strong>免責聲明：本文件僅供研究參考，不構成投資建議、買賣推薦或任何形式之邀約。</strong>
+        <a class="notice-link" href="../../DISCLAIMER.md">完整免責聲明 →</a>
+      </div>
       <header class="hero" id="snapshot">
         <div class="hero-top">
           <div>
@@ -491,23 +484,27 @@ next two monthly releases.</p>
         <section id="provenance" class="wide">
           <h3>Build Provenance</h3>
           <p class="note">schema v2 · template v1 · case case</p>
-          <table>
-            <thead>
-              <tr>
-                <th>Source File</th>
-                <th>SHA-256</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td>active-decisions.md</td><td>45dc5165f9834cff6ec502dfaeba90d598abd7974585e45c8ca7314ac3a8f274</td></tr>
-<tr><td>investment-memo.md</td><td>344268727b95e238b0c882653328f75a0a09ebde306899161dbdd4a2c62dfd90</td></tr>
-<tr><td>market-data.json</td><td>07f608ecf479287e7ccebf59c395efd6a7656a15c1efe69f5ce48f908d644f85</td></tr>
-<tr><td>open-questions.md</td><td>88ca47b29f5cc39334ae15aa30404600fe37368dce709ce0b03de6a1bf1ffb14</td></tr>
-<tr><td>stock-meta.json</td><td>cb35fd43c11478ea9a2366e149d8027d5e6dc1aa126e144212f45c5a1146dd7d</td></tr>
-<tr><td>tdcc-data.json</td><td>91ab7f7dc6f41f208374976182e133b29cb36967bb07fab1968d08ee393e6b5e</td></tr>
-<tr><td>DISCLAIMER.md</td><td>0785eae87768b86c2543fe674b834466c0a509ed7c75cd6fea274309c9cd0597</td></tr>
-            </tbody>
-          </table>
+          <details>
+            <summary>顯示建置完整性雜湊值（技術用途，非研究證據）</summary>
+            <p class="note">下表為建置檔案完整性驗證（SHA-256），用於確認本頁由指定原始檔案產生；一般讀者可略過，僅供技術稽核參考。</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Source File</th>
+                  <th>SHA-256</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>active-decisions.md</td><td class="hash" title="45dc5165f9834cff6ec502dfaeba90d598abd7974585e45c8ca7314ac3a8f274">45dc5165f983…</td></tr>
+<tr><td>investment-memo.md</td><td class="hash" title="344268727b95e238b0c882653328f75a0a09ebde306899161dbdd4a2c62dfd90">344268727b95…</td></tr>
+<tr><td>market-data.json</td><td class="hash" title="07f608ecf479287e7ccebf59c395efd6a7656a15c1efe69f5ce48f908d644f85">07f608ecf479…</td></tr>
+<tr><td>open-questions.md</td><td class="hash" title="88ca47b29f5cc39334ae15aa30404600fe37368dce709ce0b03de6a1bf1ffb14">88ca47b29f5c…</td></tr>
+<tr><td>stock-meta.json</td><td class="hash" title="cb35fd43c11478ea9a2366e149d8027d5e6dc1aa126e144212f45c5a1146dd7d">cb35fd43c114…</td></tr>
+<tr><td>tdcc-data.json</td><td class="hash" title="91ab7f7dc6f41f208374976182e133b29cb36967bb07fab1968d08ee393e6b5e">91ab7f7dc6f4…</td></tr>
+<tr><td>DISCLAIMER.md</td><td class="hash" title="0785eae87768b86c2543fe674b834466c0a509ed7c75cd6fea274309c9cd0597">0785eae87768…</td></tr>
+              </tbody>
+            </table>
+          </details>
         </section>
       </div>
       <footer>

@@ -88,13 +88,27 @@
       margin-right: auto;
     }
     .notice {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 10px;
       margin-bottom: 18px;
-      padding: 12px 16px;
-      border: 1px solid var(--line);
-      background: rgba(255, 254, 250, 0.78);
-      color: var(--muted);
-      font-size: 13px;
+      padding: 14px 18px;
+      border: 1px solid #efd596;
+      border-left: 4px solid var(--warn);
+      background: #fff8e7;
+      color: #6b4b0a;
+      font-size: 13.5px;
+      line-height: 1.6;
     }
+    .notice strong { font-weight: 750; }
+    .notice a.notice-link {
+      color: var(--accent-2);
+      font-weight: 750;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .notice a.notice-link:hover { text-decoration: underline; }
     .hero {
       margin-bottom: 22px;
       padding: 28px;
@@ -261,6 +275,18 @@
       gap: 8px;
       margin-top: 10px;
     }
+    .hash {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    details summary {
+      cursor: pointer;
+      font-weight: 750;
+      color: var(--accent-2);
+      padding: 4px 0;
+    }
+    details[open] summary { margin-bottom: 8px; }
     footer {
       margin-top: 18px;
       color: var(--muted);
@@ -305,7 +331,10 @@
       </nav>
     </aside>
     <main>
-      <div class="notice">{{DISCLAIMER}}</div>
+      <div class="notice">
+        <strong>{{DISCLAIMER}}</strong>
+        <a class="notice-link" href="{{DISCLAIMER_LINK}}">完整免責聲明 →</a>
+      </div>
       <header class="hero" id="snapshot">
         <div class="hero-top">
           <div>
@@ -442,17 +471,21 @@
         <section id="provenance" class="wide">
           <h3>Build Provenance</h3>
           <p class="note">schema v{{SCHEMA_VERSION}} · template v{{TEMPLATE_VERSION}} · case {{CASE_ID}}</p>
-          <table>
-            <thead>
-              <tr>
-                <th>Source File</th>
-                <th>SHA-256</th>
-              </tr>
-            </thead>
-            <tbody>
-              {{SOURCE_MANIFEST_ROWS}}
-            </tbody>
-          </table>
+          <details>
+            <summary>顯示建置完整性雜湊值（技術用途，非研究證據）</summary>
+            <p class="note">下表為建置檔案完整性驗證（SHA-256），用於確認本頁由指定原始檔案產生；一般讀者可略過，僅供技術稽核參考。</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Source File</th>
+                  <th>SHA-256</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{SOURCE_MANIFEST_ROWS}}
+              </tbody>
+            </table>
+          </details>
         </section>
       </div>
       <footer>
