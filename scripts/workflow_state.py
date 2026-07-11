@@ -18,6 +18,9 @@ from data_contract import atomic_write_json  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONTRACT_PATH = REPO_ROOT / "workflow-contract.json"
+STAGE_RECORD_FIELDS = {
+    "status", "checked_at", "source_as_of", "input_hashes", "output_hashes", "issues"
+}
 
 
 def load_contract(path=None):
@@ -64,6 +67,12 @@ def _iso_utc_now():
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
+def _stage_record_shape_issues(record):
+    if not isinstance(record, dict):
+        return ["record must be an object"]
+    return [f"missing required stage-record field: {field}" for field in sorted(STAGE_RECORD_FIELDS - set(record))]
+
+
 def _latest_source_as_of(case_dir, filenames):
     dates = []
     for filename in filenames:
@@ -86,7 +95,7 @@ def gate_stage(case_dir, stage_id, contract, as_of):
     case_dir = Path(case_dir)
     stage = _stages_by_id(contract)[stage_id]
     meta = _load_meta(case_dir)
-    stage_records = meta.get("stage_records", {})
+    stage_records = meta["stage_records"]
     consumable = set(contract["consumable_statuses"])
 
     blocking_reasons = []
@@ -96,16 +105,20 @@ def gate_stage(case_dir, stage_id, contract, as_of):
         if dep_record is None:
             blocking_reasons.append(f"upstream stage not yet recorded: {dep_id}")
             continue
+        record_issues = _stage_record_shape_issues(dep_record)
+        if record_issues:
+            blocking_reasons.extend(f"upstream stage {dep_id} {issue}" for issue in record_issues)
+            continue
         if dep_record["status"] not in consumable:
             blocking_reasons.append(f"upstream stage {dep_id} is {dep_record['status']}")
             continue
-        for filename, recorded_hash in dep_record.get("output_hashes", {}).items():
+        for filename, recorded_hash in dep_record["output_hashes"].items():
             current_hash = hash_file(case_dir / filename)
             if current_hash != recorded_hash:
                 blocking_reasons.append(
                     f"upstream stage {dep_id} output hash changed: {filename}"
                 )
-        for filename, recorded_hash in dep_record.get("input_hashes", {}).items():
+        for filename, recorded_hash in dep_record["input_hashes"].items():
             # stock-meta.json contains the stage records themselves, so every
             # successful record operation intentionally changes its hash.
             if filename == "stock-meta.json":
@@ -141,7 +154,7 @@ def invalidate_downstream(meta, changed_stage, contract):
         for dep in stage["depends_on"]:
             consumers.setdefault(dep, []).append(stage["id"])
 
-    stage_records = meta.setdefault("stage_records", {})
+    stage_records = meta["stage_records"]
     visited = set()
     stack = [changed_stage]
     invalidated = []
@@ -200,8 +213,8 @@ def record_stage(case_dir, stage_id, contract, as_of=None):
     else:
         status = "pass"
 
-    previous_record = meta.get("stage_records", {}).get(stage_id)
-    previous_output_hashes = (previous_record or {}).get("output_hashes", {})
+    previous_record = meta["stage_records"].get(stage_id)
+    previous_output_hashes = previous_record["output_hashes"] if previous_record else {}
     output_changed = bool(previous_output_hashes) and previous_output_hashes != output_hashes
 
     record = {
@@ -213,7 +226,7 @@ def record_stage(case_dir, stage_id, contract, as_of=None):
         "issues": issues,
     }
 
-    meta.setdefault("stage_records", {})[stage_id] = record
+    meta["stage_records"][stage_id] = record
 
     invalidated = []
     if output_changed:
@@ -235,10 +248,14 @@ def preflight(case_dir, contract):
 
 def status(case_dir, contract):
     meta = _load_meta(case_dir)
-    stage_records = meta.get("stage_records", {})
+    stage_records = meta["stage_records"]
     terminal_stage = contract["terminal_stage"]
     terminal_record = stage_records.get(terminal_stage)
-    complete = terminal_record is not None and terminal_record["status"] in contract["consumable_statuses"]
+    complete = (
+        terminal_record is not None
+        and not _stage_record_shape_issues(terminal_record)
+        and terminal_record["status"] in contract["consumable_statuses"]
+    )
     return {
         "complete": complete,
         "terminal_stage": terminal_stage,

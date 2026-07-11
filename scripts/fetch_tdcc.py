@@ -2,8 +2,6 @@
 """Fetch TDCC ownership distribution data for chip-structure analysis."""
 
 import argparse
-import csv
-import io
 import json
 import sys
 from datetime import datetime, timedelta, timezone
@@ -18,19 +16,15 @@ from data_contract import (  # noqa: E402
     metadata_envelope,
 )
 
-PARSER_VERSION = "2"
+PARSER_VERSION = "3"
 
-# Migrated from the legacy https://smart.tdcc.com.tw/opendata/getOD.ashx?id=1-5
-# endpoint (broken certificate chain, previously required a verify=False
-# workaround) to TDCC's official OpenAPI. Verified live 2026-07-11 under
-# strict TLS certificate verification -- see docs/source-policy.md. Same
-# dataset id (1-5), same field shape, JSON instead of CSV.
+# TDCC official OpenAPI, verified live 2026-07-11 under strict TLS
+# certificate verification -- see docs/source-policy.md.
 TDCC_HOLDING_DISTRIBUTION_URL = "https://openapi.tdcc.com.tw/v1/opendata/1-5"
-CSV_FIELDNAMES = ("資料日期", "證券代號", "持股分級", "人數", "股數", "占集保庫存數比例%")
 
 # The endpoint returns the all-market table (~2.3MB); TDCC refreshes it weekly,
 # so a shared cache avoids re-downloading it for every stock case.
-CACHE_CSV_NAME = "tdcc-holding-distribution.csv"
+CACHE_JSON_NAME = "tdcc-holding-distribution.json"
 CACHE_META_NAME = "tdcc-cache-meta.json"
 DEFAULT_CACHE_MAX_AGE_HOURS = 72
 
@@ -43,12 +37,12 @@ def parse_args(argv):
         "--max-age-hours",
         type=float,
         default=DEFAULT_CACHE_MAX_AGE_HOURS,
-        help="Reuse the shared all-market CSV cache when younger than this.",
+        help="Reuse the shared all-market JSON cache when younger than this.",
     )
     parser.add_argument(
         "--refresh",
         action="store_true",
-        help="Ignore the cache and re-download the all-market CSV.",
+        help="Ignore the cache and re-download the all-market JSON response.",
     )
     return parser.parse_args(argv)
 
@@ -56,18 +50,22 @@ def parse_args(argv):
 def cache_paths(repo_root=None):
     root = Path(repo_root) if repo_root else Path(__file__).resolve().parent.parent
     market_dir = root / "market"
-    return market_dir / CACHE_CSV_NAME, market_dir / CACHE_META_NAME
+    return market_dir / CACHE_JSON_NAME, market_dir / CACHE_META_NAME
 
 
-def load_cached_csv(repo_root=None, max_age_hours=DEFAULT_CACHE_MAX_AGE_HOURS):
-    """Return (csv_text, meta) when a fresh cache exists, else (None, None)."""
-    csv_path, meta_path = cache_paths(repo_root=repo_root)
-    if not csv_path.exists() or not meta_path.exists():
+def load_cached_rows(repo_root=None, max_age_hours=DEFAULT_CACHE_MAX_AGE_HOURS):
+    """Return (rows, meta) when a fresh current-format cache exists."""
+    json_path, meta_path = cache_paths(repo_root=repo_root)
+    if not json_path.exists() or not meta_path.exists():
         return None, None
 
     try:
         with open(meta_path, encoding="utf-8") as f:
             meta = json.load(f)
+        with open(json_path, encoding="utf-8") as f:
+            rows = json.load(f)
+        if not isinstance(rows, list):
+            return None, None
         fetched_at = datetime.fromisoformat(meta["fetched_at"])
     except (KeyError, TypeError, ValueError, json.JSONDecodeError):
         return None, None
@@ -76,13 +74,13 @@ def load_cached_csv(repo_root=None, max_age_hours=DEFAULT_CACHE_MAX_AGE_HOURS):
     if age > timedelta(hours=max_age_hours):
         return None, None
 
-    return csv_path.read_text(encoding="utf-8"), meta
+    return rows, meta
 
 
-def save_cached_csv(csv_text, repo_root=None):
-    csv_path, meta_path = cache_paths(repo_root=repo_root)
-    csv_path.parent.mkdir(parents=True, exist_ok=True)
-    csv_path.write_text(csv_text, encoding="utf-8")
+def save_cached_rows(rows, repo_root=None):
+    json_path, meta_path = cache_paths(repo_root=repo_root)
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    atomic_write_json(json_path, rows)
 
     meta = {
         "fetched_at": datetime.now(timezone.utc)
@@ -90,8 +88,7 @@ def save_cached_csv(csv_text, repo_root=None):
         .isoformat(timespec="seconds"),
         "source_url": TDCC_HOLDING_DISTRIBUTION_URL,
     }
-    with open(meta_path, "w", encoding="utf-8") as f:
-        json.dump(meta, f, ensure_ascii=False, indent=2)
+    atomic_write_json(meta_path, meta)
     return meta
 
 
@@ -107,18 +104,16 @@ def to_float(value):
     return float(value)
 
 
-def parse_holding_distribution(csv_text, stock_id):
+def parse_holding_distribution(source_rows, stock_id):
     rows = []
-    reader = csv.DictReader(io.StringIO(csv_text.lstrip("\ufeff")))
-
-    for row in reader:
+    for row in source_rows:
         row_stock_id = (row.get("證券代號") or "").strip()
         if row_stock_id != stock_id:
             continue
 
         rows.append(
             {
-                "date": tdcc_date(row.get("資料日期")),
+                "date": tdcc_date(row.get("﻿資料日期") or row.get("資料日期")),
                 "stock_id": row_stock_id,
                 "HoldingSharesLevel": (row.get("持股分級") or "").strip(),
                 "people": int(row.get("人數") or 0),
@@ -131,28 +126,7 @@ def parse_holding_distribution(csv_text, stock_id):
     return rows
 
 
-def _rows_to_csv_text(rows):
-    """Re-serialize the official OpenAPI's JSON rows as CSV text so the
-    existing cache file format and parse_holding_distribution() parser stay
-    unchanged; only the transport and endpoint changed."""
-    buffer = io.StringIO()
-    writer = csv.DictWriter(buffer, fieldnames=CSV_FIELDNAMES)
-    writer.writeheader()
-    for row in rows:
-        writer.writerow(
-            {
-                "資料日期": row.get("﻿資料日期") or row.get("資料日期", ""),
-                "證券代號": row.get("證券代號", ""),
-                "持股分級": row.get("持股分級", ""),
-                "人數": row.get("人數", ""),
-                "股數": row.get("股數", ""),
-                "占集保庫存數比例%": row.get("占集保庫存數比例%", ""),
-            }
-        )
-    return buffer.getvalue()
-
-
-def fetch_holding_distribution_csv():
+def fetch_holding_distribution_rows():
     """Fetch the all-market ownership-distribution dataset from TDCC's
     official OpenAPI. A TLS or HTTP failure here is a source failure; it is
     never retried with verify=False or a curl subprocess."""
@@ -169,7 +143,7 @@ def fetch_holding_distribution_csv():
     if not isinstance(rows, list):
         raise RuntimeError("TDCCStockHoldingDistribution response was not a JSON array")
 
-    return _rows_to_csv_text(rows)
+    return rows
 
 
 def merge_history(previous_payload, snapshot_rows):
@@ -233,25 +207,25 @@ def fetch_all(
     refresh=False,
     previous_payload=None,
 ):
-    csv_text, cache_meta = (None, None)
+    source_rows, cache_meta = (None, None)
     if not refresh:
-        csv_text, cache_meta = load_cached_csv(
+        source_rows, cache_meta = load_cached_rows(
             repo_root=repo_root, max_age_hours=max_age_hours
         )
-    cache_hit = csv_text is not None
+    cache_hit = source_rows is not None
 
     if not cache_hit:
-        csv_text = fetch_holding_distribution_csv()
-        cache_meta = save_cached_csv(csv_text, repo_root=repo_root)
+        source_rows = fetch_holding_distribution_rows()
+        cache_meta = save_cached_rows(source_rows, repo_root=repo_root)
 
-    rows = parse_holding_distribution(csv_text, stock_id)
+    rows = parse_holding_distribution(source_rows, stock_id)
     history = merge_history(previous_payload, rows)
     return {
         "stock_id": stock_id,
         "metadata": build_metadata(rows, history=history),
         "cache": {
             "hit": cache_hit,
-            "path": f"market/{CACHE_CSV_NAME}",
+            "path": f"market/{CACHE_JSON_NAME}",
             "cache_fetched_at": (cache_meta or {}).get("fetched_at"),
         },
         "raw": {

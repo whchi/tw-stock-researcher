@@ -31,10 +31,9 @@ no `verify=False`, no bypass. Results are facts, not assumptions:
 | `t187ap06/07_{L,O}_{basi,bd,fh,ins}` (financial-industry income statement / balance sheet variants) | **Required for a financial issuer; search the allowlisted variants and retain the one matching the company code** |
 | `t187ap04/02/11/09/12/45_{L,O}` (material events, >10% shareholders, director holdings/pledges, insider transfer declarations, dividends) | **Contextual official evidence; zero matched rows is a valid no-event/no-disclosure result, while endpoint failure is recorded as a source error** |
 | `https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O` (TPEx company basic info) | **FAILS** — `SSLError: CERTIFICATE_VERIFY_FAILED: Missing Subject Key Identifier`, confirmed with both Python's raw `ssl` module and `requests`/certifi |
-| `https://openapi.tdcc.com.tw/v1/opendata/1-5` (TDCC ownership distribution) | **OK** — same field shape as the legacy CSV endpoint, just JSON-encoded, valid cert |
-| `https://smart.tdcc.com.tw/opendata/getOD.ashx?id=1-5` (legacy TDCC endpoint) | Known broken cert (pre-existing `verify=False` workaround in `fetch_tdcc.py`, now replaced) |
+| `https://openapi.tdcc.com.tw/v1/opendata/1-5` (TDCC ownership distribution) | **OK** — native JSON response and valid certificate |
 
-**Consequence:** the official TWSE adapter and the migrated TDCC adapter can
+**Consequence:** the official TWSE and TDCC adapters can
 both run under strict TLS verification with no workaround. The TPEx
 adapter's certificate genuinely fails verification today. Per this policy's
 own rule (next section), that is treated as **a source failure, not a

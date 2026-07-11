@@ -11,7 +11,7 @@
     "watch_items", "open_questions", "sources", "source_manifest"
   ],
   "properties": {
-    "schema_version": { "const": 1 },
+    "schema_version": { "const": 2 },
     "template_version": { "const": 1 },
     "case_id": { "type": "string", "minLength": 1 },
     "locale": { "type": "string" },
@@ -197,7 +197,7 @@
     "manifest_entry": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["path", "sha256"],
+      "required": ["root", "path", "sha256"],
       "properties": {
         "root": { "enum": ["case", "repo"] },
         "path": { "type": "string" },

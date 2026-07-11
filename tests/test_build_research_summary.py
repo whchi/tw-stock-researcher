@@ -27,7 +27,7 @@ class BuildSummaryGoldenTests(unittest.TestCase):
 
         payload = build_summary(FIXTURE_CASE)
         for entry in payload["source_manifest"]:
-            root = REPO_ROOT if entry.get("root") == "repo" else FIXTURE_CASE
+            root = REPO_ROOT if entry["root"] == "repo" else FIXTURE_CASE
             actual = hashlib.sha256((root / entry["path"]).read_bytes()).hexdigest()
             self.assertEqual(entry["sha256"], actual)
 
@@ -36,7 +36,7 @@ class BuildSummaryGoldenTests(unittest.TestCase):
 
         disclaimers = [
             entry for entry in payload["source_manifest"]
-            if entry.get("root") == "repo" and entry["path"] == "DISCLAIMER.md"
+            if entry["root"] == "repo" and entry["path"] == "DISCLAIMER.md"
         ]
         self.assertEqual(len(disclaimers), 1)
         self.assertEqual(len(disclaimers[0]["sha256"]), 64)

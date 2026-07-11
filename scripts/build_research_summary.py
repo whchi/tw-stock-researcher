@@ -232,7 +232,7 @@ def _build_sources_and_manifest(case_dir, dataset_files):
         path = case_dir / filename
         if not path.exists():
             continue
-        manifest.append({"path": filename, "sha256": hash_file(path)})
+        manifest.append({"root": "case", "path": filename, "sha256": hash_file(path)})
         payload = _read_json(path) or {}
         metadata = payload.get("metadata") or {}
         source_urls = metadata.get("source_urls") or {}
@@ -291,9 +291,9 @@ def build_summary(case_dir, distribution="local", as_of=None):
 
     sources, manifest = _build_sources_and_manifest(case_dir, ["market-data.json", "tdcc-data.json"])
     for filename in ("stock-meta.json",) + REQUIRED_MARKDOWN_SOURCES:
-        manifest.append({"path": filename, "sha256": hash_file(case_dir / filename)})
+        manifest.append({"root": "case", "path": filename, "sha256": hash_file(case_dir / filename)})
     manifest.append({"root": "repo", "path": "DISCLAIMER.md", "sha256": hash_file(REPO_ROOT / "DISCLAIMER.md")})
-    manifest.sort(key=lambda entry: (entry.get("root", "case"), entry["path"]))
+    manifest.sort(key=lambda entry: (entry["root"], entry["path"]))
     sources.sort(key=lambda entry: entry["name"])
 
     resolved_as_of = as_of or _latest_source_as_of([market_data, tdcc_data]) or date.today().isoformat()

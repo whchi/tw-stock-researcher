@@ -12,7 +12,7 @@ import unicodedata
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 TEMPLATE_VERSION = 1
 DISTRIBUTIONS = ("local", "shareable")
 FACT_STATES = ("ready", "unavailable")
@@ -148,8 +148,10 @@ def validate_summary(payload):
         unknown = set(entry) - {"root", "path", "sha256"}
         for key in sorted(unknown):
             issues.append(ValidationIssue(f"{path}.{key}", f"unknown field: {key}"))
-        root = entry.get("root", "case")
-        if root not in ("case", "repo"):
+        if "root" not in entry:
+            issues.append(ValidationIssue(f"{path}.root", "missing required field: root"))
+        root = entry.get("root")
+        if root is not None and root not in ("case", "repo"):
             issues.append(ValidationIssue(f"{path}.root", "root must be 'case' or 'repo'"))
         source_path = entry.get("path")
         if not isinstance(source_path, str) or not source_path:

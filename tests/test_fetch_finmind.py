@@ -233,7 +233,7 @@ class LoadTdccHoldingDistributionResolutionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             repo_root = Path(tmp)
             (repo_root / "companies" / "2330-tsmc").mkdir(parents=True)
-            (repo_root / "companies" / "2330-legacy-slug").mkdir(parents=True)
+            (repo_root / "companies" / "2330-duplicate-slug").mkdir(parents=True)
 
             rows, warning = fetch_finmind.load_tdcc_holding_distribution("2330", repo_root=repo_root)
 

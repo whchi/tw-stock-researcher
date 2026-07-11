@@ -41,9 +41,9 @@ stock-case-init -> yahoo-profile-financials -> financial-data-fetch -> market-da
 
 The workspace keeps shared market context under `market/`, reusable templates under `templates/`, and per-stock cases under `companies/`. Create shared market files in `market/` by copying the corresponding templates from `templates/` when needed. See `docs/data-layout.md` for the full layout and file ownership rules.
 
-## Case Storage And Migration Audits
+## Case Storage
 
-Every `companies/<ticker>-<slug>/` case is local, git-ignored session data, not versioned source code — see `docs/case-storage-policy.md` for backup, export, retention, and user-provided position-context handling. `scripts/migrate_case_metadata.py --all --dry-run` (or `--case CASE_DIR --dry-run`) reports metadata/question/HTML-payload drift for existing cases without writing anything; there is intentionally no `--apply` in this release.
+Every `companies/<ticker>-<slug>/` case is local, git-ignored session data, not versioned source code — see `docs/case-storage-policy.md` for backup, export, retention, and user-provided position-context handling. Cases must conform to the current contracts; this repository does not migrate earlier shapes.
 
 ## Continuous Integration
 

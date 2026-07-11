@@ -64,27 +64,12 @@ Discipline). This is a data-handling rule, not just a wording rule:
   smuggled into a free-text field, so this remains a writing-discipline
   rule for whichever stage writes `active-decisions.md`.
 
-## Read-Only Migration Auditing
+## Current Contract Only
 
-`scripts/migrate_case_metadata.py --all --dry-run` (or `--case CASE_DIR
---dry-run`) reports drift between an existing case and the current
-`stock-meta.json` / `open-questions.md` / `research-summary-data.json`
-contracts: missing or unknown metadata keys, mixed or dangling
-`file_references` paths, absent `stage_records` (a pre-workflow-state
-case), legacy open-question table shapes, and legacy or version-mismatched
-HTML render payloads.
-
-- This command never writes to a case. There is intentionally no
-  `--apply` in this release.
-- A future change may add a per-case `--apply`, but only after the user
-  has reviewed the dry-run report for that specific case and explicitly
-  approved the exact migration targets — the same approval discipline
-  `AGENTS.md`'s Red Lines already require for any destructive or
-  irreversible operation.
-- CI (`.github/workflows/verify.yml`) never runs this command and never
-  reads `companies/**`; it only runs the repository's own structure and
-  unit tests, which use fixtures under `tests/fixtures/`, not real case
-  data.
+Every case must conform to the current `stock-meta.json`,
+`open-questions.md`, workflow stage-record, and research-summary contracts.
+Missing required fields and non-current shapes fail validation. The
+repository does not inspect, migrate, or rewrite earlier case formats.
 
 ## Do Not
 
@@ -92,7 +77,5 @@ HTML render payloads.
   of implementing this policy.
 - Do not commit a case folder's contents to git, even temporarily, to
   "share progress" — use the exported HTML instead.
-- Do not add an automated `--apply` migration path without a per-case,
-  explicit user approval step.
 - Do not let CI depend on `FIN_MIND_TOKEN`, live network access, or the
   contents of any real `companies/**` case.

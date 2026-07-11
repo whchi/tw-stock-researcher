@@ -35,7 +35,7 @@ class ResolveCaseDirTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             repo_root = Path(tmp)
             (repo_root / "companies" / "2330-tsmc").mkdir(parents=True)
-            (repo_root / "companies" / "2330-legacy-slug").mkdir(parents=True)
+            (repo_root / "companies" / "2330-duplicate-slug").mkdir(parents=True)
 
             with self.assertRaises(CaseResolutionError) as ctx:
                 resolve_case_dir("2330", repo_root)

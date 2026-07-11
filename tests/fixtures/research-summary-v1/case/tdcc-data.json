@@ -18,7 +18,7 @@
     "errors": [],
     "parser_version": "2"
   },
-  "cache": {"hit": false, "path": "market/tdcc-holding-distribution.csv", "cache_fetched_at": "2026-07-04T00:00:00Z"},
+  "cache": {"hit": false, "path": "market/tdcc-holding-distribution.json", "cache_fetched_at": "2026-07-04T00:00:00Z"},
   "raw": {"holding_distribution": []},
   "history": [
     {"date": "2026-07-04", "rows": []}

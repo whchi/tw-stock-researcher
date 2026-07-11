@@ -56,7 +56,7 @@ Create one folder per stock under `companies/`, for example `companies/6706-hui-
 
 - `scripts/build_research_summary.py` builds the payload from a fixed source map only (`stock-meta.json`, `active-decisions.md`, `investment-memo.md`, `market-data.json` + `tdcc-data.json`, validated `open-questions.md`, `DISCLAIMER.md`) and requires the `research-html-output` workflow gate to be ready first. It never reads an existing `research-summary-data.json` or `research-summary.html` as an input.
 - `scripts/render_research_html.py` renders `research-summary.html` from that payload only, escaping every scalar with `html.escape(..., quote=True)` and accepting only `http`/`https` source URLs. Both scripts support `--check` to validate without writing, and both write atomically.
-- `scripts/validate_research_summary.py --all` is a read-only audit of every existing case's `research-summary-data.json` (legacy `v0`, version mismatch, invalid shape, or a source-manifest hash that no longer matches the file on disk). Manifest paths are case-relative unless an entry explicitly declares `root: repo`; both roots reject path escape. It never writes; rebuilding a specific case requires the user to explicitly approve that case.
+- `scripts/validate_research_summary.py --all` is a read-only audit of every existing case's current `research-summary-data.json`. Non-current or invalid shapes and source-manifest hash drift are invalid. Every manifest entry explicitly declares `root: case` or `root: repo`; both roots reject path escape.
 
 ## Validation Workflow
 
@@ -65,8 +65,8 @@ Create one folder per stock under `companies/`, for example `companies/6706-hui-
 3. Add a focused structure test before changing file ownership, template boundaries, or workflow order.
 4. `.github/workflows/verify.yml` runs steps 1-2 (structure checks plus the full unit-test suite) on every push and pull request, without touching `companies/**` or requiring `FIN_MIND_TOKEN`.
 
-## Case Storage And Read-Only Migration Auditing
+## Case Storage
 
 See `docs/case-storage-policy.md` for the full policy on why `companies/**` is git-ignored, backup/export/retention guidance, and user-provided position-context handling.
 
-`scripts/migrate_case_metadata.py --all --dry-run` (or `--case CASE_DIR --dry-run`) is a read-only audit that reports, per case: missing/unknown `stock-meta.json` keys, an absent `stage_records` map (a pre-workflow-state case), mixed or dangling `file_references` path conventions, legacy `open-questions.md` table shapes, and legacy or version-mismatched `research-summary-data.json` payloads. It never writes to a case, and there is intentionally no `--apply` in this release.
+Cases must use the current metadata, question-ledger, stage-record, and render-payload shapes. The repository provides no earlier-format migration path.

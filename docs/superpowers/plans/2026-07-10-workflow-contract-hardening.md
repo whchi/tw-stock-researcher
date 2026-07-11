@@ -1044,25 +1044,14 @@ git add docs/adr/0001-mops-xbrl-ingestion.md tests/fixtures/mops-xbrl/README.md
 git commit -m "docs: decide MOPS XBRL ingestion boundary"
 ```
 
-### Task 11: Add CI, storage policy and read-only legacy migration reports
+### Task 11: Add CI and current-contract storage policy
 
 **Files:**
 
 - Create: `.github/workflows/verify.yml`
 - Create: `docs/case-storage-policy.md`
-- Create: `scripts/migrate_case_metadata.py`
-- Create: `tests/test_migrate_case_metadata.py`
 - Modify: `README.md`
 - Modify: `docs/data-layout.md`
-
-**Interfaces:**
-
-```bash
-.venv/bin/python scripts/migrate_case_metadata.py --all --dry-run
-.venv/bin/python scripts/migrate_case_metadata.py --case CASE_DIR --dry-run
-```
-
-There is intentionally no batch `--apply` in the first release. A later change may add per-case apply after the user approves exact targets.
 
 - [ ] **Step 1: Add a deterministic CI workflow**
 
@@ -1072,15 +1061,11 @@ Run structure tests and the full unittest suite on supported Python. Do not call
 
 Explain that case artifacts are local/private session data, not versioned source code; define optional encrypted backup/export, retention, and user-provided position-context handling. Do not remove ignore rules in this plan.
 
-- [ ] **Step 3: Implement read-only migration analysis**
+- [ ] **Step 3: Require current contracts**
 
-Report missing/unknown metadata keys, case-relative references, dangling references, stage-state absence, legacy question tables, and legacy HTML payload versions. Emit JSON and human text; never rewrite a case.
+Document that case metadata, question ledgers, stage records, and render payloads must use the current shapes. Do not add an earlier-format inspection or migration path.
 
-- [ ] **Step 4: Add tests proving dry-run immutability**
-
-Hash every fixture file before and after migration analysis and assert equality. Cover current-template, old-template and malformed fixtures.
-
-- [ ] **Step 5: Run final verification**
+- [ ] **Step 4: Run final verification**
 
 Run:
 
@@ -1093,17 +1078,16 @@ sh tests/structure/test_skills.sh
 .venv/bin/python scripts/build_research_summary.py --case tests/fixtures/research-summary-v1/case --check
 .venv/bin/python scripts/render_research_html.py --case tests/fixtures/research-summary-v1/case --check
 .venv/bin/python scripts/validate_research_summary.py --all
-.venv/bin/python scripts/migrate_case_metadata.py --all --dry-run
 git status --short --branch -uall
 ```
 
-Expected: all tracked-code tests/checks pass; legacy validators may report user case drift but perform no writes; only intentional plan implementation files are dirty before final commits.
+Expected: all tracked-code tests/checks pass; only current-contract validation exists; only intentional plan implementation files are dirty before final commits.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add .github/workflows/verify.yml docs/case-storage-policy.md scripts/migrate_case_metadata.py tests/test_migrate_case_metadata.py README.md docs/data-layout.md
-git commit -m "chore: add workflow verification and migration audit"
+git add .github/workflows/verify.yml docs/case-storage-policy.md README.md docs/data-layout.md
+git commit -m "chore: add workflow verification and storage policy"
 ```
 
 ## Execution Checkpoints

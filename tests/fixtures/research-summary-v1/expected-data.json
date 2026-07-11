@@ -166,31 +166,37 @@
       "validation_trigger": "Revenue growth below 3%"
     }
   ],
-  "schema_version": 1,
+  "schema_version": 2,
   "source_manifest": [
     {
       "path": "active-decisions.md",
+      "root": "case",
       "sha256": "45dc5165f9834cff6ec502dfaeba90d598abd7974585e45c8ca7314ac3a8f274"
     },
     {
       "path": "investment-memo.md",
+      "root": "case",
       "sha256": "344268727b95e238b0c882653328f75a0a09ebde306899161dbdd4a2c62dfd90"
     },
     {
       "path": "market-data.json",
+      "root": "case",
       "sha256": "07f608ecf479287e7ccebf59c395efd6a7656a15c1efe69f5ce48f908d644f85"
     },
     {
       "path": "open-questions.md",
+      "root": "case",
       "sha256": "88ca47b29f5cc39334ae15aa30404600fe37368dce709ce0b03de6a1bf1ffb14"
     },
     {
       "path": "stock-meta.json",
+      "root": "case",
       "sha256": "cb35fd43c11478ea9a2366e149d8027d5e6dc1aa126e144212f45c5a1146dd7d"
     },
     {
       "path": "tdcc-data.json",
-      "sha256": "636f288fa286c3629270c595cba1b5077f05096084d2ecf515d54b0982bad442"
+      "root": "case",
+      "sha256": "91ab7f7dc6f41f208374976182e133b29cb36967bb07fab1968d08ee393e6b5e"
     },
     {
       "path": "DISCLAIMER.md",

@@ -45,6 +45,17 @@ def write_json(case_dir, filename, payload):
     write(case_dir, filename, json.dumps(payload))
 
 
+def stage_record(status="pass", input_hashes=None, output_hashes=None):
+    return {
+        "status": status,
+        "checked_at": "2026-07-10T00:00:00Z",
+        "source_as_of": None,
+        "input_hashes": {} if input_hashes is None else input_hashes,
+        "output_hashes": {} if output_hashes is None else output_hashes,
+        "issues": [],
+    }
+
+
 class HashFileTests(unittest.TestCase):
     def test_hash_is_deterministic_for_same_bytes(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -194,6 +205,32 @@ class InvalidateDownstreamTests(unittest.TestCase):
 
 
 class GateStageTests(unittest.TestCase):
+    def test_rejects_upstream_record_without_output_hashes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_json(
+                tmp,
+                "stock-meta.json",
+                {"stage_records": {"stock-case-init": {"status": "pass", "input_hashes": {}}}},
+            )
+
+            result = gate_stage(tmp, "yahoo-profile-financials", CONTRACT, date(2026, 7, 10))
+
+            self.assertFalse(result["ready"])
+            self.assertTrue(any("output_hashes" in reason for reason in result["blocking_reasons"]))
+
+    def test_rejects_upstream_record_without_input_hashes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_json(
+                tmp,
+                "stock-meta.json",
+                {"stage_records": {"stock-case-init": {"status": "pass", "output_hashes": {}}}},
+            )
+
+            result = gate_stage(tmp, "yahoo-profile-financials", CONTRACT, date(2026, 7, 10))
+
+            self.assertFalse(result["ready"])
+            self.assertTrue(any("input_hashes" in reason for reason in result["blocking_reasons"]))
+
     def test_rejects_when_upstream_output_hash_changed_without_re_recording(self):
         with tempfile.TemporaryDirectory() as tmp:
             write_json(tmp, "stock-meta.json", {"file_references": {}, "stage_records": {}})
@@ -251,7 +288,7 @@ class GateStageTests(unittest.TestCase):
             write_json(
                 tmp,
                 "stock-meta.json",
-                {"file_references": {}, "stage_records": {"stock-case-init": {"status": "stale"}}},
+                {"file_references": {}, "stage_records": {"stock-case-init": stage_record("stale")}},
             )
 
             result = gate_stage(tmp, "yahoo-profile-financials", CONTRACT, date(2026, 7, 10))
@@ -263,7 +300,7 @@ class GateStageTests(unittest.TestCase):
             write_json(
                 tmp,
                 "stock-meta.json",
-                {"file_references": {}, "stage_records": {"stock-case-init": {"status": "blocked"}}},
+                {"file_references": {}, "stage_records": {"stock-case-init": stage_record("blocked")}},
             )
 
             result = gate_stage(tmp, "yahoo-profile-financials", CONTRACT, date(2026, 7, 10))
@@ -275,7 +312,7 @@ class GateStageTests(unittest.TestCase):
             write_json(
                 tmp,
                 "stock-meta.json",
-                {"file_references": {}, "stage_records": {"stock-case-init": {"status": "degraded"}}},
+                {"file_references": {}, "stage_records": {"stock-case-init": stage_record("degraded")}},
             )
 
             result = gate_stage(tmp, "yahoo-profile-financials", CONTRACT, date(2026, 7, 10))
@@ -287,7 +324,7 @@ class GateStageTests(unittest.TestCase):
             write_json(
                 tmp,
                 "stock-meta.json",
-                {"file_references": {}, "stage_records": {"yahoo-profile-financials": {"status": "pass"}}},
+                {"file_references": {}, "stage_records": {"yahoo-profile-financials": stage_record()}},
             )
             write_json(tmp, "yahoo-data.json", {"metadata": {"status": "pass"}})
             # official-issuer-data.json (optional input) deliberately absent
@@ -310,7 +347,7 @@ class GateStageTests(unittest.TestCase):
             write_json(
                 tmp,
                 "stock-meta.json",
-                {"file_references": {}, "stage_records": {"session-wrap": {"status": "pass"}}},
+                {"file_references": {}, "stage_records": {"session-wrap": stage_record()}},
             )
             write(tmp, "active-decisions.md", "# Active Decisions")
 
@@ -323,6 +360,16 @@ class LoadContractTests(unittest.TestCase):
     def test_loads_the_real_repo_contract_by_default(self):
         contract = load_contract()
         self.assertEqual(contract["terminal_stage"], "session-wrap")
+
+
+class WorkflowStatusTests(unittest.TestCase):
+    def test_incomplete_when_terminal_record_is_not_current_shape(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write_json(tmp, "stock-meta.json", {"stage_records": {"session-wrap": {"status": "pass"}}})
+
+            result = workflow_status(tmp, CONTRACT)
+
+            self.assertFalse(result["complete"])
 
 
 class FixtureCaseTests(unittest.TestCase):

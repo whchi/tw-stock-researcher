@@ -7,15 +7,22 @@ from unittest.mock import patch
 
 import scripts.fetch_tdcc as fetch_tdcc
 
+JSON_ROWS = [
+    {"﻿資料日期": "20260605", "證券代號": "6451  ", "持股分級": "1", "人數": "11983", "股數": "1394229", "占集保庫存數比例%": "1.22"},
+    {"﻿資料日期": "20260605", "證券代號": "6451  ", "持股分級": "17", "人數": "19022", "股數": "113593460", "占集保庫存數比例%": "100.00"},
+    {"﻿資料日期": "20260605", "證券代號": "6706  ", "持股分級": "17", "人數": "46918", "股數": "78549433", "占集保庫存數比例%": "100.00"},
+]
+
 
 class TdccHoldingDistributionTests(unittest.TestCase):
-    def test_parse_holding_distribution_filters_requested_stock(self):
-        csv_text = "\ufeff資料日期,證券代號,持股分級,人數,股數,占集保庫存數比例%\n"
-        csv_text += "20260605,6451  ,1,11983,1394229,1.22\n"
-        csv_text += "20260605,6451  ,17,19022,113593460,100.00\n"
-        csv_text += "20260605,6706  ,17,46918,78549433,100.00\n"
+    def test_cache_uses_current_json_transport_shape(self):
+        self.assertEqual(
+            getattr(fetch_tdcc, "CACHE_JSON_NAME", None),
+            "tdcc-holding-distribution.json",
+        )
 
-        result = fetch_tdcc.parse_holding_distribution(csv_text, "6451")
+    def test_parse_holding_distribution_filters_requested_stock(self):
+        result = fetch_tdcc.parse_holding_distribution(JSON_ROWS, "6451")
 
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0]["date"], "2026-06-05")
@@ -28,26 +35,19 @@ class TdccHoldingDistributionTests(unittest.TestCase):
         self.assertEqual(result[1]["HoldingSharesLevel"], "17")
 
     def test_fetch_all_returns_only_requested_stock_rows(self):
-        csv_text = "\ufeff資料日期,證券代號,持股分級,人數,股數,占集保庫存數比例%\n"
-        csv_text += "20260605,6451  ,17,19022,113593460,100.00\n"
-        csv_text += "20260605,6706  ,17,46918,78549433,100.00\n"
-
         with tempfile.TemporaryDirectory() as tmp:
-            with patch.object(fetch_tdcc, "fetch_holding_distribution_csv", return_value=csv_text):
+            with patch.object(fetch_tdcc, "fetch_holding_distribution_rows", return_value=JSON_ROWS):
                 result = fetch_tdcc.fetch_all("6451", repo_root=Path(tmp))
 
         self.assertEqual(result["stock_id"], "6451")
         self.assertEqual(result["raw"]["holding_distribution"][0]["stock_id"], "6451")
-        self.assertEqual(result["metadata"]["row_counts"]["TDCCStockHoldingDistribution"], 1)
+        self.assertEqual(result["metadata"]["row_counts"]["TDCCStockHoldingDistribution"], 2)
 
     def test_fetch_all_saves_cache_and_reuses_it_within_max_age(self):
-        csv_text = "﻿資料日期,證券代號,持股分級,人數,股數,占集保庫存數比例%\n"
-        csv_text += "20260605,6451  ,17,19022,113593460,100.00\n"
-
         with tempfile.TemporaryDirectory() as tmp:
             repo_root = Path(tmp)
             with patch.object(
-                fetch_tdcc, "fetch_holding_distribution_csv", return_value=csv_text
+                fetch_tdcc, "fetch_holding_distribution_rows", return_value=JSON_ROWS
             ) as fetcher:
                 first = fetch_tdcc.fetch_all("6451", repo_root=repo_root)
                 second = fetch_tdcc.fetch_all("6451", repo_root=repo_root)
@@ -55,19 +55,16 @@ class TdccHoldingDistributionTests(unittest.TestCase):
             self.assertEqual(fetcher.call_count, 1)
             self.assertFalse(first["cache"]["hit"])
             self.assertTrue(second["cache"]["hit"])
-            self.assertTrue((repo_root / "market" / fetch_tdcc.CACHE_CSV_NAME).exists())
+            self.assertTrue((repo_root / "market" / fetch_tdcc.CACHE_JSON_NAME).exists())
             self.assertEqual(
                 second["raw"]["holding_distribution"][0]["stock_id"], "6451"
             )
 
     def test_fetch_all_refetches_when_cache_expired_or_refresh_forced(self):
-        csv_text = "﻿資料日期,證券代號,持股分級,人數,股數,占集保庫存數比例%\n"
-        csv_text += "20260605,6451  ,17,19022,113593460,100.00\n"
-
         with tempfile.TemporaryDirectory() as tmp:
             repo_root = Path(tmp)
             with patch.object(
-                fetch_tdcc, "fetch_holding_distribution_csv", return_value=csv_text
+                fetch_tdcc, "fetch_holding_distribution_rows", return_value=JSON_ROWS
             ) as fetcher:
                 fetch_tdcc.fetch_all("6451", repo_root=repo_root)
                 fetch_tdcc.fetch_all("6451", repo_root=repo_root, max_age_hours=0)
@@ -99,8 +96,6 @@ class TdccHoldingDistributionTests(unittest.TestCase):
         self.assertEqual(len(deduped), 2)
 
     def test_fetch_all_accumulates_history_and_keeps_latest_snapshot_in_raw(self):
-        csv_text = "﻿資料日期,證券代號,持股分級,人數,股數,占集保庫存數比例%\n"
-        csv_text += "20260605,6451  ,17,19022,113593460,100.00\n"
         previous = {
             "history": [
                 {
@@ -111,7 +106,7 @@ class TdccHoldingDistributionTests(unittest.TestCase):
         }
 
         with tempfile.TemporaryDirectory() as tmp:
-            with patch.object(fetch_tdcc, "fetch_holding_distribution_csv", return_value=csv_text):
+            with patch.object(fetch_tdcc, "fetch_holding_distribution_rows", return_value=JSON_ROWS):
                 result = fetch_tdcc.fetch_all(
                     "6451", repo_root=Path(tmp), previous_payload=previous
                 )
@@ -128,7 +123,7 @@ class TdccHoldingDistributionTests(unittest.TestCase):
             result["metadata"]["row_counts"]["TDCCHoldingDistributionHistoryDates"], 2
         )
         
-    def test_fetch_holding_distribution_parses_official_json_endpoint_into_csv_text(self):
+    def test_fetch_holding_distribution_returns_official_json_rows(self):
         json_rows = [
             {
                 "證券代號": "6451  ",
@@ -147,23 +142,23 @@ class TdccHoldingDistributionTests(unittest.TestCase):
                 return json_rows
 
         with patch("requests.get", return_value=Response()) as get:
-            csv_text = fetch_tdcc.fetch_holding_distribution_csv()
+            rows = fetch_tdcc.fetch_holding_distribution_rows()
 
         self.assertEqual(get.call_args.args[0], fetch_tdcc.TDCC_HOLDING_DISTRIBUTION_URL)
         self.assertEqual(get.call_args.kwargs["timeout"], 30)
         self.assertIn("openapi.tdcc.com.tw", fetch_tdcc.TDCC_HOLDING_DISTRIBUTION_URL)
 
-        rows = fetch_tdcc.parse_holding_distribution(csv_text, "6451")
-        self.assertEqual(len(rows), 1)
-        self.assertEqual(rows[0]["date"], "2026-06-05")
-        self.assertEqual(rows[0]["people"], 19022)
+        parsed = fetch_tdcc.parse_holding_distribution(rows, "6451")
+        self.assertEqual(len(parsed), 1)
+        self.assertEqual(parsed[0]["date"], "2026-06-05")
+        self.assertEqual(parsed[0]["people"], 19022)
 
     def test_fetch_holding_distribution_does_not_retry_without_verification_on_tls_failure(self):
         import requests
 
         with patch("requests.get", side_effect=requests.exceptions.SSLError("bad cert")) as get:
             with self.assertRaises(requests.exceptions.SSLError):
-                fetch_tdcc.fetch_holding_distribution_csv()
+                fetch_tdcc.fetch_holding_distribution_rows()
 
         self.assertEqual(get.call_count, 1)
         for call in get.call_args_list:
@@ -175,7 +170,7 @@ class TdccHoldingDistributionTests(unittest.TestCase):
 
         with patch("requests.get", return_value=Response()):
             with self.assertRaises(RuntimeError):
-                fetch_tdcc.fetch_holding_distribution_csv()
+                fetch_tdcc.fetch_holding_distribution_rows()
 
     def test_fetch_holding_distribution_raises_when_response_is_not_a_json_array(self):
         class Response:
@@ -186,7 +181,7 @@ class TdccHoldingDistributionTests(unittest.TestCase):
 
         with patch("requests.get", return_value=Response()):
             with self.assertRaises(RuntimeError):
-                fetch_tdcc.fetch_holding_distribution_csv()
+                fetch_tdcc.fetch_holding_distribution_rows()
 
 
 class BuildMetadataTests(unittest.TestCase):

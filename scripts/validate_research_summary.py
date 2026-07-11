@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
-"""Read-only legacy audit of research-summary-data.json / research-summary.html.
+"""Read-only current-contract audit of research-summary-data.json.
 
-Reports v0 payloads, version mismatches, invalid shapes, and stale source
-manifests (a source file that no longer matches the hash recorded when the
-summary was built) across companies/. Never writes; rebuilding a legacy case
-happens only via build_research_summary.py after the user explicitly
-approves it for that case. Never parses old HTML with regex — legacy state
-is judged from research-summary-data.json only.
+Reports invalid shapes and stale source manifests across companies/. It
+never writes or attempts to interpret or migrate non-current payloads.
 """
 
 import argparse
@@ -16,7 +12,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from research_summary_contract import SCHEMA_VERSION, TEMPLATE_VERSION, validate_summary  # noqa: E402
+from research_summary_contract import validate_summary  # noqa: E402
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 COMPANIES_DIR = ROOT_DIR / "companies"
@@ -27,7 +23,7 @@ def _hash_file(path):
 
 
 def _manifest_source_path(case_dir, entry):
-    root_name = entry.get("root", "case")
+    root_name = entry["root"]
     root = ROOT_DIR if root_name == "repo" else Path(case_dir)
     source_path = (root / entry["path"]).resolve()
     resolved_root = root.resolve()
@@ -50,16 +46,6 @@ def audit_case(case_dir):
     except json.JSONDecodeError as exc:
         report["status"] = "invalid_json"
         report["error"] = str(exc)
-        return report
-
-    if not isinstance(payload, dict) or "schema_version" not in payload:
-        report["status"] = "legacy_v0"
-        return report
-
-    if payload.get("schema_version") != SCHEMA_VERSION or payload.get("template_version") != TEMPLATE_VERSION:
-        report["status"] = "version_mismatch"
-        report["schema_version"] = payload.get("schema_version")
-        report["template_version"] = payload.get("template_version")
         return report
 
     issues = validate_summary(payload)

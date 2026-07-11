@@ -128,10 +128,10 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 # Uses the same repo-local venv:
 .venv/bin/python scripts/fetch_tdcc.py <stock_id>
 ```
-- **Source:** TDCC's official OpenAPI dataset `id=1-5` (`https://openapi.tdcc.com.tw/v1/opendata/1-5`) is the all-market ownership distribution table, not a stock id. Migrated from the legacy `smart.tdcc.com.tw` CSV endpoint (broken certificate, previously required `verify=False`) to this JSON endpoint, which succeeds under strict TLS verification — see `docs/source-policy.md`.
+- **Source:** TDCC's official OpenAPI dataset `id=1-5` (`https://openapi.tdcc.com.tw/v1/opendata/1-5`) is the all-market ownership distribution table, not a stock id, and succeeds under strict TLS verification — see `docs/source-policy.md`.
 - **Auto-detection:** requires exactly one real `companies/<stock_id>-*/` directory; zero, multiple, symlink, or escaping matches fail closed with no repo-root fallback.
 - **Purpose:** `tdcc-data.json` stores the requested stock's holding levels (`持股分級`), people count, shares, and TDCC custody percentage. `fetch_finmind.py` reads this local file for egg-theory holder reads; it does not fetch TDCC directly.
-- **Cache:** the all-market response (~9.6MB JSON, re-serialized to CSV for the on-disk cache) is cached at `market/tdcc-holding-distribution.csv` and reused for 72h by default (`--max-age-hours`, `--refresh` to force a re-download), so repeated per-stock runs within a week skip the download.
+- **Cache:** the all-market JSON response is cached without format conversion at `market/tdcc-holding-distribution.json` and reused for 72h by default (`--max-age-hours`, `--refresh` to force a re-download).
 - **Trend accumulation:** the endpoint serves only the latest weekly snapshot, but each new snapshot date is appended to `tdcc-data.json` under `history`. After a few weekly runs, `fetch_finmind.py` derives holder-count trends from this history (`holder_trend_from_tdcc_weekly`, confidence capped at medium) when FinMind `TaiwanStockHoldingSharesPer` is not accessible.
 
 ### 5. Fetching Shared Macro Data
@@ -165,7 +165,7 @@ When the user explicitly asks for a comprehensive research result as HTML, use t
 - The output HTML must live in the company folder as `companies/<ticker-slug>/research-summary.html`.
 - HTML is a derived preview, not a replacement for `investment-memo.md`, `active-decisions.md`, or other case artifacts.
 - Preserve disclaimer discipline and never introduce buy/sell, entry/exit, stop-loss, or target-price language.
-- Run `scripts/validate_research_summary.py --all` to audit existing cases for legacy (`v0`), version-mismatched, or stale-manifest `research-summary-data.json` files. It is read-only and never rewrites a case; rebuilding one requires the user to explicitly approve that case.
+- Run `scripts/validate_research_summary.py --all` to audit current-format `research-summary-data.json` files for invalid payloads or stale manifests. It is read-only and never rewrites a case.
 
 ## Financial Analysis Conventions
 

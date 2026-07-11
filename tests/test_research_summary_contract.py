@@ -1,10 +1,12 @@
 import json
 import unittest
 
-from scripts.research_summary_contract import canonical_json, validate_summary
-
-SCHEMA_VERSION = 1
-TEMPLATE_VERSION = 1
+from scripts.research_summary_contract import (
+    SCHEMA_VERSION,
+    TEMPLATE_VERSION,
+    canonical_json,
+    validate_summary,
+)
 
 
 def valid_payload(**overrides):
@@ -81,7 +83,7 @@ def valid_payload(**overrides):
         "watch_items": [{"trigger": "monthly revenue release", "why_it_matters": "validates thesis"}],
         "open_questions": [{"id": "FIN-DATA-VALUATION", "priority": "high", "question": "q", "status": "open"}],
         "sources": [{"name": "FinMind", "tier": "secondary_aggregator", "url": "https://finmind.github.io", "restricted": False}],
-        "source_manifest": [{"path": "active-decisions.md", "sha256": "a" * 64}],
+        "source_manifest": [{"root": "case", "path": "active-decisions.md", "sha256": "a" * 64}],
     }
     payload.update(overrides)
     return payload
@@ -110,6 +112,14 @@ class ValidateSummaryTests(unittest.TestCase):
         issues = validate_summary(payload)
 
         self.assertTrue(any("source_manifest" in issue.path and "root" in issue.path for issue in issues))
+
+    def test_rejects_manifest_entry_without_root(self):
+        payload = valid_payload()
+        payload["source_manifest"][0].pop("root", None)
+
+        issues = validate_summary(payload)
+
+        self.assertTrue(any(issue.path.endswith(".root") and "required" in issue.message for issue in issues))
 
     def test_rejects_manifest_path_escape(self):
         payload = valid_payload()
@@ -185,7 +195,7 @@ class ValidateSummaryTests(unittest.TestCase):
         self.assertEqual(validate_summary(payload), [])
 
     def test_rejects_wrong_schema_version(self):
-        payload = valid_payload(schema_version=2)
+        payload = valid_payload(schema_version=1)
         issues = validate_summary(payload)
         self.assertTrue(any("schema_version" in issue.path for issue in issues))
 
