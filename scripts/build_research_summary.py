@@ -3,27 +3,25 @@
 
 Reads only the fixed set of canonical source files documented in
 docs/data-layout.md; never consults an existing research-summary-data.json
-or research-summary.html as an input.
+or research-summary.html as an input. Section extraction is tolerant:
+headings are matched by containment against the shapes in templates/, table
+columns are matched by name with common aliases, and a section whose heading
+or table is missing renders as empty instead of failing the build. The build
+fails only on a missing source file or an invalid final payload.
 """
 
 import argparse
 import hashlib
 import json
+import re
 import sys
 from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from atomic_io import atomic_write_text  # noqa: E402
-from markdown_contract import MarkdownContractError, extract_table_under_heading, extract_text_under_heading, normalize_text  # noqa: E402
+from markdown_contract import normalize_text  # noqa: E402
 from research_summary_contract import SCHEMA_VERSION, TEMPLATE_VERSION, canonical_json, validate_summary  # noqa: E402
-
-
-def hash_file(path):
-    path = Path(path)
-    if not path.exists():
-        return None
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -34,6 +32,13 @@ DISCLAIMER_SUMMARY = (
 
 class BuildError(RuntimeError):
     pass
+
+
+def hash_file(path):
+    path = Path(path)
+    if not path.exists():
+        return None
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _read_json(path):
@@ -49,11 +54,111 @@ def _read_text(path):
     return normalize_text(path.read_text(encoding="utf-8"))
 
 
+# --- tolerant markdown extraction -------------------------------------------
+
+
+def _strip_md(value):
+    return value.replace("**", "").strip()
+
+
+def _sections(text):
+    """Split markdown into (heading, body_lines) per `##` section; `#` closes a section."""
+    result = []
+    heading, body = None, None
+    for line in text.split("\n"):
+        if line.startswith("## "):
+            if heading is not None:
+                result.append((heading, body))
+            heading, body = line[3:].strip(), []
+        elif line.startswith("# "):
+            if heading is not None:
+                result.append((heading, body))
+            heading, body = None, None
+        elif heading is not None:
+            body.append(line)
+    if heading is not None:
+        result.append((heading, body))
+    return result
+
+
+def _find_section(text, key):
+    """First `##` section whose heading contains key (case-insensitive)."""
+    for heading, body in _sections(text):
+        if key.lower() in heading.lower():
+            return heading, body
+    return None, []
+
+
+def _section_text(text, key):
+    _, body = _find_section(text, key)
+    return "\n".join(line for line in body if line.strip()).strip()
+
+
+_TABLE_SEPARATOR_RE = re.compile(r"^[\s|:\-]+$")
+
+
+def _parse_table(body_lines):
+    """First pipe table in a section as (headers, rows-of-dicts); never raises."""
+    raw = []
+    for line in body_lines:
+        stripped = line.strip()
+        if stripped.startswith("|"):
+            raw.append(stripped)
+        elif raw:
+            break
+    if len(raw) < 2:
+        return [], []
+
+    def cells(row):
+        return [_strip_md(cell) for cell in row.strip("|").split("|")]
+
+    headers = cells(raw[0])
+    data = raw[1:]
+    if data and _TABLE_SEPARATOR_RE.match(data[0]):
+        data = data[1:]
+    rows = []
+    for line in data:
+        values = cells(line)
+        rows.append({headers[i]: (values[i] if i < len(values) else "") for i in range(len(headers))})
+    return headers, rows
+
+
+def _table_under(text, key):
+    _, body = _find_section(text, key)
+    return _parse_table(body)
+
+
+def _col(row, *names):
+    """Value of the first column whose header matches one of names (case-insensitive)."""
+    lowered = {header.strip().lower(): value for header, value in row.items()}
+    for name in names:
+        if name.lower() in lowered:
+            return lowered[name.lower()].strip()
+    return ""
+
+
 def _ready_fact(value, source_ref):
     value = (value or "").strip()
     if not value:
         return {"state": "unavailable", "reason": "required source field absent"}
     return {"value": value, "unit": "", "period": "", "state": "ready", "source_ref": source_ref}
+
+
+def _probability_fact(probability_text):
+    probability_text = (probability_text or "").strip()
+    match = re.search(r"(\d+(?:\.\d+)?)", probability_text)
+    if not match:
+        return {"state": "unavailable", "reason": "required source field absent"}
+    return {
+        "value": float(match.group(1)),
+        "unit": "%",
+        "period": "",
+        "state": "ready",
+        "source_ref": "investment-memo.md",
+    }
+
+
+# --- payload sections --------------------------------------------------------
 
 
 def _build_identity(meta):
@@ -66,131 +171,186 @@ def _build_identity(meta):
 
 
 def _build_current_view(active_text, disclaimer_text):
+    stance_heading, stance_body = _find_section(active_text, "Stance")
+    stance_body_text = "\n".join(line for line in stance_body if line.strip()).strip()
+    stance = ""
+    if stance_heading is not None:
+        _, _, suffix = stance_heading.partition(":")
+        stance = suffix.strip() or stance_body_text
+    summary = _section_text(active_text, "Summary")
+    if not summary and stance and stance != stance_body_text:
+        # "## Stance: <立場>" style: the paragraph under the heading is the summary.
+        summary = stance_body_text
     return {
-        "headline": extract_text_under_heading(active_text, "Headline"),
-        "summary": extract_text_under_heading(active_text, "Summary"),
-        "stance": extract_text_under_heading(active_text, "Stance"),
+        "headline": _section_text(active_text, "Headline"),
+        "summary": summary,
+        "stance": stance,
         "disclaimer": disclaimer_text,
     }
 
 
 def _build_kpis(active_text):
-    _, rows = extract_table_under_heading(active_text, "Three Numbers To Watch")
+    _, rows = _table_under(active_text, "Three Numbers")
     return [
         {
-            "label": row.get("Number / Signal", ""),
-            "fact": _ready_fact(row.get("Current Read"), "active-decisions.md"),
-            "read": row.get("Why It Matters", ""),
+            "label": _col(row, "Number / Signal", "Number", "Signal"),
+            "fact": _ready_fact(_col(row, "Current Read", "Current"), "active-decisions.md"),
+            "read": _col(row, "Why It Matters"),
         }
         for row in rows
     ]
 
 
 def _build_evidence_timeline(active_text):
-    _, rows = extract_table_under_heading(active_text, "Expected Evidence Timeline")
+    _, rows = _table_under(active_text, "Evidence Timeline")
     return [
         {
-            "evidence": row.get("Evidence", ""),
-            "expected_timing": row.get("Expected Timing", ""),
-            "what_confirms": row.get("What Confirms", ""),
-            "what_disconfirms": row.get("What Disconfirms", ""),
-            "source": row.get("Source", ""),
+            "evidence": _col(row, "Evidence", "Event"),
+            "expected_timing": _col(row, "Expected Timing", "When"),
+            "what_confirms": _col(row, "What Confirms", "Key Watch"),
+            "what_disconfirms": _col(row, "What Disconfirms"),
+            "source": _col(row, "Source"),
         }
         for row in rows
     ]
 
 
 def _build_kill_criteria(active_text):
-    _, rows = extract_table_under_heading(active_text, "Thesis Kill Criteria")
+    _, rows = _table_under(active_text, "Kill Criteria")
     return [
         {
-            "kill_condition": row.get("Kill Condition", ""),
-            "evidence_needed": row.get("Evidence Needed", ""),
-            "source": row.get("Source", ""),
-            "tracking_impact": row.get("Tracking Impact", ""),
+            "kill_condition": _col(row, "Kill Condition", "Condition"),
+            "evidence_needed": _col(row, "Evidence Needed"),
+            "source": _col(row, "Source"),
+            "tracking_impact": _col(row, "Tracking Impact", "Impact"),
         }
         for row in rows
     ]
 
 
 def _build_watch_items(active_text):
-    _, rows = extract_table_under_heading(active_text, "Next Review Triggers")
+    _, rows = _table_under(active_text, "Trigger")
+    if rows:
+        return [
+            {"trigger": _col(row, "Trigger"), "why_it_matters": _col(row, "Why It Matters")}
+            for row in rows
+        ]
+    _, body = _find_section(active_text, "Trigger")
     return [
-        {"trigger": row.get("Trigger", ""), "why_it_matters": row.get("Why It Matters", "")}
-        for row in rows
+        {"trigger": _strip_md(line.strip()[2:]), "why_it_matters": ""}
+        for line in body
+        if line.strip().startswith("- ")
     ]
 
 
 def _build_expectation_gaps(memo_text):
-    _, rows = extract_table_under_heading(memo_text, "Expectation Gap Analysis")
+    _, rows = _table_under(memo_text, "Expectation Gap")
     return [
         {
-            "market_belief": row.get("Market Belief", ""),
-            "evidence_status": row.get("Evidence Status", ""),
-            "gap": row.get("Gap / Mispricing Risk", ""),
-            "verification_source": row.get("Verification Source", ""),
+            "market_belief": _col(row, "Market Belief", "Market Believes"),
+            "evidence_status": _col(row, "Evidence Status", "Reality"),
+            "gap": _col(row, "Gap / Mispricing Risk", "Gap"),
+            "verification_source": _col(row, "Verification Source"),
         }
         for row in rows
     ]
 
 
 def _build_pricing_stage(memo_text):
-    _, rows = extract_table_under_heading(memo_text, "Pricing Stage Assessment")
+    _, rows = _table_under(memo_text, "Pricing Stage")
     stage_rows = [
         {
-            "stage": row.get("Stage", ""),
-            "status": row.get("Status", ""),
-            "evidence": row.get("Evidence", ""),
-            "transition_trigger": row.get("Transition Trigger", ""),
+            "stage": _col(row, "Stage"),
+            "status": _col(row, "Status"),
+            "evidence": _col(row, "Evidence"),
+            "transition_trigger": _col(row, "Transition Trigger"),
         }
         for row in rows
     ]
     current = next((row for row in stage_rows if row["status"].strip().lower() == "current"), None)
-    label = current["stage"] if current else "Not yet assessed"
-    read = current["evidence"] if current else ""
-    return {"label": label, "read": read, "rows": stage_rows}
+    if current:
+        return {"label": current["stage"], "read": current["evidence"], "rows": stage_rows}
+    match = re.search(r"Pricing stage:\**\s*(.+)", memo_text, re.IGNORECASE)
+    if match:
+        return {"label": _strip_md(match.group(1)), "read": "", "rows": stage_rows}
+    return {"label": "Not yet assessed", "read": "", "rows": stage_rows}
 
 
-SCENARIO_HEADINGS = ("Bull Case", "Base Case", "Bear Case")
+_SCENARIO_FIELD_KEYWORDS = (
+    ("eps_driver_assumption", ("assumption", "driver", "eps")),
+    ("multiple_assumption", ("multiple", "p/b", "p/e")),
+    ("scenario_derived_range", ("range",)),
+    ("validation_trigger", ("validation",)),
+    ("break_condition", ("break", "kill")),
+)
+
+
+def _scenario_from_row(name, row):
+    return {
+        "name": name,
+        "probability": _probability_fact(_col(row, "Probability")),
+        "eps_driver_assumption": _col(row, "EPS / Driver Assumption", "Assumptions", "Assumption", "Driver"),
+        "multiple_assumption": _col(row, "Multiple Assumption", "Multiple", "P/B", "P/E"),
+        "scenario_derived_range": _col(row, "Scenario-Derived Price Range", "Obs. Range", "Range"),
+        "validation_trigger": _col(row, "Validation Trigger"),
+        "break_condition": _col(row, "Break Condition"),
+    }
 
 
 def _build_scenarios(memo_text):
     scenarios = []
-    for heading in SCENARIO_HEADINGS:
-        _, rows = extract_table_under_heading(memo_text, heading)
+    for key in ("Bull Case", "Base Case", "Bear Case"):
+        _, rows = _table_under(memo_text, key)
         if not rows:
             continue
-        row = rows[0]
-        name = heading.split(" ")[0]
-        probability_text = (row.get("Probability") or "").strip()
-        probability_value = None
-        if probability_text:
-            try:
-                probability_value = float(probability_text)
-            except ValueError:
-                probability_value = None
-        if probability_value is None:
-            probability_fact = {"state": "unavailable", "reason": "required source field absent"}
-        else:
-            probability_fact = {
-                "value": probability_value,
-                "unit": "%",
-                "period": "",
-                "state": "ready",
-                "source_ref": "investment-memo.md",
-            }
-        scenarios.append(
+        scenarios.append(_scenario_from_row(key.split(" ")[0], rows[0]))
+    if scenarios:
+        return scenarios
+
+    headers, rows = _table_under(memo_text, "Scenario")
+    if not headers or not rows:
+        return []
+
+    if any(header.strip().lower() in ("scenario", "name") for header in headers):
+        return [_scenario_from_row(_col(row, "Scenario", "Name"), row) for row in rows]
+
+    # Transposed table: first column holds row labels, remaining headers are
+    # scenario names like "Bull (15%)".
+    label_key = headers[0]
+    columns = []
+    for header in headers[1:]:
+        match = re.match(r"(.+?)\s*\(\s*(\d+(?:\.\d+)?)\s*%\s*\)", header)
+        columns.append(
             {
-                "name": name,
-                "probability": probability_fact,
-                "eps_driver_assumption": row.get("EPS / Driver Assumption", ""),
-                "multiple_assumption": row.get("Multiple Assumption", ""),
-                "scenario_derived_range": row.get("Scenario-Derived Price Range", ""),
-                "validation_trigger": row.get("Validation Trigger", ""),
-                "break_condition": row.get("Break Condition", ""),
+                "header": header,
+                "name": _strip_md(match.group(1)) if match else _strip_md(header),
+                "probability": match.group(2) if match else "",
+                "fields": {},
             }
         )
-    return scenarios
+    for row in rows:
+        label = row.get(label_key, "").lower()
+        field = next(
+            (name for name, keywords in _SCENARIO_FIELD_KEYWORDS if any(k in label for k in keywords)),
+            None,
+        )
+        if field is None:
+            continue
+        for column in columns:
+            if field not in column["fields"]:
+                column["fields"][field] = row.get(column["header"], "")
+    return [
+        {
+            "name": column["name"],
+            "probability": _probability_fact(column["probability"]),
+            "eps_driver_assumption": column["fields"].get("eps_driver_assumption", ""),
+            "multiple_assumption": column["fields"].get("multiple_assumption", ""),
+            "scenario_derived_range": column["fields"].get("scenario_derived_range", ""),
+            "validation_trigger": column["fields"].get("validation_trigger", ""),
+            "break_condition": column["fields"].get("break_condition", ""),
+        }
+        for column in columns
+    ]
 
 
 def _build_egg_theory(market_data, tdcc_data):
@@ -218,13 +378,13 @@ def _build_egg_theory(market_data, tdcc_data):
 
 
 def _build_open_questions(questions_text):
-    _, rows = extract_table_under_heading(questions_text, "Active Questions")
+    _, rows = _table_under(questions_text, "Active")
     return [
         {
-            "id": row.get("ID", ""),
-            "priority": row.get("Priority", ""),
-            "question": row.get("Question", ""),
-            "status": row.get("Status", ""),
+            "id": _col(row, "ID"),
+            "priority": _col(row, "Priority"),
+            "question": _col(row, "Question"),
+            "status": _col(row, "Status"),
         }
         for row in rows
     ]
@@ -298,16 +458,7 @@ def build_summary(case_dir, distribution="local", as_of=None):
 
     resolved_as_of = as_of or _latest_source_as_of([market_data, tdcc_data]) or date.today().isoformat()
 
-    missing_sections = []
-
-    def _section(source_file, builder, *args):
-        try:
-            return builder(*args)
-        except MarkdownContractError as exc:
-            missing_sections.append(f"{source_file}: {exc}")
-            return None
-
-    payload = {
+    return {
         "schema_version": SCHEMA_VERSION,
         "template_version": TEMPLATE_VERSION,
         "case_id": case_dir.name,
@@ -316,26 +467,19 @@ def build_summary(case_dir, distribution="local", as_of=None):
         "as_of": resolved_as_of,
         "distribution": distribution,
         "identity": _build_identity(meta),
-        "current_view": _section("active-decisions.md", _build_current_view, active_text, DISCLAIMER_SUMMARY),
-        "kpis": _section("active-decisions.md", _build_kpis, active_text),
-        "expectation_gaps": _section("investment-memo.md", _build_expectation_gaps, memo_text),
-        "pricing_stage": _section("investment-memo.md", _build_pricing_stage, memo_text),
+        "current_view": _build_current_view(active_text, DISCLAIMER_SUMMARY),
+        "kpis": _build_kpis(active_text),
+        "expectation_gaps": _build_expectation_gaps(memo_text),
+        "pricing_stage": _build_pricing_stage(memo_text),
         "egg_theory": _build_egg_theory(market_data, tdcc_data),
-        "evidence_timeline": _section("active-decisions.md", _build_evidence_timeline, active_text),
-        "kill_criteria": _section("active-decisions.md", _build_kill_criteria, active_text),
-        "scenarios": _section("investment-memo.md", _build_scenarios, memo_text),
-        "watch_items": _section("active-decisions.md", _build_watch_items, active_text),
-        "open_questions": _section("open-questions.md", _build_open_questions, questions_text),
+        "evidence_timeline": _build_evidence_timeline(active_text),
+        "kill_criteria": _build_kill_criteria(active_text),
+        "scenarios": _build_scenarios(memo_text),
+        "watch_items": _build_watch_items(active_text),
+        "open_questions": _build_open_questions(questions_text),
         "sources": sources,
         "source_manifest": manifest,
     }
-
-    if missing_sections:
-        raise BuildError(
-            "source files are missing required template sections: " + "; ".join(missing_sections)
-        )
-
-    return payload
 
 
 def write_summary(case_dir, check=False, distribution="local"):

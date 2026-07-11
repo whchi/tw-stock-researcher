@@ -5,7 +5,7 @@ description: Use when the user asks to output a stock research synthesis, compre
 
 # Research HTML Output
 
-Use this only for an explicit HTML output request. Markdown and JSON case files remain the source of truth; run `session-wrap` first so the HTML reflects a wrapped-up case. The payload is built deterministically by `scripts/build_research_summary.py` from fixed source files; do not hand-write `research-summary-data.json`.
+The HTML summary renders automatically as the final step of `session-wrap`; use this skill standalone when the user asks for a re-render outside a session close. Markdown and JSON case files remain the source of truth. The payload is built deterministically by `scripts/build_research_summary.py` from fixed source files; do not hand-write `research-summary-data.json`.
 
 ## Source Of Truth
 
@@ -26,7 +26,7 @@ Use this only for an explicit HTML output request. Markdown and JSON case files 
 ## Workflow
 
 1. Confirm the case markdown files are current (`session-wrap` has run for this session); if a required source like `active-decisions.md` or `investment-memo.md` is missing or stale, finish that stage first instead of rendering from stale evidence.
-2. Run `build_research_summary.py --case <case_dir>` to produce a fresh, validated `research-summary-data.json`. It fails closed (non-zero exit, nothing written) on a missing required source, a missing template section (it lists every missing heading at once), a malformed table, or an invalid payload shape.
+2. Run `build_research_summary.py --case <case_dir>` to produce a fresh, validated `research-summary-data.json`. It fails closed (non-zero exit, nothing written) only on a missing required source file or an invalid payload shape; a missing section renders as an empty block.
 3. Run `render_research_html.py --case <case_dir>` to render `research-summary.html` from that payload. Every value is HTML-escaped; the renderer never trusts pre-formatted HTML from a case file.
 4. Add unresolved rendering gaps to `open-questions.md`.
 

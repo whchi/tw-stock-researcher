@@ -67,18 +67,59 @@ class BuildSummaryRejectionTests(unittest.TestCase):
             with self.assertRaises(BuildError):
                 build_summary(case_dir)
 
-    def test_rejects_malformed_table_shape_in_source_markdown(self):
+    def test_missing_section_renders_empty_instead_of_failing(self):
         with tempfile.TemporaryDirectory() as tmp:
             case_dir = self._copy_case(tmp)
             text = (case_dir / "active-decisions.md").read_text(encoding="utf-8")
+            text = text.replace("## Expected Evidence Timeline", "## Removed Section")
+            (case_dir / "active-decisions.md").write_text(text, encoding="utf-8")
+
+            payload = build_summary(case_dir)
+
+            self.assertEqual(payload["evidence_timeline"], [])
+
+    def test_template_style_heading_and_column_variants_still_render(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            case_dir = self._copy_case(tmp)
+            text = (case_dir / "active-decisions.md").read_text(encoding="utf-8")
+            text = text.replace("## Expected Evidence Timeline", "## Evidence Timeline")
             text = text.replace(
-                "| Number / Signal | Current Read | Why It Matters | Next Check |",
-                "| Number / Signal | Current Read | Why It Matters |",
+                "| Evidence | Expected Timing | What Confirms | What Disconfirms | Source |",
+                "| Event | When | Key Watch | What Disconfirms | Source |",
             )
             (case_dir / "active-decisions.md").write_text(text, encoding="utf-8")
 
-            with self.assertRaises(Exception):
-                build_summary(case_dir)
+            payload = build_summary(case_dir)
+
+            self.assertEqual(len(payload["evidence_timeline"]), 1)
+            self.assertEqual(payload["evidence_timeline"][0]["evidence"], "Monthly revenue")
+            self.assertEqual(payload["evidence_timeline"][0]["expected_timing"], "Monthly, ~10th")
+
+    def test_transposed_scenario_table_renders_scenarios(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            case_dir = self._copy_case(tmp)
+            memo = (case_dir / "investment-memo.md").read_text(encoding="utf-8")
+            for heading in ("## Bull Case", "## Base Case", "## Bear Case"):
+                start = memo.index(heading)
+                end = memo.index("## ", start + 3)
+                memo = memo[:start] + memo[end:]
+            memo += (
+                "\n## Scenarios\n\n"
+                "| | Bull (30%) | Base (50%) | Bear (20%) |\n"
+                "|---|---|---|---|\n"
+                "| Assumptions | fast growth | steady | stall |\n"
+                "| P/B | 3x | 2x | 1x |\n"
+                "| Range | 120-140 | 95-115 | 70-90 |\n"
+            )
+            (case_dir / "investment-memo.md").write_text(memo, encoding="utf-8")
+
+            payload = build_summary(case_dir)
+
+            names = [s["name"] for s in payload["scenarios"]]
+            self.assertEqual(names, ["Bull", "Base", "Bear"])
+            self.assertEqual(sum(s["probability"]["value"] for s in payload["scenarios"]), 100)
+            self.assertEqual(payload["scenarios"][0]["scenario_derived_range"], "120-140")
+            self.assertEqual(payload["scenarios"][1]["multiple_assumption"], "2x")
 
 
 class WriteSummaryTests(unittest.TestCase):

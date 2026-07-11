@@ -51,7 +51,7 @@ Every `companies/<ticker>-<slug>/` case is local, git-ignored session data, not 
 
 ## HTML Summary Output
 
-Markdown and JSON files remain the source of truth. When the user explicitly asks for a comprehensive research result as HTML, use the `research-html-output` skill and render a derived preview from `templates/research-html-summary.html`.
+Markdown and JSON files remain the source of truth. The HTML summary renders automatically at the end of `session-wrap`; for a standalone re-render, use the `research-html-output` skill. The derived preview comes from `templates/research-html-summary.html`.
 
 The HTML output is produced by string replacement, not by changing the canonical case files:
 
@@ -85,7 +85,7 @@ These project-local workflow skills live under `.agents/skills/<skill-name>/SKIL
 - `quality-and-valuation-check`: assess ROIC, owner earnings, working-capital quality, capital allocation, implied expectations, and margin of safety.
 - `investment-thesis`: produce the current memo with assumptions and disconfirming evidence; the sole writer of `investment-memo.md`.
 - `session-wrap`: preserve unresolved questions, expected evidence, thesis kill criteria, decisions, and next follow-ups; the last step for both first visits and return visits.
-- `research-html-output`: render an explicit HTML summary request from `templates/research-html-summary.html` using `scripts/render_research_html.py`; run after `session-wrap`.
+- `research-html-output`: render the HTML summary from `templates/research-html-summary.html` using `scripts/render_research_html.py`; runs automatically at the end of `session-wrap`, or standalone for a re-render.
 - `signal-update`: append new events and decide whether the thesis changed.
 - `case-revisit`: re-enter an existing case with a file-grounded summary.
 

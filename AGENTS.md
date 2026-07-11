@@ -28,7 +28,7 @@ The three fetch stages (`yahoo-profile-financials`, `financial-data-fetch`, `mar
 | `quality-and-valuation-check` | Depends on `financial-analysis` and `market-data-fetch`; business quality, implied expectations, margin of safety. |
 | `investment-thesis` | Depends on `company-deep-dive`, `financial-analysis`, `industry-transmission-analysis`, `macro-impact-analysis`, `quality-and-valuation-check`, and `market-action-read`; writes the whole memo once. |
 | `session-wrap` | Last step of every session, first visit or return visit; depends on `investment-thesis`. |
-| `research-html-output` | Optional, explicit-request-only; run after `session-wrap`. |
+| `research-html-output` | Runs automatically as the final step of `session-wrap`; also available standalone for an explicit re-render. |
 
 - **Return visit:** `case-revisit` -> affected stages -> `session-wrap`
 - **New event:** `signal-update` (appends to `signal-log.md`, may update `thesis-updates.md`)
@@ -150,7 +150,7 @@ companies/**/*.json
 **All case files are git-ignored by default.** This is intentional — case files are session artifacts, not repo source code. Only root-level docs, scripts, templates, and market context are version controlled.
 
 ### 7. HTML Summary Output
-When the user explicitly asks for a comprehensive research result as HTML, use the `research-html-output` skill from `.agents/skills/research-html-output/SKILL.md`.
+The HTML summary renders automatically at the end of `session-wrap`. For a standalone re-render, use the `research-html-output` skill from `.agents/skills/research-html-output/SKILL.md`.
 
 - Keep markdown / JSON case files as the source of truth.
 - Use `templates/research-html-summary.html` as the shared template and `templates/research-summary-data.schema.json` as the payload shape (enforced by `scripts/research_summary_contract.py`).
@@ -159,7 +159,7 @@ When the user explicitly asks for a comprehensive research result as HTML, use t
 .venv/bin/python scripts/build_research_summary.py --case companies/<ticker-slug>
 .venv/bin/python scripts/render_research_html.py --case companies/<ticker-slug>
 ```
-- Both commands accept `--check` to validate without writing. `build_research_summary.py` fails closed (non-zero exit) when a required source is missing, a source table is malformed, or the built payload fails validation.
+- Both commands accept `--check` to validate without writing. `build_research_summary.py` fails closed (non-zero exit) only when a required source file is missing or the built payload fails validation; a section whose heading or table is absent renders as an empty block instead of failing the build.
 - Never hand-write `research-summary-data.json` and never consult an existing `research-summary-data.json` or `research-summary.html` as a builder input — every field is re-derived from the canonical markdown/JSON case files each time.
 - The output HTML must live in the company folder as `companies/<ticker-slug>/research-summary.html`.
 - HTML is a derived preview, not a replacement for `investment-memo.md`, `active-decisions.md`, or other case artifacts.
