@@ -28,6 +28,15 @@ class DocumentationContractTests(unittest.TestCase):
     def test_companies_directory_placeholder_is_preserved(self):
         self.assertTrue((REPO_ROOT / "companies" / ".gitkeep").exists())
 
+    def test_ci_installs_fetcher_test_dependencies(self):
+        workflow = (REPO_ROOT / ".github" / "workflows" / "verify.yml").read_text(encoding="utf-8")
+
+        self.assertIn("uv pip add requests beautifulsoup4", workflow)
+        self.assertLess(
+            workflow.index("uv pip add requests beautifulsoup4"),
+            workflow.index(".venv/bin/python -m unittest"),
+        )
+
 
 class ProductionFetchPolicyTests(unittest.TestCase):
     def test_fetch_macro_has_no_insecure_tls_bypass(self):

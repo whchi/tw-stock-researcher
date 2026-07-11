@@ -27,6 +27,9 @@ jobs:
       - name: Create repo-local virtual environment
         run: uv venv --python ${{ matrix.python-version }}
 
+      - name: Install test dependencies
+        run: uv pip add requests beautifulsoup4
+
       - name: Run structure checks
         run: |
           sh tests/structure/test_skills.sh
