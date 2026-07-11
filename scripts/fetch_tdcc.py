@@ -129,7 +129,7 @@ def parse_holding_distribution(source_rows, stock_id):
 def fetch_holding_distribution_rows():
     """Fetch the all-market ownership-distribution dataset from TDCC's
     official OpenAPI. A TLS or HTTP failure here is a source failure; it is
-    never retried with verify=False or a curl subprocess."""
+    never retried by disabling TLS verification or shelling out to curl."""
     import requests
 
     response = requests.get(TDCC_HOLDING_DISTRIBUTION_URL, timeout=30)

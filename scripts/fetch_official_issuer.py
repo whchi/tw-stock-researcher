@@ -6,7 +6,7 @@ See docs/source-policy.md for verified endpoint findings: TWSE's OpenAPI
 succeeds under strict TLS verification with `requests`' bundled CA store;
 TPEx's certificate genuinely fails verification today (confirmed live,
 2026-07-11) and is therefore treated as a source failure (status=blocked),
-never bypassed with verify=False. Statement dataset variants are selected
+never bypassed by disabling TLS verification. Statement dataset variants are selected
 explicitly from issuer type rather than treating an industry EPS table as a
 company financial statement.
 """

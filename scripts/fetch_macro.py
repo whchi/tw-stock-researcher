@@ -244,25 +244,6 @@ def fetch_twse_market_stats(session=None):
     ]
 
 
-def request_text_with_ssl_fallback(url, session=None, encoding="utf-8-sig"):
-    """Some Taiwan government hosts serve certificate chains that fail strict
-    verification (same issue as TDCC OpenData); retry unverified for these
-    public statistical downloads."""
-    import requests
-
-    try:
-        return request_text(url, session=session, encoding=encoding)
-    except requests.exceptions.SSLError:
-        import urllib3
-
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        response = requests.get(url, timeout=30, verify=False)
-        response.raise_for_status()
-        if encoding:
-            response.encoding = encoding
-        return response.text
-
-
 def parse_customs_trade_csv(text):
     """Parse data.gov.tw dataset 6053 (海關進出口貿易統計, ROC year rows)."""
     reader = csv.DictReader(io.StringIO(text.lstrip("﻿")))
@@ -329,7 +310,7 @@ def build_customs_trade_rows(text, source_url):
 
 def fetch_taiwan_official(configured_url=None, session=None):
     url = configured_url or DEFAULT_TAIWAN_MACRO_URL
-    text = request_text_with_ssl_fallback(url, session=session)
+    text = request_text(url, session=session, encoding="utf-8-sig")
 
     if url == DEFAULT_TAIWAN_MACRO_URL:
         return build_customs_trade_rows(text, url)

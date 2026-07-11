@@ -25,7 +25,7 @@ If FinMind needs credentials, provide `FIN_MIND_TOKEN` only in the command envir
 ## Workflow
 
 1. Confirm the case folder exists; if not, run `stock-case-init` first.
-2. Run TDCC first so holder distribution is available before FinMind derivation. The all-market CSV is cached under `market/` (72h default; `--refresh` forces a re-download), and each new snapshot date is appended to `tdcc-data.json` `history`.
+2. Run TDCC first so holder distribution is available before FinMind derivation. The all-market JSON response is cached as `market/tdcc-holding-distribution.json` (72h default; `--refresh` forces a re-download), and each new snapshot date is appended to `tdcc-data.json` `history`.
 3. If TDCC fails, record the failure and continue to FinMind only when price-volume data is still useful for the requested read.
 4. Run FinMind second to refresh price, volume, institutional flow, margin, shareholding, day-trading, and egg-theory derived reads.
 5. Inspect warnings for permission limits, especially `TaiwanStockHoldingSharesPer`; when it is unavailable, holder trends come from accumulated TDCC history (`holder_trend_from_tdcc_weekly`, confidence capped at medium) and need at least two snapshot dates in the window.

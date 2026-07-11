@@ -53,15 +53,14 @@ Every `companies/<ticker>-<slug>/` case is local, git-ignored session data, not 
 
 Markdown and JSON files remain the source of truth. The HTML summary renders automatically at the end of `session-wrap`; for a standalone re-render, use the `research-html-output` skill. The derived preview comes from `templates/research-html-summary.html`.
 
-The HTML output is produced by string replacement, not by changing the canonical case files:
+Build the typed payload from the current case files first, then render HTML from that payload:
 
 ```bash
-.venv/bin/python scripts/render_research_html.py \
-  --data companies/<ticker-slug>/research-summary-data.json \
-  --output companies/<ticker-slug>/research-summary.html
+.venv/bin/python scripts/build_research_summary.py --case companies/<ticker-slug>
+.venv/bin/python scripts/render_research_html.py --case companies/<ticker-slug>
 ```
 
-Build the JSON payload from the case files in the same company folder, then let `scripts/render_research_html.py` replace the template placeholders. The HTML output should stay in that company folder as `companies/<ticker-slug>/research-summary.html`. The 6706 惠特 and 6741 91APP preview layouts are represented by the shared template structure: research snapshot, expectation gap, expected evidence timeline, thesis kill criteria, scenario summary, watch items, source quality, and sources.
+Both commands accept `--check` to validate without writing. `scripts/build_research_summary.py` always re-derives `research-summary-data.json` from canonical case files; `scripts/render_research_html.py` then writes `research-summary.html` inside the same case folder. The 6706 惠特 and 6741 91APP preview layouts are represented by the shared template structure: research snapshot, expectation gap, expected evidence timeline, thesis kill criteria, scenario summary, watch items, source quality, and sources.
 
 ### Rendered HTML Preview
 
@@ -85,7 +84,7 @@ These project-local workflow skills live under `.agents/skills/<skill-name>/SKIL
 - `quality-and-valuation-check`: assess ROIC, owner earnings, working-capital quality, capital allocation, implied expectations, and margin of safety.
 - `investment-thesis`: produce the current memo with assumptions and disconfirming evidence; the sole writer of `investment-memo.md`.
 - `session-wrap`: preserve unresolved questions, expected evidence, thesis kill criteria, decisions, and next follow-ups; the last step for both first visits and return visits.
-- `research-html-output`: render the HTML summary from `templates/research-html-summary.html` using `scripts/render_research_html.py`; runs automatically at the end of `session-wrap`, or standalone for a re-render.
+- `research-html-output`: build `research-summary-data.json` and render the HTML summary from `templates/research-html-summary.html`; runs automatically at the end of `session-wrap`, or standalone for a re-render.
 - `signal-update`: append new events and decide whether the thesis changed.
 - `case-revisit`: re-enter an existing case with a file-grounded summary.
 
@@ -95,7 +94,7 @@ These project-local workflow skills live under `.agents/skills/<skill-name>/SKIL
 2. Start a new case with `stock-case-init` so metadata, research questions, and open questions are created in the right order.
 3. Use the files in `templates/` as the canonical shapes for the artifacts each skill should create or update.
 4. Create shared market context files in `market/` by copying the corresponding templates from `templates/` when needed.
-5. Run the structure and skill checks in `tests/` after changing the workspace.
+5. Run the `unittest` suite after changing the workspace.
 
 ## Usage Examples
 
