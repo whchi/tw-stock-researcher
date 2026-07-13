@@ -9,7 +9,7 @@ Keep only macro variables with a concrete path into the company case.
 
 ## Source Of Truth
 
-- Follow `AGENTS.md`, `docs/data-layout.md`, and `templates/macro-map.md`.
+- Follow `AGENTS.md`, `docs/data-layout.md`, `docs/data-freshness.md`, and `templates/macro-map.md`.
 - Shared reusable context may live in `market/shared-macro-view.md`.
 
 ## Command

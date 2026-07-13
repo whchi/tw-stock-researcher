@@ -1,11 +1,16 @@
 ---
 name: research-html-output
-description: Use when the user asks to output a stock research synthesis, comprehensive result, summary, dashboard, or preview as HTML.
+description: Use when the user asks to output a stock research synthesis, comprehensive result, summary, dashboard, or preview as HTML, or when the standard workflow finishes market-action-read.
 ---
 
 # Research HTML Output
 
 Use this for an explicit HTML output request, or when the standard workflow finishes `market-action-read` and needs the derived summary preview refreshed. Markdown and JSON case files remain the source of truth.
+
+## Source Of Truth
+
+- Follow `AGENTS.md`, `DISCLAIMER.md`, `docs/data-layout.md`, and `templates/research-html-summary.html`.
+- Read the case Markdown and JSON artifacts; never treat the HTML preview as evidence.
 
 ## Workflow
 
@@ -39,3 +44,8 @@ Use this for an explicit HTML output request, or when the standard workflow fini
 - Confirm `research-summary.html` was written in the same company folder.
 - Confirm no template placeholders remain unresolved.
 - Confirm HTML remains a derived preview and does not replace source markdown files.
+
+## Output
+
+- `research-summary-data.json`
+- `research-summary.html`

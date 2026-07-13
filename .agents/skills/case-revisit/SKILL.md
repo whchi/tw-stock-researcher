@@ -9,14 +9,14 @@ Re-enter a case from repo files rather than memory.
 
 ## Source Of Truth
 
-- Follow `AGENTS.md` and `docs/data-layout.md`.
+- Follow `AGENTS.md`, `docs/data-layout.md`, and `docs/data-freshness.md`.
 - Start from `stock-meta.json`, then read referenced case files.
 
 ## Workflow
 
 1. Locate the single matching case folder.
 2. Read `stock-meta.json`, `active-decisions.md`, `open-questions.md`, `signal-log.md`, and the latest core analysis files.
-3. Summarize current research stance, unresolved questions, data freshness, and evidence timeline.
+3. Summarize current research stance, unresolved questions, data freshness against `docs/data-freshness.md`, and evidence timeline.
 4. Identify which fetchers or skills should run next, but do not refresh data unless the user asked for an update.
 5. Carry forward closed and unresolved questions into `open-questions.md` when needed.
 

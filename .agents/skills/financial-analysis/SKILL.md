@@ -1,6 +1,6 @@
 ---
 name: financial-analysis
-description: Use when writing or refreshing financial-analysis.md with Goodinfo/MOPS-based operating, profitability, and balance-sheet analysis.
+description: Use when writing or refreshing financial-analysis.md with Goodinfo, FinMind, and MOPS-based operating, profitability, and balance-sheet analysis.
 ---
 
 # Financial Analysis

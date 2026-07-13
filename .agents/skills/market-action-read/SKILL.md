@@ -9,7 +9,7 @@ Turn refreshed market data into a neutral read, not a trading decision.
 
 ## Source Of Truth
 
-- Follow `AGENTS.md`, `DISCLAIMER.md`, and `templates/market-action-read.md`.
+- Follow `AGENTS.md`, `DISCLAIMER.md`, `docs/data-freshness.md`, and `templates/market-action-read.md`.
 - Run or verify `market-data-fetch` first when data is missing or stale.
 
 ## Workflow
@@ -19,19 +19,16 @@ Turn refreshed market data into a neutral read, not a trading decision.
 3. Add egg-theory reads for `1m`, `3m`, and `6m` when `derived.egg_theory_read` exists.
 4. Surface holder-distribution limits clearly: `snapshot_only`, missing `TaiwanStockHoldingSharesPer`, or insufficient holder trend means confidence cannot be high.
 5. Use neutral labels such as `market confirmation`, `price-in risk`, `thesis validation trigger`, `assumption failure signal`, and `wait_for_confirmation`.
-6. If `investment-memo.md` exists and its Evidence Support Summary market-action row is empty, stale, or marked 待查, backfill that row (and only that row) from the new read.
-7. After `market-action-read.md` and any memo backfill are complete, automatically run research-html-output for the same case folder so the derived `research-summary-data.json` and `research-summary.html` are refreshed as the final workflow artifact.
+6. After `market-action-read.md` is complete, automatically run research-html-output for the same case folder so the derived `research-summary-data.json` and `research-summary.html` are refreshed as the final workflow artifact.
 
 ## Output
 
 - `market-action-read.md`
-- Optional backfill of the market-action evidence row in `investment-memo.md`
 - `research-summary-data.json` and `research-summary.html` refreshed via `research-html-output`
 
 ## Verification
 
 - Confirm the file cites `market-data.json` and TDCC/FinMind datasets used.
-- Confirm the memo's market-action evidence row is no longer empty or 待查 when `investment-memo.md` exists.
 - Confirm `research-summary-data.json` is valid JSON and `research-summary.html` exists in the same company folder.
 - Confirm the rendered HTML contains no unresolved template placeholders.
 - Confirm no direct entry, exit, stop-loss, position-sizing, target-price, or buy/sell instruction language was introduced.

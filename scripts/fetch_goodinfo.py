@@ -7,6 +7,7 @@ fetch_goodinfo.py
 範例：python fetch_goodinfo.py 2317
 """
 
+import argparse
 import json
 import sys
 import time
@@ -527,11 +528,17 @@ def default_output_path(stock_id):
     return repo_root / f"{stock_id}_raw_data.json"
 
 
-if __name__ == "__main__":
-    stock_id = sys.argv[1] if len(sys.argv) > 1 else "2330"
-    output_path = (
-        Path(sys.argv[2]) if len(sys.argv) > 2 else default_output_path(stock_id)
-    )
+def parse_args(argv):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("stock_id", help="Taiwan stock id")
+    parser.add_argument("--output", help="Output JSON path")
+    return parser.parse_args(argv)
+
+
+def main(argv=None):
+    args = parse_args(argv or sys.argv[1:])
+    stock_id = args.stock_id
+    output_path = Path(args.output) if args.output else default_output_path(stock_id)
     data = fetch_all(stock_id)
 
     is_d = data["income_statement"]
@@ -592,3 +599,8 @@ if __name__ == "__main__":
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     print(f"\n原始數據（含驗證結果）已存至 {output_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

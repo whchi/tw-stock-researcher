@@ -20,8 +20,9 @@ Create the durable case shell before any fetch or analysis work.
 3. If none exists, create `companies/<stock_id>-<slug>/` using a stable, readable slug.
 4. Copy the needed template shapes into the case folder and fill only facts known from the user or verified repo data.
 5. In `stock-meta.json`, keep `file_references` values either `null` or repo-relative case paths.
-6. Seed `research-questions.md` with core business questions, disconfirming evidence to seek, and a claim hygiene register.
-7. Seed `open-questions.md` with unresolved items that should carry across sessions.
+6. Leave not-yet-created artifact references as `null`; producing skills fill their matching reference when the artifact is created.
+7. Seed `research-questions.md` with core business questions, disconfirming evidence to seek, and a claim hygiene register.
+8. Seed `open-questions.md` with unresolved items that should carry across sessions.
 
 ## Output
 

@@ -20,11 +20,23 @@ stock-case-init
 - **Return visit:** `case-revisit` → `session-wrap`
 - **New event:** `signal-update` (appends to `signal-log.md`, may update `thesis-updates.md`)
 
+## Reading Order And Precedence
+
+When instructions overlap, use this order instead of averaging conflicting text:
+
+1. `AGENTS.md` — project policy, workflow order, red lines, and mutation boundaries.
+2. `docs/` — durable data contracts, ownership, freshness, and verification rules.
+3. The triggered skill — operational steps and the skill's owned output.
+4. `templates/` — required artifact shape and section names.
+5. Case files — stock-specific facts, evidence, and user-provided context.
+
+If two surfaces at the same level disagree, stop and record the conflict in the case rather than silently choosing a hybrid rule.
+
 ## File Structure & Ownership
 
 Create one directory per stock under `companies/<ticker>-<slug>/`.
 
-| File | Owner | Purpose |
+| File | Primary owner | Purpose |
 |------|-------|---------|
 | `stock-meta.json` | `stock-case-init` | Case index + status. All `file_references` values are `null` or repo-relative paths rooted in the case dir. |
 | `yahoo-data.json` | `fetch_yahoo.py` | Yahoo Finance Taiwan company profile, revenue, income statement, cash flow, and derived summary. |
@@ -42,6 +54,8 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 | `market-data.json` | `fetch_finmind.py` | FinMind price, volume, institutional, margin, shareholding, and day-trading raw data plus derived 1D / 3D / 5D windows and 1m / 3m / 6m egg-theory reads. |
 | `tdcc-data.json` | `fetch_tdcc.py` | TDCC ownership distribution snapshot: holding level, people, shares, and concentration by stock_id. |
 | `market-action-read.md` | `market-action-read` | Neutral market-state view: price/volume, institutional flow, market confirmation, watch conditions. No trade instructions. |
+| `research-summary-data.json` | `research-html-output` | Derived payload for the HTML preview; not a source of truth. |
+| `research-summary.html` | `research-html-output` | Derived HTML preview; not a replacement for case files. |
 | `signal-log.md` | `signal-update` | Append-only event log with data points and thesis changes. |
 | `thesis-updates.md` | `signal-update` | Explicit thesis changes when a signal shifts the research stance. |
 
@@ -82,11 +96,11 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 
 ### 3. Writing Files
 - **Always use `write` or `edit` tools** for markdown/JSON files. Do NOT use bash `echo`, `cat`, or `mv` for file creation.
-- **Do NOT create HTML dashboards.** Output all financial analysis as markdown (`financial-analysis.md`).
-- **Never leave `*_raw_data.json` in repo root.** Move to `companies/<ticker>-<slug>/raw-data.json` if the script fails auto-detection.
-- **Never leave `*_yahoo_data.json` in repo root.** Move to `companies/<ticker>-<slug>/yahoo-data.json` if the Yahoo script fails auto-detection.
-- **Never leave `*_market_data.json` in repo root.** Move to `companies/<ticker>-<slug>/market-data.json` if the FinMind script fails auto-detection.
-- **Never leave `*_fundamentals_data.json` in repo root.** Move to `companies/<ticker>-<slug>/fundamentals-data.json` if the fundamentals script fails auto-detection.
+- **Do NOT replace financial-analysis.md or other source layers with HTML.** Only `research-html-output` may create the derived research summary preview.
+- **Never leave `*_raw_data.json` in repo root.** Fix case-folder detection and rerun with `--output companies/<ticker>-<slug>/raw-data.json` if the script falls back.
+- **Never leave `*_yahoo_data.json` in repo root.** Fix case-folder detection and rerun with `--output companies/<ticker>-<slug>/yahoo-data.json` if the Yahoo script falls back.
+- **Never leave `*_market_data.json` in repo root.** Fix case-folder detection and rerun with `--output companies/<ticker>-<slug>/market-data.json` if the FinMind script falls back.
+- **Never leave `*_fundamentals_data.json` in repo root.** Fix case-folder detection and rerun with `--output companies/<ticker>-<slug>/fundamentals-data.json` if the fundamentals script falls back.
 
 ### 4. Fetching Market Data
 ```bash
@@ -140,6 +154,19 @@ When the user explicitly asks for a comprehensive research result as HTML, or wh
 - The final `market-action-read` step should automatically refresh this derived HTML preview after its markdown evidence layer is verified.
 - HTML is a derived preview, not a replacement for `investment-memo.md`, `active-decisions.md`, or other case artifacts.
 - Preserve disclaimer discipline and never introduce buy/sell, entry/exit, stop-loss, or target-price language.
+
+### 8. Case Index And Mutation Boundaries
+
+- `stock-meta.json` is the complete case index. Whenever a skill creates or refreshes a case artifact, update its matching `file_references` value to the repo-relative case path.
+- `session-wrap` updates `stock-meta.json.updated_at` and `current_status` after persisting the session state.
+- `signal-update` may append `signal-log.md` and make only evidence-linked, narrow updates to affected layers; it must not replace another skill's whole artifact.
+- `case-revisit` may carry forward questions, while `session-wrap` consolidates open and closed questions.
+- `market-action-read` owns `market-action-read.md` and invokes `research-html-output`; it does not edit `investment-memo.md`.
+- Refreshing an owned generated artifact is allowed. Deleting history or replacing user-authored narrative content still requires explicit approval.
+
+### 9. Data Freshness
+
+- Use `docs/data-freshness.md` for the default stale-data thresholds and override rules. Missing `fetched_at` is stale unless the source is explicitly labeled unavailable or intentionally reused.
 
 ## Financial Analysis Conventions
 

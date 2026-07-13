@@ -10,16 +10,23 @@
   "current_status": "researching",
   "file_references": {
     "yahoo_data": null,
+    "raw_data": null,
+    "fundamentals_data": null,
     "research_questions": null,
     "company_analysis": null,
+    "financial_analysis": null,
     "industry_transmission": null,
     "macro_map": null,
     "quality_and_valuation_check": null,
     "investment_memo": null,
+    "market_data": null,
+    "tdcc_data": null,
     "market_action_read": null,
     "signal_log": null,
     "thesis_updates": null,
     "open_questions": null,
-    "active_decisions": null
+    "active_decisions": null,
+    "research_summary_data": null,
+    "research_summary_html": null
   }
 }

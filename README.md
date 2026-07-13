@@ -33,7 +33,7 @@ This repository is a markdown-first workspace template for researching one stock
 
 ## Data Layout
 
-The workspace keeps shared market context under `market/`, reusable templates under `templates/`, and per-stock cases under `companies/`. Create shared market files in `market/` by copying the corresponding templates from `templates/` when needed. See `docs/data-layout.md` for the full layout and file ownership rules.
+The workspace keeps shared market context under `market/`, reusable templates under `templates/`, and per-stock cases under `companies/`. Create shared market files in `market/` by copying the corresponding templates from `templates/` when needed. See `docs/data-layout.md` for file ownership and `docs/data-freshness.md` for stale-data defaults.
 
 ## HTML Summary Output
 
@@ -135,11 +135,10 @@ companies/3105-awsc/
 **User:** "更新 2344 華邦電最新財報"
 
 **What happens:**
-1. `signal-update` re-runs `scripts/fetch_goodinfo.py 2344`
-2. Reads existing case files to understand prior thesis
-3. Appends new financial data to `financial-analysis.md`
-4. Updates `investment-memo.md` if thesis changes
-5. Logs the update in `signal-log.md`
+1. `signal-update` classifies the new item and reads the existing case files
+2. Refreshes the relevant fetcher only when the signal depends on updated structured data
+3. Appends the event to `signal-log.md`
+4. Updates only the affected thesis or tracking section when the signal changes the research stance
 
 ### Example 3: Revisiting a case
 
@@ -151,15 +150,9 @@ companies/3105-awsc/
 3. Lists open questions from `open-questions.md`
 4. Suggests next follow-ups
 
-### Example 4: Comparing peers
+### Example 4: Multi-stock comparison
 
-**User:** "幫我比較 2330 台積電和 2454 聯發科"
-
-**What happens:**
-1. Initializes both cases if not existing
-2. Fetches financial data for both
-3. Creates side-by-side comparison in `financial-analysis.md`
-4. Highlights key differences (business model, margins, valuation)
+Peer comparison is outside the one-stock case workflow. Keep each stock in its own case; do not write a cross-company comparison into a case-owned analysis file.
 
 ### Key Conventions
 

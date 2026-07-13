@@ -10,6 +10,7 @@ Make the case resumable before stopping.
 ## Source Of Truth
 
 - Follow `AGENTS.md`, `DISCLAIMER.md`, `templates/active-decisions.md`, and `templates/open-questions.md`.
+- Read `stock-meta.json` and update its `updated_at`, `current_status`, and completed `file_references` before stopping.
 
 ## Workflow
 
@@ -23,6 +24,7 @@ Make the case resumable before stopping.
 
 - `active-decisions.md`
 - `open-questions.md`
+- Updated `stock-meta.json`
 - Optional final session summary to the user
 
 ## Verification

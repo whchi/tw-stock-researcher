@@ -9,7 +9,7 @@ Refresh the market-action data layer while preserving the user's stock-id workfl
 
 ## Source Of Truth
 
-- Follow `AGENTS.md` and `docs/data-layout.md`.
+- Follow `AGENTS.md`, `docs/data-layout.md`, and `docs/data-freshness.md`.
 - `fetch_tdcc.py` writes `tdcc-data.json`; `fetch_finmind.py` writes `market-data.json`.
 - `fetch_finmind.py` may read local `tdcc-data.json` as the holder-distribution snapshot for egg-theory proxy reads.
 
