@@ -50,6 +50,24 @@
 | `investment-memo.md` |  |  |  |
 | `market-action-read.md` |  |  |  |
 
+## Research Completeness Gate
+
+Use a 0-10 evidence-completeness score. This is not a stock-quality score: low scores mean the research layer is missing, stale, weakly sourced, or internally inconsistent.
+
+| Dimension | Score (0-10) | Evidence Basis | Critical Gap |
+| --- | --- | --- | --- |
+| Business |  |  |  |
+| Risk |  |  |  |
+| Financial |  |  |  |
+| Quality Signal |  |  |  |
+| Forward-Looking |  |  |  |
+| Internal Consistency |  |  |  |
+
+## Critical Gaps And Remedy
+
+| Critical Gap | Why It Blocks Confidence | Remedy | Owner File / Skill | Next Check |
+| --- | --- | --- | --- | --- |
+
 ## Next Review Triggers
 
 | Trigger | Source To Refresh | Why It Matters | Planned Response |

@@ -106,6 +106,16 @@
 | **Stage 2** | 預期驗證 | EPS 成長追上估值，股價靠獲利推升 | 基本面兌現 | 中。最折磨人的階段，盤整期長 |
 | **Stage 3** | 成長放緩與估值收縮 | 成長放緩，本益比壓縮 | 估值下修 | 高。即使獲利仍成長，股價可能下跌 |
 
+### Stage 1 → Stage 2 驗證門檻
+
+不得只因股價上漲或管理層重複敘事，就把標的判為 Stage 2。以下三項必須各自引用當期證據並標示 `Confirmed`、`Not confirmed` 或 `Insufficient data`：
+
+1. **Structure（結構）**：具可比較部門資料時，高毛利部門的營收占比在兩個可比年度內提高至少 5 個百分點。若公司未揭露可靠的部門營收與利潤率，標示 `Insufficient data`，不得用總營收成長代替。
+2. **Quality（品質）**：`financial-analysis.md` 的四項三表矛盾檢查中，`Confirming` 多於 `Diverging` 且 `Diverging` 為零。只要 Revenue vs cash conversion 為 Diverging，即阻擋 Stage 1 → Stage 2 的品質驗證。
+3. **Narrative（敘事）**：年報、法說或公司公告至少 3 項有來源的當期成果陳述，且能對回先前承諾；計畫、預估、願景或未驗證形容詞不計入成果。
+
+只有三項皆為 `Confirmed`，才可把 Stage 1 → Stage 2 寫成已驗證的階段轉換。任一項為 `Not confirmed` 或 `Insufficient data` 時，應保留為待驗證或部分驗證，不得補推缺失證據。
+
 **分析時的應用**：
 - 若標的處於 Stage 1，重點不是問「它值多少錢」，而是問「這個敘事是否有被證實的可能性？機率多大？」。
 - 若標的處於 Stage 2，重點是追蹤 EPS 是否持續超預期、股價對好消息是否還有反應。

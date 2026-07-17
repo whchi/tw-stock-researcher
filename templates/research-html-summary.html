@@ -293,6 +293,8 @@
         <a href="#snapshot">研究快照</a>
         <a href="#gap">預期落差</a>
         <a href="#pricing-stage">定價階段</a>
+        <a href="#pricing-stage-verification">階段驗證</a>
+        <a href="#confidence-calibration">信心校準</a>
         <a href="#egg">雞蛋理論</a>
         <a href="#timeline">證據時間表</a>
         <a href="#kill">放棄追蹤條件</a>
@@ -364,6 +366,38 @@
             </thead>
             <tbody>
               {{PRICING_STAGE_ROWS}}
+            </tbody>
+          </table>
+        </section>
+        <section id="pricing-stage-verification" class="wide">
+          <h3>Pricing Stage Verification</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Criterion</th>
+                <th>Current Evidence</th>
+                <th>Result</th>
+                <th>Missing Evidence / Next Check</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{PRICING_STAGE_GATE_ROWS}}
+            </tbody>
+          </table>
+        </section>
+        <section id="confidence-calibration" class="wide">
+          <h3>Confidence Calibration</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Evidence Layer</th>
+                <th>Confidence</th>
+                <th>Reason</th>
+                <th>Missing / Conflicting Evidence</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{CONFIDENCE_CALIBRATION_ROWS}}
             </tbody>
           </table>
         </section>

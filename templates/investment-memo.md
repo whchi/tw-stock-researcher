@@ -36,6 +36,32 @@
 - Evidence that would close the gap:
 - Evidence that would invalidate the gap:
 
+## Information Edge
+
+Use this section only for a sourced, decision-relevant observation that appears underemphasized by the current market narrative. A widely repeated fact or an unsupported belief about market awareness is not an edge.
+
+| Observation | Why It May Be Overlooked | Source | Counterevidence | Confidence |
+| --- | --- | --- | --- | --- |
+
+- No defensible information edge identified: Yes / No
+- If yes, explain which evidence or market-awareness claim is missing:
+
+## Confidence Calibration
+
+| Evidence Layer | Confidence (High / Medium / Low) | Reason | Missing Or Conflicting Evidence |
+| --- | --- | --- | --- |
+| Business facts |  |  |  |
+| Financial trend |  |  |  |
+| Industry transmission |  |  |  |
+| Macro transmission |  |  |  |
+| Quality and valuation |  |  |  |
+| Market action |  |  |  |
+
+- Low-confidence evidence layers:
+- Missing load-bearing input:
+- Overall memo confidence: High / Medium / Low
+- Downgrade rule applied: any Low layer caps overall confidence at Medium; two or more Low layers, or one missing load-bearing input, cap it at Low.
+
 ## Event And Narrative Audit
 
 ## Why This Stock
@@ -43,6 +69,19 @@
 ## Business Thesis
 
 ## Pricing Thesis
+
+## Pricing Stage Verification
+
+Current pricing stage:
+
+| Criterion | Verification Rule | Current Evidence | Result | Missing Evidence / Next Check |
+| --- | --- | --- | --- | --- |
+| Structure | Higher-margin segment revenue share rises at least 5 percentage points across two comparable fiscal years |  | Confirmed / Not confirmed / Insufficient data |  |
+| Quality | Three-statement checks have more Confirming than Diverging signals, no Diverging signal, and no revenue-vs-cash divergence |  | Confirmed / Not confirmed / Insufficient data |  |
+| Narrative | At least 3 sourced current-period outcome statements verify prior commitments |  | Confirmed / Not confirmed / Insufficient data |  |
+
+- Overall Stage 1 → Stage 2 gate:
+- Evidence preventing a stronger stage conclusion:
 
 ## Technical Bottleneck -> Customer Dependency -> Monetization -> Pricing
 

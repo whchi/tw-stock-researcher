@@ -1,4 +1,5 @@
 import json
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -7,6 +8,31 @@ from scripts.render_research_html import render_html
 
 
 class RenderResearchHtmlTests(unittest.TestCase):
+    def test_legacy_payload_renders_pricing_gate_and_confidence_blocks_as_not_evaluated(self):
+        repo_root = Path(__file__).resolve().parents[1]
+        template = repo_root / "templates" / "research-html-summary.html"
+        template_text = template.read_text(encoding="utf-8")
+        decision_placeholders = {
+            "PRICING_STAGE_GATE_ROWS",
+            "CONFIDENCE_CALIBRATION_ROWS",
+        }
+        legacy_payload = {
+            name: f"legacy-{name}"
+            for name in set(re.findall(r"\{\{([A-Z0-9_]+)\}\}", template_text))
+            if name not in decision_placeholders
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "research-summary.html"
+            render_html(template, output, legacy_payload)
+            html = output.read_text(encoding="utf-8")
+
+        self.assertIn("Pricing Stage Verification", html)
+        self.assertIn("Confidence Calibration", html)
+        self.assertEqual(html.count("尚未依新版研究契約評估"), 2)
+        for placeholder in decision_placeholders:
+            self.assertNotIn(f"{{{{{placeholder}}}}}", html)
+
     def test_render_html_replaces_placeholders_with_payload_values(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

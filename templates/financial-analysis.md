@@ -55,6 +55,31 @@
 | Capex productivity | Capex + fixed assets + revenue growth + depreciation / revenue + ROIC trend |  |  |  |
 | Contract / prepayment signal | Prepaid assets + contract liabilities / deferred revenue + revenue outlook |  |  |  |
 
+## Three-Statement Contradiction Checks
+
+Signal: Confirming / Diverging / Watch / Insufficient data
+
+| Check | Evidence Combination | Current-Period Read | Signal | Source / Missing Items |
+| --- | --- | --- | --- | --- |
+| Revenue vs cash conversion | Revenue growth vs CFO / FCF direction; receivables and inventory explain any gap |  |  |  |
+| Operating profit vs revenue | Revenue growth vs operating-profit direction; separate investment-led margin pressure from gross-margin deterioration |  |  |  |
+| Capex follow-through | Capex and fixed-asset growth vs revenue, margin, and ROIC outcomes over the following 1-2 years |  |  |  |
+| Inventory-to-CFO lead | Inventory / DIO build vs demand evidence and the next reported CFO direction |  |  |  |
+
+## Accounting Anomaly Verification
+
+Structured financial data can surface candidates but cannot clear them. Use MOPS financial-statement notes for verification; otherwise mark `Low confidence` and name the missing disclosure.
+
+| Candidate | Structured-Data Signal | MOPS Note Evidence | Current Read | Confidence / Missing Disclosure |
+| --- | --- | --- | --- | --- |
+| Related-party transactions |  |  |  |  |
+| Off-balance-sheet commitments |  |  |  |  |
+| Revenue-recognition policy changes |  |  |  |  |
+| One-period line-item discontinuities |  |  |  |  |
+| Non-operating gains / losses |  |  |  |  |
+| Investment structure |  |  |  |  |
+| Asset revaluation |  |  |  |  |
+
 ## Data Sources And MOPS Cross-Check
 
 - Primary data source:
