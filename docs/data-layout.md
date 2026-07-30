@@ -39,6 +39,25 @@ Create one folder per stock under `companies/`, for example `companies/6706-hui-
 | `open-questions.md` | unresolved questions to carry forward | `case-revisit`, `session-wrap` |
 | `active-decisions.md` | current research stance, expected evidence timeline, thesis kill criteria, review triggers, and follow-ups | `session-wrap` |
 
+## Current Data Availability Contract
+
+Every generated source JSON must include `metadata.fetched_at` and
+`metadata.data_availability` with exactly these required fields:
+
+| Field | Meaning |
+|---|---|
+| `status` | `available`, `partial`, or `unavailable` for the current run |
+| `observation_date` | Latest actual source observation or reporting period; never the fetch timestamp |
+| `source` | Source that produced the current artifact |
+| `missing_inputs` | Required datasets or fields absent from the current result |
+| `failure_reasons` | Provider, permission, endpoint, parsing, or empty-response failures from the current run |
+| `confidence_impact` | `none`, `downgrade`, or `block` |
+
+`partial` requires explicit confidence reduction. `unavailable` blocks the
+dependent evidence layer. A provider failure is not a negative company signal.
+Current workflow runs do not accept legacy availability shapes or inferred
+defaults.
+
 ## Validation Workflow
 
 1. Run `sh tests/structure/test_templates.sh` after template or workflow-doc changes.

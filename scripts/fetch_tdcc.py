@@ -10,6 +10,11 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+if __package__:
+    from .data_availability import build_data_availability, latest_observation_date
+else:
+    from data_availability import build_data_availability, latest_observation_date
+
 TDCC_HOLDING_DISTRIBUTION_URL = "https://smart.tdcc.com.tw/opendata/getOD.ashx?id=1-5"
 
 # The endpoint returns the all-market table (~2.3MB); TDCC refreshes it weekly,
@@ -190,6 +195,7 @@ def merge_history(previous_payload, snapshot_rows):
 
 
 def build_metadata(rows, cache_hit=False, cache_meta=None, history=None):
+    observation_date = latest_observation_date(rows, history or [])
     return {
         "fetched_at": datetime.now(timezone.utc)
         .astimezone()
@@ -211,6 +217,16 @@ def build_metadata(rows, cache_hit=False, cache_meta=None, history=None):
         "warnings": []
         if rows
         else ["TDCCStockHoldingDistribution returned no rows"],
+        "data_availability": build_data_availability(
+            observation_date=observation_date,
+            source="TDCC",
+            missing_inputs=[]
+            if rows
+            else ["TDCCStockHoldingDistribution"],
+            failure_reasons=[]
+            if observation_date
+            else ["no_current_observation"],
+        ),
     }
 
 

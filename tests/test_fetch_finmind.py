@@ -149,6 +149,39 @@ def make_tdcc_holding_rows():
     ]
 
 
+class MetadataTests(unittest.TestCase):
+    def test_metadata_marks_missing_market_datasets_partial(self):
+        raw_rows = {dataset: [] for dataset in fetch_finmind.DATASETS}
+        raw_rows["TaiwanStockPrice"] = [
+            {"date": "2026-07-28", "stock_id": "6451", "close": 250.0}
+        ]
+        metadata = fetch_finmind.build_metadata(
+            "6451",
+            "2026-01-01",
+            "2026-07-30",
+            raw_rows,
+            [
+                "TaiwanStockHoldingSharesPer unavailable: "
+                "provider plan restriction"
+            ],
+        )
+
+        self.assertIn("data_availability", metadata)
+        availability = metadata["data_availability"]
+        self.assertEqual(availability["status"], "partial")
+        self.assertEqual(availability["observation_date"], "2026-07-28")
+        self.assertIn(
+            "TaiwanStockHoldingSharesPer", availability["missing_inputs"]
+        )
+        self.assertEqual(
+            availability["failure_reasons"],
+            [
+                "TaiwanStockHoldingSharesPer unavailable: "
+                "provider plan restriction"
+            ],
+        )
+
+
 class OutputPathTests(unittest.TestCase):
     def test_default_output_path_uses_unique_case_directory(self):
         with tempfile.TemporaryDirectory() as tmp:

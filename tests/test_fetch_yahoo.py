@@ -109,6 +109,17 @@ class YahooParserTests(unittest.TestCase):
             "https://tw.stock.yahoo.com/quote/8299.TWO/profile",
         )
 
+    def test_build_metadata_requires_a_current_observation(self):
+        result = build_metadata("2330")
+
+        self.assertIn("data_availability", result)
+        self.assertEqual(result["data_availability"]["status"], "unavailable")
+        self.assertIsNone(result["data_availability"]["observation_date"])
+        self.assertEqual(
+            result["data_availability"]["failure_reasons"],
+            ["no_current_observation"],
+        )
+
 
 class OutputPathTests(unittest.TestCase):
     def test_default_output_path_uses_unique_case_directory(self):

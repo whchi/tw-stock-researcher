@@ -25,7 +25,7 @@ Use `--suffix TWO` only when Yahoo requires the OTC `.TWO` symbol.
 
 1. Confirm a single matching case folder exists before running the script.
 2. Run the fetcher with the repo-local virtualenv.
-3. Read `yahoo-data.json` and note data freshness, missing fields, warning flags, and market suffix used.
+3. Read `yahoo-data.json` and verify `metadata.data_availability`, data freshness, missing fields, warning flags, and market suffix used.
 4. Use the data only as verified or source-labeled support in downstream markdown.
 
 ## Output
@@ -38,6 +38,7 @@ Use `--suffix TWO` only when Yahoo requires the OTC `.TWO` symbol.
 - Confirm no `<stock_id>_yahoo_data.json` remains in repo root.
 - Confirm the fetch did not write to repo root because of zero or multiple matching case folders.
 - Confirm any missing profile, revenue, income, or cash-flow fields are surfaced before analysis.
+- Confirm `metadata.data_availability` uses the current schema. `partial` lowers confidence; `unavailable` blocks Yahoo-dependent conclusions and cannot be interpreted as a negative company signal.
 
 ## Red Lines
 

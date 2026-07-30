@@ -35,15 +35,22 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertTrue(expected.issubset(refs.keys()))
 
     def test_ownership_docs_cover_the_same_case_file_set(self):
-        def files(path):
+        def files(path, heading):
+            lines = (ROOT / path).read_text().splitlines()
+            section_start = lines.index(heading) + 1
+            section = []
+            for line in lines[section_start:]:
+                if line.startswith("## "):
+                    break
+                section.append(line)
             return {
                 line.split("`")[1]
-                for line in (ROOT / path).read_text().splitlines()
+                for line in section
                 if line.startswith("| `")
             }
 
-        agents = files("AGENTS.md")
-        layout = files("docs/data-layout.md")
+        agents = files("AGENTS.md", "## File Structure & Ownership")
+        layout = files("docs/data-layout.md", "## File Ownership")
         self.assertEqual(agents, layout)
         self.assertIn("research-summary.html", agents)
 
@@ -136,6 +143,154 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("No defensible information edge identified", template)
         self.assertIn("## Confidence Calibration", template)
         self.assertIn("Low-confidence evidence layers", template)
+
+    def test_investment_thesis_preserves_conflicts_and_runs_adversarial_review(self):
+        skill = (ROOT / ".agents/skills/investment-thesis/SKILL.md").read_text()
+        template = (ROOT / "templates/investment-memo.md").read_text()
+
+        self.assertIn("cross-layer conflict map", skill)
+        self.assertIn("before assigning Bull/Base/Bear probabilities", skill)
+        for reviewer in ("Bull Researcher", "Bear Researcher", "Risk Reviewer"):
+            self.assertIn(reviewer, skill)
+            self.assertIn(f"| {reviewer} |", template)
+
+        conflict_step = skill.index("Build a cross-layer conflict map")
+        review_step = skill.index("Run the adversarial review")
+        scenario_step = skill.index("Include Bull/Base/Bear scenarios")
+        self.assertLess(conflict_step, review_step)
+        self.assertLess(review_step, scenario_step)
+        self.assertIn("same evidence cutoff", skill)
+
+        self.assertIn("## Cross-Layer Conflict Map", template)
+        for column in (
+            "Evidence Layer",
+            "Current Signal",
+            "Time Horizon",
+            "Conflicts With",
+            "Reconciliation",
+            "Resolution Evidence",
+            "Confidence Impact",
+        ):
+            self.assertIn(column, template)
+        self.assertIn("## Adversarial Review", template)
+
+    def test_research_updates_use_evidence_thesis_impact_next_verification(self):
+        contract = "Evidence → Thesis Impact → Next Verification"
+        for path in (
+            ".agents/skills/investment-thesis/SKILL.md",
+            ".agents/skills/signal-update/SKILL.md",
+            ".agents/skills/session-wrap/SKILL.md",
+            "templates/investment-memo.md",
+            "templates/signal-log.md",
+            "templates/active-decisions.md",
+        ):
+            content = (ROOT / path).read_text()
+            self.assertIn(contract, content, path)
+            self.assertIn("Next Verification", content, path)
+
+        signal_skill = (ROOT / ".agents/skills/signal-update/SKILL.md").read_text()
+        signal_template = (ROOT / "templates/signal-log.md").read_text()
+        self.assertNotIn("Next Action", signal_skill)
+        self.assertNotIn("Next Action", signal_template)
+        expected_headers = {
+            "templates/investment-memo.md": (
+                "| Evidence | Source / Observation Date | "
+                "Thesis Impact (Business / Pricing / Both) | "
+                "Next Verification | Failure Signal |"
+            ),
+            "templates/active-decisions.md": (
+                "| Evidence | Source / Observation Date | "
+                "Thesis Impact (Business / Pricing / Both) | "
+                "Next Verification | Failure Signal |"
+            ),
+            "templates/signal-log.md": (
+                "| Date | Signal Layer | Signal Type | Claim Type | "
+                "Classification | Source / Observation Date | Evidence | "
+                "Price Reaction | Revenue/Earnings Validation | "
+                "Thesis Impact (Business / Pricing / Both) | Next Verification |"
+            ),
+        }
+        for path, header in expected_headers.items():
+            self.assertIn(header, (ROOT / path).read_text(), path)
+
+    def test_html_requires_all_current_research_contract_blocks(self):
+        skill = (ROOT / ".agents/skills/research-html-output/SKILL.md").read_text()
+        template = (ROOT / "templates/research-html-summary.html").read_text()
+
+        for placeholder in (
+            "CROSS_LAYER_CONFLICT_ROWS",
+            "ADVERSARIAL_REVIEW_ROWS",
+            "EVIDENCE_THESIS_VERIFICATION_ROWS",
+            "DATA_AVAILABILITY_ROWS",
+        ):
+            self.assertIn(placeholder, skill)
+            self.assertIn(f"{{{{{placeholder}}}}}", template)
+        self.assertNotIn("backward-compatible", skill)
+        self.assertNotIn("older payload", skill)
+
+    def test_html_pricing_stage_gate_has_the_same_five_columns_as_the_memo(self):
+        template = (ROOT / "templates/research-html-summary.html").read_text()
+        section = template.split('id="pricing-stage-verification"', 1)[1].split(
+            "</section>", 1
+        )[0]
+        headers = (
+            "Criterion",
+            "Verification Rule",
+            "Current Evidence",
+            "Result",
+            "Missing Evidence / Next Check",
+        )
+
+        self.assertEqual(section.count("<th>"), len(headers))
+        positions = [section.index(f"<th>{header}</th>") for header in headers]
+        self.assertEqual(positions, sorted(positions))
+
+    def test_data_availability_contract_is_current_only_and_blocks_unavailable_layers(self):
+        agents = (ROOT / "AGENTS.md").read_text()
+        layout = (ROOT / "docs/data-layout.md").read_text()
+        freshness = (ROOT / "docs/data-freshness.md").read_text()
+
+        self.assertIn("Data Availability Contract", agents)
+        self.assertIn("metadata.data_availability", layout)
+        for field in (
+            "status",
+            "observation_date",
+            "source",
+            "missing_inputs",
+            "failure_reasons",
+            "confidence_impact",
+        ):
+            self.assertIn(f"`{field}`", layout)
+
+        self.assertIn(
+            "Provider failure is a data limitation, not a negative company signal",
+            freshness,
+        )
+        self.assertIn(
+            "Do not reuse an older artifact to satisfy a current refresh",
+            freshness,
+        )
+        self.assertIn(
+            "`unavailable` blocks every conclusion that depends on that evidence layer",
+            freshness,
+        )
+        for legacy_rule in (
+            "intentionally reused",
+            "reason for reuse",
+            "keep the last successful artifact",
+        ):
+            self.assertNotIn(legacy_rule, freshness)
+
+        for path in (
+            ".agents/skills/yahoo-profile-financials/SKILL.md",
+            ".agents/skills/financial-analysis/SKILL.md",
+            ".agents/skills/macro-impact-analysis/SKILL.md",
+            ".agents/skills/market-data-fetch/SKILL.md",
+            ".agents/skills/case-revisit/SKILL.md",
+        ):
+            skill = (ROOT / path).read_text()
+            self.assertIn("metadata.data_availability", skill, path)
+            self.assertIn("unavailable", skill, path)
 
     def test_company_analysis_tracks_management_claims_without_inventing_outcomes(self):
         skill = (ROOT / ".agents/skills/company-deep-dive/SKILL.md").read_text()

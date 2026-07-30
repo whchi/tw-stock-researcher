@@ -10,6 +10,11 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
 
+if __package__:
+    from .data_availability import build_data_availability, latest_observation_date
+else:
+    from data_availability import build_data_availability, latest_observation_date
+
 BASE_URL = "https://tw.stock.yahoo.com/quote"
 PAGE_PATHS = {
     "profile": "profile",
@@ -104,7 +109,17 @@ def default_output_path(stock_id, repo_root=None):
     return root / f"{stock_id}_yahoo_data.json"
 
 
-def build_metadata(stock_id, suffix="TW", warnings=None):
+def build_metadata(
+    stock_id,
+    suffix="TW",
+    warnings=None,
+    observation_date=None,
+    missing_inputs=None,
+    failure_reasons=None,
+):
+    availability_failures = list(failure_reasons or [])
+    if observation_date is None and not availability_failures:
+        availability_failures.append("no_current_observation")
     return {
         "fetched_at": datetime.now(timezone.utc)
         .astimezone()
@@ -116,6 +131,12 @@ def build_metadata(stock_id, suffix="TW", warnings=None):
         },
         "symbol_suffix": suffix,
         "warnings": warnings or [],
+        "data_availability": build_data_availability(
+            observation_date=observation_date,
+            source="Yahoo Finance Taiwan",
+            missing_inputs=missing_inputs,
+            failure_reasons=availability_failures,
+        ),
     }
 
 
@@ -338,9 +359,31 @@ def fetch_all(stock_id, suffix="TW"):
     if not cash_flow_statement.get("line_items"):
         warnings.append("Yahoo cash flow statement returned no parsed line items")
 
+    required_inputs = {
+        "profile": profile,
+        "revenue": revenue,
+        "income_statement": income_statement.get("line_items"),
+        "cash_flow_statement": cash_flow_statement.get("line_items"),
+    }
+    missing_inputs = [
+        name for name, value in required_inputs.items() if not value
+    ]
+    observation_date = latest_observation_date(
+        revenue,
+        income_statement.get("periods", []),
+        cash_flow_statement.get("periods", []),
+    )
+
     return {
         "stock_id": stock_id,
-        "metadata": build_metadata(stock_id, suffix=suffix, warnings=warnings),
+        "metadata": build_metadata(
+            stock_id,
+            suffix=suffix,
+            warnings=warnings,
+            observation_date=observation_date,
+            missing_inputs=missing_inputs,
+            failure_reasons=warnings,
+        ),
         "profile": profile,
         "revenue": revenue,
         "income_statement": income_statement,

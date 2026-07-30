@@ -18,6 +18,11 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
+if __package__:
+    from .data_availability import build_data_availability, latest_observation_date
+else:
+    from data_availability import build_data_availability, latest_observation_date
+
 TEMPLATE_SOURCES = (
     "TWSE Open API",
     "Yahoo Finance / public market data",
@@ -118,13 +123,23 @@ def latest_read(rows):
 
 def build_macro_data(records_by_source, warnings=None):
     sources = {source: records_by_source.get(source, []) for source in TEMPLATE_SOURCES}
+    missing_inputs = [
+        source for source, rows in sources.items() if not rows
+    ]
+    availability_warnings = list(warnings or [])
     return {
         "metadata": {
             "fetched_at": datetime.now(timezone.utc)
             .astimezone()
             .isoformat(timespec="seconds"),
             "source_scope": list(TEMPLATE_SOURCES),
-            "warnings": warnings or [],
+            "warnings": availability_warnings,
+            "data_availability": build_data_availability(
+                observation_date=latest_observation_date(sources),
+                source=" + ".join(TEMPLATE_SOURCES),
+                missing_inputs=missing_inputs,
+                failure_reasons=availability_warnings,
+            ),
         },
         "sources": sources,
     }

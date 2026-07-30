@@ -15,7 +15,7 @@ Make the case resumable before stopping.
 ## Workflow
 
 1. Read the files touched during the session.
-2. Update `active-decisions.md` with current research stance, expected evidence timeline, thesis kill criteria, review triggers, and any user-provided position context.
+2. Update `active-decisions.md` with current research stance, expected evidence timeline, thesis kill criteria, review triggers, and any user-provided position context. Every decision-relevant row must follow `Evidence → Thesis Impact → Next Verification`, identify whether it affects the Business Thesis, Pricing Thesis, or both, and cite its source and observation date.
 3. Complete the six-dimension research completeness gate in `active-decisions.md`: Business, Risk, Financial, Quality Signal, Forward-Looking, and Internal Consistency. Score only from cited case evidence, then record every critical gap and its concrete remedy.
 4. Update `open-questions.md` with unresolved items, closed items, and evidence needed to resolve them.
 5. Add a short next-step list that points to exact files or fetchers.
@@ -31,6 +31,7 @@ Make the case resumable before stopping.
 ## Verification
 
 - Confirm active decisions are evidence timelines and tracking criteria, not trade instructions.
+- Confirm every decision-relevant row follows `Evidence → Thesis Impact → Next Verification`.
 - Confirm all six completeness dimensions have a 0-10 score, evidence basis, and visible gap; confirm each critical gap has a source or skill-based remedy.
 - Confirm unresolved questions remain visible.
 - Confirm the next session can resume from files without relying on chat memory.

@@ -375,6 +375,7 @@
             <thead>
               <tr>
                 <th>Criterion</th>
+                <th>Verification Rule</th>
                 <th>Current Evidence</th>
                 <th>Result</th>
                 <th>Missing Evidence / Next Check</th>
@@ -398,6 +399,78 @@
             </thead>
             <tbody>
               {{CONFIDENCE_CALIBRATION_ROWS}}
+            </tbody>
+          </table>
+        </section>
+        <section id="data-availability" class="wide">
+          <h3>Data Availability</h3>
+          <p class="note">Provider or endpoint failure is a data limitation, not a negative company signal. An unavailable evidence layer blocks conclusions that depend on it.</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Artifact</th>
+                <th>Status</th>
+                <th>Observation Date</th>
+                <th>Source</th>
+                <th>Missing Inputs / Failure Reasons</th>
+                <th>Confidence Impact</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{DATA_AVAILABILITY_ROWS}}
+            </tbody>
+          </table>
+        </section>
+        <section id="evidence-thesis-verification" class="wide">
+          <h3>Evidence → Thesis Impact → Next Verification</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Evidence</th>
+                <th>Source / Observation Date</th>
+                <th>Thesis Impact</th>
+                <th>Next Verification</th>
+                <th>Failure Signal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{EVIDENCE_THESIS_VERIFICATION_ROWS}}
+            </tbody>
+          </table>
+        </section>
+        <section id="cross-layer-conflicts" class="wide">
+          <h3>Cross-Layer Conflict Map</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Evidence Layer</th>
+                <th>Current Signal</th>
+                <th>Time Horizon</th>
+                <th>Conflicts With</th>
+                <th>Reconciliation</th>
+                <th>Resolution Evidence</th>
+                <th>Confidence Impact</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{CROSS_LAYER_CONFLICT_ROWS}}
+            </tbody>
+          </table>
+        </section>
+        <section id="adversarial-review" class="wide">
+          <h3>Adversarial Review</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Reviewer</th>
+                <th>Strongest Evidence</th>
+                <th>Counterevidence</th>
+                <th>Failure Condition</th>
+                <th>Effect On Scenario Weights</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{ADVERSARIAL_REVIEW_ROWS}}
             </tbody>
           </table>
         </section>

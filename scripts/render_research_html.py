@@ -11,15 +11,6 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_TEMPLATE = ROOT_DIR / "templates" / "research-html-summary.html"
 PLACEHOLDER_RE = re.compile(r"\{\{([A-Z0-9_]+)\}\}")
-NOT_EVALUATED_ROW = (
-    '<tr><td colspan="4"><span class="tag warn">'
-    "尚未依新版研究契約評估"
-    "</span></td></tr>"
-)
-OPTIONAL_PLACEHOLDER_DEFAULTS = {
-    "PRICING_STAGE_GATE_ROWS": NOT_EVALUATED_ROW,
-    "CONFIDENCE_CALIBRATION_ROWS": NOT_EVALUATED_ROW,
-}
 
 
 def parse_args(argv):
@@ -54,16 +45,18 @@ def render_html(template_path, output_path, values):
     output_path = Path(output_path)
     template = template_path.read_text(encoding="utf-8")
     placeholders = sorted(set(PLACEHOLDER_RE.findall(template)))
-    effective_values = {**OPTIONAL_PLACEHOLDER_DEFAULTS, **values}
-    missing = [name for name in placeholders if name not in effective_values]
+    missing = [name for name in placeholders if name not in values]
+    unexpected = sorted(set(values) - set(placeholders))
 
     if missing:
         raise RuntimeError(f"Missing template values: {', '.join(missing)}")
+    if unexpected:
+        raise RuntimeError(f"Unexpected template values: {', '.join(unexpected)}")
 
     rendered = template
     for name in placeholders:
         rendered = rendered.replace(
-            f"{{{{{name}}}}}", stringify(effective_values[name])
+            f"{{{{{name}}}}}", stringify(values[name])
         )
 
     unresolved = sorted(set(PLACEHOLDER_RE.findall(rendered)))

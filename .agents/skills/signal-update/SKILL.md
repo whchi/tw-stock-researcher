@@ -15,7 +15,7 @@ Record new information without rewriting the whole case unless the evidence trul
 ## Workflow
 
 1. Classify the new item: verified fact, management claim, market inference, speculation to verify, or user-provided context.
-2. Append the event to `signal-log.md` with date, source, classification, price reaction if relevant, validation status, thesis impact, and next action.
+2. Append the event to `signal-log.md` using the exact `Evidence → Thesis Impact → Next Verification` contract, together with date, source, classification, price reaction if relevant, and validation status. Thesis Impact must identify the Business Thesis, Pricing Thesis, or both; Next Verification must name the evidence and source that can confirm or invalidate the read.
 3. Refresh the relevant fetcher only when the signal depends on updated structured data.
 4. Update `thesis-updates.md`, `investment-memo.md`, `active-decisions.md`, or `open-questions.md` only when the signal changes the research stance or follow-up path; update only the affected section and preserve the primary owner's structure.
 5. Label user-provided data as user-provided until fetched or independently verified.
@@ -30,6 +30,7 @@ Record new information without rewriting the whole case unless the evidence trul
 
 - Confirm the signal was appended rather than replacing history.
 - Confirm changed thesis language is traceable to the new evidence.
+- Confirm every appended row follows `Evidence → Thesis Impact → Next Verification` and does not contain an action recommendation.
 - Confirm no direct trade instruction language was introduced.
 
 ## Red Lines

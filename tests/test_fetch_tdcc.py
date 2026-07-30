@@ -49,6 +49,14 @@ class TdccHoldingDistributionTests(unittest.TestCase):
         self.assertEqual(result["stock_id"], "6451")
         self.assertEqual(result["raw"]["holding_distribution"][0]["stock_id"], "6451")
         self.assertEqual(result["metadata"]["row_counts"]["TDCCStockHoldingDistribution"], 1)
+        self.assertIn("data_availability", result["metadata"])
+        self.assertEqual(
+            result["metadata"]["data_availability"]["status"], "available"
+        )
+        self.assertEqual(
+            result["metadata"]["data_availability"]["observation_date"],
+            "2026-06-05",
+        )
 
     def test_fetch_all_saves_cache_and_reuses_it_within_max_age(self):
         csv_text = "﻿資料日期,證券代號,持股分級,人數,股數,占集保庫存數比例%\n"

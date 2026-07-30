@@ -16,6 +16,11 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+
+if __package__:
+    from .data_availability import build_data_availability, latest_observation_date
+else:
+    from data_availability import build_data_availability, latest_observation_date
 from statistics import median
 
 BASE_URL = "https://api.finmindtrade.com/api/v4/data"
@@ -411,6 +416,17 @@ def build_metadata(stock_id, start_date, end_date, raw_rows_by_dataset, warnings
         )
         for dataset in DATASETS
     }
+    missing_inputs = [
+        dataset
+        for dataset in DATASETS
+        if not raw_rows_by_dataset.get(dataset)
+    ]
+    failure_reasons = [
+        warning
+        for warning in warnings
+        if " unavailable:" in warning.lower()
+        or "request failed" in warning.lower()
+    ]
     return {
         "fetched_at": datetime.now(timezone.utc)
         .astimezone()
@@ -424,6 +440,12 @@ def build_metadata(stock_id, start_date, end_date, raw_rows_by_dataset, warnings
             for dataset in DATASETS
         },
         "warnings": warnings,
+        "data_availability": build_data_availability(
+            observation_date=latest_observation_date(raw_rows_by_dataset),
+            source="FinMind",
+            missing_inputs=missing_inputs,
+            failure_reasons=failure_reasons,
+        ),
     }
 
 

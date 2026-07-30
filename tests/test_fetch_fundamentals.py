@@ -66,6 +66,29 @@ def make_per_rows():
     ]
 
 
+class MetadataTests(unittest.TestCase):
+    def test_metadata_distinguishes_partial_availability_from_provider_failure(self):
+        raw_rows = {dataset: [] for dataset in fetch_fundamentals.DATASETS}
+        raw_rows["TaiwanStockMonthRevenue"] = [{"date": "2026-06-10"}]
+        metadata = fetch_fundamentals.build_metadata(
+            "6451",
+            "2021-01-01",
+            "2026-07-30",
+            raw_rows,
+            ["TaiwanStockPER unavailable: plan restriction"],
+        )
+
+        self.assertIn("data_availability", metadata)
+        availability = metadata["data_availability"]
+        self.assertEqual(availability["status"], "partial")
+        self.assertEqual(availability["observation_date"], "2026-06-10")
+        self.assertIn("TaiwanStockPER", availability["missing_inputs"])
+        self.assertEqual(
+            availability["failure_reasons"],
+            ["TaiwanStockPER unavailable: plan restriction"],
+        )
+
+
 class OutputPathTests(unittest.TestCase):
     def test_default_output_path_uses_unique_case_directory(self):
         with tempfile.TemporaryDirectory() as tmp:

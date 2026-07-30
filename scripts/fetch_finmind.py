@@ -9,6 +9,11 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
+if __package__:
+    from .data_availability import build_data_availability, latest_observation_date
+else:
+    from data_availability import build_data_availability, latest_observation_date
+
 BASE_URL = "https://api.finmindtrade.com/api/v4/data"
 DATASETS = (
     "TaiwanStockPrice",
@@ -619,6 +624,17 @@ def build_metadata(
     row_counts["TDCCHoldingDistributionSnapshot"] = len(
         tdcc_holding_distribution_rows or []
     )
+    missing_inputs = [
+        dataset
+        for dataset in DATASETS
+        if not raw_rows_by_dataset.get(dataset)
+    ]
+    failure_reasons = [
+        warning
+        for warning in warnings
+        if " unavailable:" in warning.lower()
+        or "request failed" in warning.lower()
+    ]
 
     return {
         "fetched_at": datetime.now(timezone.utc)
@@ -630,6 +646,15 @@ def build_metadata(
         "date_range": {"start_date": start_date, "end_date": end_date},
         "row_counts": row_counts,
         "warnings": warnings,
+        "data_availability": build_data_availability(
+            observation_date=latest_observation_date(
+                raw_rows_by_dataset,
+                tdcc_holding_distribution_rows or [],
+            ),
+            source="FinMind",
+            missing_inputs=missing_inputs,
+            failure_reasons=failure_reasons,
+        ),
     }
 
 

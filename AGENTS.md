@@ -166,7 +166,14 @@ When the user explicitly asks for a comprehensive research result as HTML, or wh
 
 ### 9. Data Freshness
 
-- Use `docs/data-freshness.md` for the default stale-data thresholds and override rules. Missing `fetched_at` is stale unless the source is explicitly labeled unavailable or intentionally reused.
+- Use `docs/data-freshness.md` for stale-data thresholds and the current-run refresh rules. Missing `fetched_at` or `metadata.data_availability` does not satisfy the current data contract.
+
+### 10. Data Availability Contract
+
+- Every generated source JSON must contain `metadata.data_availability` with `status`, `observation_date`, `source`, `missing_inputs`, `failure_reasons`, and `confidence_impact`.
+- `available` supports normal use, `partial` requires a confidence downgrade and explicit missing-input note, and `unavailable` blocks every conclusion that depends on that evidence layer.
+- Provider, permission, endpoint, parsing, and empty-response failures are data limitations, not negative company signals.
+- A requested refresh must succeed with the current schema. Do not use an older artifact, stale snapshot, legacy payload, or renderer default to satisfy the current workflow run.
 
 ## Financial Analysis Conventions
 

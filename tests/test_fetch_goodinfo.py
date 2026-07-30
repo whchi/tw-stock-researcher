@@ -105,6 +105,17 @@ SAMPLE_AJAX_PAIR_HTML = """
 """
 
 
+class MetadataTests(unittest.TestCase):
+    def test_metadata_marks_latest_financial_year_available(self):
+        metadata = goodinfo.build_metadata("6451", ["2025", "2024", "2023"])
+
+        self.assertIn("data_availability", metadata)
+        self.assertEqual(metadata["data_availability"]["status"], "available")
+        self.assertEqual(
+            metadata["data_availability"]["observation_date"], "2025"
+        )
+
+
 class ParseTableTests(unittest.TestCase):
     def test_parse_table_supports_ajax_single_table_layout(self):
         soup = BeautifulSoup(SAMPLE_AJAX_HTML, "html.parser")
@@ -213,6 +224,13 @@ class VerificationTests(unittest.TestCase):
         fields = [warning["field"] for warning in verified["verification"]["sanity"]]
         self.assertIn("Goodinfo 財報年度", fields)
         self.assertIn("Goodinfo 損益表", fields)
+        self.assertIn("data_availability", verified["metadata"])
+        availability = verified["metadata"]["data_availability"]
+        self.assertEqual(availability["status"], "unavailable")
+        self.assertEqual(availability["confidence_impact"], "block")
+        self.assertIn("income_statement", availability["missing_inputs"])
+        self.assertIn("balance_sheet", availability["missing_inputs"])
+        self.assertIn("cash_flow", availability["missing_inputs"])
 
 
 if __name__ == "__main__":

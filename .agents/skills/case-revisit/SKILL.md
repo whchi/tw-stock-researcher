@@ -15,8 +15,8 @@ Re-enter a case from repo files rather than memory.
 ## Workflow
 
 1. Locate the single matching case folder.
-2. Read `stock-meta.json`, `active-decisions.md`, `open-questions.md`, `signal-log.md`, and the latest core analysis files.
-3. Summarize current research stance, unresolved questions, data freshness against `docs/data-freshness.md`, and evidence timeline.
+2. Read `stock-meta.json`, `active-decisions.md`, `open-questions.md`, `signal-log.md`, the latest core analysis files, and every referenced source JSON `metadata.data_availability`.
+3. Summarize current research stance, unresolved questions, data freshness against `docs/data-freshness.md`, availability status, and evidence timeline. `partial` lowers confidence; `unavailable` blocks dependent conclusions and is never a negative company signal.
 4. In every cross-period summary, the current period is the subject and prior periods are comparison baselines; do not let an older-period description replace the current read.
 5. Identify which fetchers or skills should run next, but do not refresh data unless the user asked for an update.
 6. Carry forward closed and unresolved questions into `open-questions.md` when needed.
@@ -30,7 +30,7 @@ Re-enter a case from repo files rather than memory.
 
 - Confirm every status claim is grounded in a case file or explicitly labeled as missing.
 - Confirm cross-period conclusions lead with the current period and use prior periods only as baselines.
-- Confirm stale data is reported with dates when available.
+- Confirm freshness and `metadata.data_availability` are reported with fetched and observation dates.
 - Confirm no direct trade instruction language was introduced.
 
 ## Red Lines

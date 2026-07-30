@@ -4,7 +4,10 @@
 
 ## Current Research Stance
 
-## Current Decisions
+## Evidence → Thesis Impact → Next Verification
+
+| Evidence | Source / Observation Date | Thesis Impact (Business / Pricing / Both) | Next Verification | Failure Signal |
+| --- | --- | --- | --- | --- |
 
 ## Observation Range
 

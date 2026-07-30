@@ -15,8 +15,11 @@ These are research-workflow defaults, not claims about a data provider's update 
 
 ## Rules
 
-- Missing `metadata.fetched_at` is stale unless the file explicitly records an unavailable or intentionally reused source.
-- A refresh is not required merely because a file is old when the workflow records why the existing evidence remains fit for the current question.
-- `case-revisit` reports the file date, threshold, and reason for reuse or refresh.
+- Missing `metadata.fetched_at` or `metadata.data_availability` fails the current data contract.
+- Do not reuse an older artifact to satisfy a current refresh. A requested refresh must produce a current-schema artifact from that run.
+- `case-revisit` reports the file date, threshold, `observation_date`, availability status, and confidence impact.
 - `market-data-fetch` retains the TDCC provider cache rule (`--max-age-hours`) in addition to the case-artifact threshold above.
-- When a source fails, keep the last successful artifact, record the failure and timestamp, and label conclusions that depend on it as lower confidence.
+- Provider failure is a data limitation, not a negative company signal.
+- `partial` requires a visible missing-input note and confidence downgrade.
+- `unavailable` blocks every conclusion that depends on that evidence layer.
+- A failed refresh leaves any prior file outside the current workflow evidence set; the stage remains incomplete until the source succeeds or the user explicitly removes that evidence layer from scope.

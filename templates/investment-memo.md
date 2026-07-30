@@ -19,11 +19,10 @@
 
 ## Recent Evidence Conclusion
 
-- Revenue / earnings evidence:
-- Price / volume evidence:
-- News / event evidence:
-- What is confirmed:
-- What is still only narrative:
+Every row must follow `Evidence → Thesis Impact → Next Verification`.
+
+| Evidence | Source / Observation Date | Thesis Impact (Business / Pricing / Both) | Next Verification | Failure Signal |
+| --- | --- | --- | --- | --- |
 
 ## Expectation Gap Analysis
 
@@ -61,6 +60,29 @@ Use this section only for a sourced, decision-relevant observation that appears 
 - Missing load-bearing input:
 - Overall memo confidence: High / Medium / Low
 - Downgrade rule applied: any Low layer caps overall confidence at Medium; two or more Low layers, or one missing load-bearing input, cap it at Low.
+
+## Cross-Layer Conflict Map
+
+Do not average conflicting evidence into a single direction. Preserve the conflict, distinguish its time horizon, and state what sourced evidence would resolve it.
+
+| Evidence Layer | Current Signal | Time Horizon | Conflicts With | Reconciliation | Resolution Evidence | Confidence Impact |
+| --- | --- | --- | --- | --- | --- | --- |
+| Business facts |  |  |  |  |  |  |
+| Financial trend |  |  |  |  |  |  |
+| Industry transmission |  |  |  |  |  |  |
+| Macro transmission |  |  |  |  |  |  |
+| Quality and valuation |  |  |  |  |  |  |
+| Market action |  |  |  |  |  |  |
+
+## Adversarial Review
+
+Complete this review from the same evidence cutoff before assigning Bull/Base/Bear probabilities.
+
+| Reviewer | Strongest Evidence | Counterevidence | Failure Condition | Effect On Scenario Weights |
+| --- | --- | --- | --- | --- |
+| Bull Researcher |  |  |  |  |
+| Bear Researcher |  |  |  |  |
+| Risk Reviewer |  |  |  |  |
 
 ## Event And Narrative Audit
 

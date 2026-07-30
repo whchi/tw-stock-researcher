@@ -124,7 +124,12 @@ class LatestReadTests(unittest.TestCase):
 
     def test_build_macro_data_groups_records_by_template_source(self):
         records = {
-            "TWSE Open API": [{"indicator": "TAIEX", "latest": {"value": 22000}}],
+            "TWSE Open API": [
+                {
+                    "indicator": "TAIEX",
+                    "latest": {"date": "2026-07-29", "value": 22000},
+                }
+            ],
             "Yahoo Finance / public market data": [],
         }
 
@@ -133,6 +138,17 @@ class LatestReadTests(unittest.TestCase):
         self.assertEqual(result["sources"]["TWSE Open API"][0]["indicator"], "TAIEX")
         self.assertEqual(result["sources"]["Yahoo Finance / public market data"], [])
         self.assertIn("TAIWAN_MACRO_URL not set", result["metadata"]["warnings"])
+        self.assertIn("data_availability", result["metadata"])
+        availability = result["metadata"]["data_availability"]
+        self.assertEqual(availability["status"], "partial")
+        self.assertEqual(availability["observation_date"], "2026-07-29")
+        self.assertIn(
+            "Yahoo Finance / public market data",
+            availability["missing_inputs"],
+        )
+        self.assertEqual(
+            availability["failure_reasons"], ["TAIWAN_MACRO_URL not set"]
+        )
 
 
 if __name__ == "__main__":

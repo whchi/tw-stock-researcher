@@ -11,7 +11,7 @@ Build the financial fact layer before quality, valuation, or thesis writing.
 
 - Follow `AGENTS.md`, `docs/data-layout.md`, and `templates/financial-analysis.md`.
 - Annual primary data is `raw-data.json` from `scripts/fetch_goodinfo.py`.
-- Monthly revenue and quarterly statements come from `fundamentals-data.json` via `scripts/fetch_fundamentals.py`; Yahoo revenue is the fallback.
+- Monthly revenue and quarterly statements come from `fundamentals-data.json` via `scripts/fetch_fundamentals.py`; Yahoo remains supplemental and cannot replace an unavailable official fundamentals layer.
 - Include MOPS cross-check links.
 
 ## Commands
@@ -24,8 +24,8 @@ Build the financial fact layer before quality, valuation, or thesis writing.
 ## Workflow
 
 1. Confirm the case folder exists, then run the Goodinfo fetcher and the fundamentals fetcher first.
-2. Read `raw-data.json`, especially `metadata`, `three_statement_coverage`, and sanity-check warnings; read `fundamentals-data.json` `metadata.warnings` for dataset gaps.
-3. Fill the Recent 6M Revenue Snapshot from `fundamentals-data.json` → `derived.monthly_revenue_6m` (official source); fall back to `yahoo-data.json` revenue rows only when fundamentals data is missing, and label the fallback.
+2. Read `raw-data.json` and `fundamentals-data.json` `metadata.data_availability` first. `partial` lowers confidence and names missing inputs; `unavailable` blocks every conclusion that depends on that source. Provider failure is not a negative company signal.
+3. Fill the Recent 6M Revenue Snapshot only from `fundamentals-data.json` → `derived.monthly_revenue_6m` (official source). If that current input is unavailable, leave the section unresolved and block the dependent conclusion.
 4. Fill the Quarterly Trend (8Q) table from `derived.quarterly_income_8q`; use `derived.quarterly_balance_key_items` and `derived.quarterly_cash_flow` for quarter-level working-capital and cash reads.
 5. Write the 3D financial read: operating analysis, profitability analysis, and financial health.
 6. Write period comparisons so the current period is the subject and prior periods are comparison baselines; state what changed in the current period before describing the baseline.
@@ -45,7 +45,8 @@ Build the financial fact layer before quality, valuation, or thesis writing.
 - Confirm `raw-data.json` and `fundamentals-data.json` exist in the case folder.
 - Confirm no `<stock_id>_raw_data.json` or `<stock_id>_fundamentals_data.json` remains in repo root.
 - Confirm the fetch did not write to repo root because of zero or multiple matching case folders.
-- Confirm the 6M revenue snapshot cites the official fundamentals data or explicitly labels the Yahoo fallback.
+- Confirm the 6M revenue snapshot cites current official fundamentals data; do not substitute Yahoo for an unavailable fundamentals layer.
+- Confirm both source JSON files contain current-schema `metadata.data_availability` and apply `downgrade` or `block` exactly as recorded.
 - Confirm comparative conclusions use the current period as the grammatical and analytical subject.
 - Confirm `financial-analysis.md` includes a MOPS official filing URL or an explicit missing-source note.
 - Confirm all four three-statement contradiction checks have an evidence combination, a neutral signal label, and a source or missing-data note.

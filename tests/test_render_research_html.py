@@ -8,7 +8,7 @@ from scripts.render_research_html import render_html
 
 
 class RenderResearchHtmlTests(unittest.TestCase):
-    def test_legacy_payload_renders_pricing_gate_and_confidence_blocks_as_not_evaluated(self):
+    def test_current_template_rejects_payload_missing_required_decision_blocks(self):
         repo_root = Path(__file__).resolve().parents[1]
         template = repo_root / "templates" / "research-html-summary.html"
         template_text = template.read_text(encoding="utf-8")
@@ -16,7 +16,7 @@ class RenderResearchHtmlTests(unittest.TestCase):
             "PRICING_STAGE_GATE_ROWS",
             "CONFIDENCE_CALIBRATION_ROWS",
         }
-        legacy_payload = {
+        incomplete_payload = {
             name: f"legacy-{name}"
             for name in set(re.findall(r"\{\{([A-Z0-9_]+)\}\}", template_text))
             if name not in decision_placeholders
@@ -24,14 +24,11 @@ class RenderResearchHtmlTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             output = Path(tmp) / "research-summary.html"
-            render_html(template, output, legacy_payload)
-            html = output.read_text(encoding="utf-8")
-
-        self.assertIn("Pricing Stage Verification", html)
-        self.assertIn("Confidence Calibration", html)
-        self.assertEqual(html.count("尚未依新版研究契約評估"), 2)
-        for placeholder in decision_placeholders:
-            self.assertNotIn(f"{{{{{placeholder}}}}}", html)
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "CONFIDENCE_CALIBRATION_ROWS, PRICING_STAGE_GATE_ROWS",
+            ):
+                render_html(template, output, incomplete_payload)
 
     def test_render_html_replaces_placeholders_with_payload_values(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -61,6 +58,16 @@ class RenderResearchHtmlTests(unittest.TestCase):
 
             with self.assertRaisesRegex(RuntimeError, "Missing template values: MISSING"):
                 render_html(template, output, {"TITLE": "6706 惠特"})
+
+    def test_render_html_fails_when_payload_contains_unused_legacy_value(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            template = root / "template.html"
+            output = root / "output.html"
+            template.write_text("{{TITLE}}", encoding="utf-8")
+
+            with self.assertRaisesRegex(RuntimeError, "Unexpected template values: LEGACY"):
+                render_html(template, output, {"TITLE": "6706 惠特", "LEGACY": "old"})
 
     def test_render_html_cli_accepts_json_payload_shape(self):
         with tempfile.TemporaryDirectory() as tmp:

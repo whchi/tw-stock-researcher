@@ -16,6 +16,11 @@ from pathlib import Path
 import requests
 from bs4 import BeautifulSoup
 
+if __package__:
+    from .data_availability import build_data_availability, latest_observation_date
+else:
+    from data_availability import build_data_availability, latest_observation_date
+
 # ─── 抓取層 ───────────────────────────────────────────────
 
 
@@ -329,6 +334,7 @@ def build_three_statement_coverage(result):
 
 
 def build_metadata(stock_id, years):
+    observation_date = latest_observation_date(years)
     return {
         "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%S+08:00"),
         "source": "Goodinfo.tw",
@@ -341,6 +347,14 @@ def build_metadata(stock_id, years):
         "mops_url_otc": f"https://mops.twse.com.tw/mops/web/t05st01?step=1&co_id={stock_id}&TYPEK=otc",
         "years_covered": years[:3],
         "currency": "TWD 億元",
+        "data_availability": build_data_availability(
+            observation_date=observation_date,
+            source="Goodinfo.tw",
+            missing_inputs=[] if observation_date else ["financial_years"],
+            failure_reasons=[]
+            if observation_date
+            else ["no_current_observation"],
+        ),
     }
 
 
@@ -502,6 +516,21 @@ def run_verification(result, metrics_by_year):
         "sanity": warnings,
         "sanity_pass": sanity_pass,
     }
+    missing_inputs = []
+    if not years:
+        missing_inputs.append("financial_years")
+    missing_inputs.extend(
+        key for key, _label in required_tables if not result.get(key)
+    )
+    failure_reasons = [
+        warning["msg"] for warning in warnings if warning["level"] == "error"
+    ]
+    result["metadata"]["data_availability"] = build_data_availability(
+        observation_date=latest_observation_date(years),
+        source="Goodinfo.tw",
+        missing_inputs=missing_inputs,
+        failure_reasons=failure_reasons,
+    )
 
     if warnings:
         print(f"\n⚠️  合理性檢查發現 {len(warnings)} 項警示：")
