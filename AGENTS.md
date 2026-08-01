@@ -20,6 +20,13 @@ stock-case-init
 - **Return visit:** `case-revisit` → `session-wrap`
 - **New event:** `signal-update` (appends to `signal-log.md`, may update `thesis-updates.md`)
 
+## Research Run Boundary
+
+- `研究 <ticker>` means: run the existing mandatory workflow for that one case and refresh its current evidence layers.
+- During a research run, do **not** modify `AGENTS.md`, skills, templates, scripts, renderer, or another stock case unless the user explicitly asks for a system change.
+- A research run may write only to `companies/<ticker>-<slug>/` and the required current shared data under `market/`. Any other file change requires explicit user authorization.
+- Every case-file update must be evidence-linked to the current fetch results. Do not rewrite unrelated case narrative merely to make a case appear fresh.
+
 ## Reading Order And Precedence
 
 When instructions overlap, use this order instead of averaging conflicting text:
@@ -151,7 +158,8 @@ When the user explicitly asks for a comprehensive research result as HTML, or wh
   --output companies/<ticker-slug>/research-summary.html
 ```
 - The output HTML must live in the company folder as `companies/<ticker-slug>/research-summary.html`.
-- The final `market-action-read` step should automatically refresh this derived HTML preview after its markdown evidence layer is verified.
+- The final `market-action-read` step owns the final HTML refresh: after its markdown evidence layer is verified, build `research-summary-data.json` from the completed **current** case files, then run `render_research_html.py`.
+- Do not reuse, patch, or manually reconstruct a prior payload as a substitute for the current case synthesis. If the current payload cannot be built under the template contract, stop and report the blocker; do not change the workflow contract during a stock run.
 - HTML is a derived preview, not a replacement for `investment-memo.md`, `active-decisions.md`, or other case artifacts.
 - Preserve disclaimer discipline and never introduce buy/sell, entry/exit, stop-loss, or target-price language.
 
@@ -162,6 +170,7 @@ When the user explicitly asks for a comprehensive research result as HTML, or wh
 - `signal-update` may append `signal-log.md` and make only evidence-linked, narrow updates to affected layers; it must not replace another skill's whole artifact.
 - `case-revisit` may carry forward questions, while `session-wrap` consolidates open and closed questions.
 - `market-action-read` owns `market-action-read.md` and invokes `research-html-output`; it does not edit `investment-memo.md`.
+- `research-html-output` owns `research-summary-data.json` and `research-summary.html`; it derives both from the completed current case files and does not alter source evidence layers.
 - Refreshing an owned generated artifact is allowed. Deleting history or replacing user-authored narrative content still requires explicit approval.
 
 ### 9. Data Freshness
