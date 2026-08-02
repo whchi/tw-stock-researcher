@@ -26,10 +26,13 @@ This repository is a markdown-first workspace template for researching one stock
 8. Write the current thesis with `investment-thesis`.
 9. Refresh TDCC and FinMind market data with `market-data-fetch`.
 10. Add the market-state layer with `market-action-read`; after this final evidence layer is complete, automatically refresh the derived HTML summary with `research-html-output`.
-11. Record expected evidence, thesis kill criteria, and tracking triggers in `active-decisions.md`.
-12. Use `signal-update` for new filings, revenue releases, or news.
-13. Use `case-revisit` when returning to the case later.
-14. Use `session-wrap` before ending a session.
+11. Use `signal-update` for new filings, revenue releases, or news.
+12. Use `case-revisit` when returning to the case later.
+13. Use `session-wrap` before ending a session to record expected evidence, thesis kill criteria, and tracking triggers in `active-decisions.md`.
+
+### Research Run Boundary
+
+`研究 <ticker>` runs the existing workflow only for that case. It may write to the matching `companies/<ticker>-<slug>/` directory and required current shared data under `market/`; it must not modify skills, templates, scripts, the renderer, another case, or workspace policy unless the user explicitly requests a system change. Every case-file update must be evidence-linked to the current fetch results.
 
 ## Data Layout
 
@@ -47,7 +50,9 @@ The HTML output is produced by string replacement, not by changing the canonical
   --output companies/<ticker-slug>/research-summary.html
 ```
 
-Build the JSON payload from the case files in the same company folder, then let `scripts/render_research_html.py` replace the template placeholders. The HTML output should stay in that company folder as `companies/<ticker-slug>/research-summary.html`. The final `market-action-read` step refreshes this derived preview automatically after the markdown evidence layer is verified. The 6706 惠特 and 6741 91APP preview layouts are represented by the shared template structure: research snapshot, expectation gap, expected evidence timeline, thesis kill criteria, scenario summary, watch items, source quality, and sources.
+After the `market-action-read.md` evidence layer is verified, build the JSON payload from the completed **current** case files, then let `scripts/render_research_html.py` replace the template placeholders. The HTML output stays in that company folder as `companies/<ticker-slug>/research-summary.html`.
+
+Do not reuse, patch, or manually reconstruct a prior payload as a substitute for the current case synthesis. If the current payload cannot satisfy the template contract, stop and report the blocker; do not change the workflow contract during a stock research run. The shared template includes the research snapshot, expectation gap, pricing-stage verification, confidence calibration, cross-layer conflicts, adversarial review, data availability, evidence timeline, scenario summary, watch items, and source quality.
 
 ### Rendered HTML Preview
 
@@ -69,7 +74,7 @@ These project-local workflow skills live under `.agents/skills/<skill-name>/SKIL
 - `investment-thesis`: produce the current memo with assumptions and disconfirming evidence.
 - `market-data-fetch`: refresh TDCC ownership distribution and FinMind market data for the requested stock id.
 - `market-action-read`: summarize market state, institutional flow, and egg-theory evidence without trading instructions, then automatically render the summary HTML preview.
-- `research-html-output`: render an explicit HTML summary request from `templates/research-html-summary.html` using `scripts/render_research_html.py`.
+- `research-html-output`: derive the current HTML payload and preview from completed case files using `templates/research-html-summary.html` and `scripts/render_research_html.py`; it does not alter source evidence layers.
 - `signal-update`: append new events and decide whether the thesis changed.
 - `case-revisit`: re-enter an existing case with a file-grounded summary.
 - `session-wrap`: preserve unresolved questions, expected evidence, thesis kill criteria, decisions, and next follow-ups.
@@ -127,7 +132,8 @@ companies/3105-awsc/
 ├── market-action-read.md   # Neutral market-state read
 ├── research-summary-data.json # HTML summary payload
 ├── research-summary.html   # Derived summary preview
-└── signal-log.md           # Decision history
+├── signal-log.md           # Append-only event log
+└── thesis-updates.md       # Explicit thesis changes from new signals
 ```
 
 ### Example 2: Updating a case with new data
