@@ -43,8 +43,7 @@ Build the financial fact layer before quality, valuation, or thesis writing.
 ## Verification
 
 - Confirm `raw-data.json` and `fundamentals-data.json` exist in the case folder.
-- Confirm no `<stock_id>_raw_data.json` or `<stock_id>_fundamentals_data.json` remains in repo root.
-- Confirm the fetch did not write to repo root because of zero or multiple matching case folders.
+- Confirm the default fetch found exactly one matching case folder and wrote no case artifact to repo root.
 - Confirm the 6M revenue snapshot cites current official fundamentals data; do not substitute Yahoo for an unavailable fundamentals layer.
 - Confirm both source JSON files contain current-schema `metadata.data_availability` and apply `downgrade` or `block` exactly as recorded.
 - Confirm comparative conclusions use the current period as the grammatical and analytical subject.

@@ -47,10 +47,13 @@ def default_output_path(stock_id, repo_root=None):
     companies_dir = root / "companies"
     case_dirs = sorted(p for p in companies_dir.glob(f"{stock_id}-*") if p.is_dir())
 
-    if len(case_dirs) == 1:
-        return case_dirs[0] / "tdcc-data.json"
+    if len(case_dirs) != 1:
+        raise RuntimeError(
+            f"Expected exactly one case directory for {stock_id}, found {len(case_dirs)}; "
+            "create the case first or pass --output explicitly."
+        )
 
-    return root / f"{stock_id}_tdcc_data.json"
+    return case_dirs[0] / "tdcc-data.json"
 
 
 def cache_paths(repo_root=None):

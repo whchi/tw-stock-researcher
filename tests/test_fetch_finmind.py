@@ -181,6 +181,33 @@ class MetadataTests(unittest.TestCase):
             ],
         )
 
+    def test_metadata_marks_rejected_tdcc_input_partial(self):
+        raw_rows = {
+            dataset: [{"date": "2026-06-20", "stock_id": "2330"}]
+            for dataset in fetch_finmind.DATASETS
+        }
+        warning = (
+            "tdcc-data.json stock_id mismatch: expected 2330, found 2454"
+        )
+
+        metadata = fetch_finmind.build_metadata(
+            "2330",
+            "2026-01-01",
+            "2026-06-30",
+            raw_rows,
+            [warning],
+            tdcc_holding_distribution_rows=[],
+        )
+
+        availability = metadata["data_availability"]
+        self.assertEqual(availability["status"], "partial")
+        self.assertEqual(availability["confidence_impact"], "downgrade")
+        self.assertIn(
+            "TDCCHoldingDistributionSnapshot",
+            availability["missing_inputs"],
+        )
+        self.assertEqual(availability["failure_reasons"], [warning])
+
 
 class OutputPathTests(unittest.TestCase):
     def test_default_output_path_uses_unique_case_directory(self):
@@ -192,14 +219,136 @@ class OutputPathTests(unittest.TestCase):
 
             self.assertEqual(output_path, repo_root / "companies" / "2330-tsmc" / "market-data.json")
 
-    def test_default_output_path_falls_back_to_repo_root_without_unique_case(self):
+    def test_default_output_path_requires_unique_case_directory(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo_root = Path(tmp)
             (repo_root / "companies").mkdir()
 
-            output_path = default_output_path("2330", repo_root=repo_root)
+            with self.assertRaisesRegex(RuntimeError, "exactly one case directory"):
+                default_output_path("2330", repo_root=repo_root)
 
-            self.assertEqual(output_path, repo_root / "2330_market_data.json")
+    def test_main_uses_tdcc_data_next_to_explicit_output(self):
+        payload = {
+            "stock_id": "2330",
+            "history": [
+                {
+                    "date": "2026-06-20",
+                    "rows": [{"date": "2026-06-20", "people": 700}],
+                }
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            case_dir = Path(tmp) / "companies" / "2330-tsmc"
+            case_dir.mkdir(parents=True)
+            (case_dir / "tdcc-data.json").write_text(
+                json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+            )
+            output_path = case_dir / "market-data.json"
+
+            with patch.object(
+                fetch_finmind, "fetch_dataset", return_value=[]
+            ):
+                exit_code = fetch_finmind.main(
+                    [
+                        "2330",
+                        "--start-date",
+                        "2026-01-01",
+                        "--end-date",
+                        "2026-06-30",
+                        "--token",
+                        "test-token",
+                        "--output",
+                        str(output_path),
+                    ]
+                )
+
+            written = json.loads(output_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            written["raw"]["tdcc_holding_distribution"],
+            payload["history"][0]["rows"],
+        )
+
+    def test_tdcc_input_does_not_fallback_to_repo_root(self):
+        payload = {
+            "stock_id": "2330",
+            "history": [
+                {
+                    "date": "2025-01-01",
+                    "rows": [{"date": "2025-01-01", "people": 1000}],
+                }
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            (repo_root / "companies").mkdir()
+            (repo_root / "2330_tdcc_data.json").write_text(
+                json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+            )
+
+            rows, warning = fetch_finmind.load_tdcc_holding_distribution(
+                "2330", repo_root=repo_root
+            )
+
+        self.assertEqual(rows, [])
+        self.assertIn("exactly one case directory", warning)
+
+    def test_tdcc_input_rejects_payload_for_another_stock(self):
+        payload = {
+            "stock_id": "2454",
+            "history": [
+                {
+                    "date": "2026-06-20",
+                    "rows": [{"date": "2026-06-20", "people": 700}],
+                }
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tdcc_data_path = Path(tmp) / "tdcc-data.json"
+            tdcc_data_path.write_text(
+                json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+            )
+
+            rows, warning = fetch_finmind.load_tdcc_holding_distribution(
+                "2330", tdcc_data_path=tdcc_data_path
+            )
+
+        self.assertEqual(rows, [])
+        self.assertIn("stock_id mismatch", warning)
+
+    def test_tdcc_input_rejects_history_rows_for_another_stock(self):
+        payload = {
+            "stock_id": "2330",
+            "history": [
+                {
+                    "date": "2026-06-20",
+                    "rows": [
+                        {
+                            "date": "2026-06-20",
+                            "stock_id": "2454",
+                            "people": 700,
+                        }
+                    ],
+                }
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            tdcc_data_path = Path(tmp) / "tdcc-data.json"
+            tdcc_data_path.write_text(
+                json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+            )
+
+            rows, warning = fetch_finmind.load_tdcc_holding_distribution(
+                "2330", tdcc_data_path=tdcc_data_path
+            )
+
+        self.assertEqual(rows, [])
+        self.assertIn("history stock_id mismatch", warning)
 
 
 class TokenTests(unittest.TestCase):

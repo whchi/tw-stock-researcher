@@ -35,7 +35,7 @@ Create the durable case shell before any fetch or analysis work.
 - Confirm there is exactly one matching case folder for the stock id.
 - Confirm `stock-meta.json` has no absolute paths.
 - Confirm every non-null `file_references` value is rooted in the case folder.
-- Confirm no root fallback files such as `<stock_id>_raw_data.json`, `<stock_id>_yahoo_data.json`, or `<stock_id>_market_data.json` were created.
+- Confirm the case folder is the only default destination and no case artifact was created in repo root.
 
 ## Red Lines
 

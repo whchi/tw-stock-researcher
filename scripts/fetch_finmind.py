@@ -62,10 +62,13 @@ def default_output_path(stock_id, repo_root=None):
     companies_dir = root / "companies"
     case_dirs = sorted(p for p in companies_dir.glob(f"{stock_id}-*") if p.is_dir())
 
-    if len(case_dirs) == 1:
-        return case_dirs[0] / "market-data.json"
+    if len(case_dirs) != 1:
+        raise RuntimeError(
+            f"Expected exactly one case directory for {stock_id}, found {len(case_dirs)}; "
+            "create the case first or pass --output explicitly."
+        )
 
-    return root / f"{stock_id}_market_data.json"
+    return case_dirs[0] / "market-data.json"
 
 
 def resolve_token(args_token=None, env=None):
@@ -357,24 +360,55 @@ def default_tdcc_data_path(stock_id, repo_root=None):
     companies_dir = root / "companies"
     case_dirs = sorted(p for p in companies_dir.glob(f"{stock_id}-*") if p.is_dir())
 
-    if len(case_dirs) == 1:
-        return case_dirs[0] / "tdcc-data.json"
+    if len(case_dirs) != 1:
+        raise RuntimeError(
+            f"Expected exactly one case directory for {stock_id}, found {len(case_dirs)}; "
+            "create the case first or provide an explicit TDCC data path."
+        )
 
-    return root / f"{stock_id}_tdcc_data.json"
+    return case_dirs[0] / "tdcc-data.json"
 
 
-def load_tdcc_holding_distribution(stock_id, repo_root=None):
-    path = default_tdcc_data_path(stock_id, repo_root=repo_root)
+def load_tdcc_holding_distribution(stock_id, repo_root=None, tdcc_data_path=None):
+    if tdcc_data_path:
+        path = Path(tdcc_data_path)
+    else:
+        try:
+            path = default_tdcc_data_path(stock_id, repo_root=repo_root)
+        except RuntimeError as exc:
+            return [], str(exc)
     if not path.exists():
         return [], f"{path.name} not found; run scripts/fetch_tdcc.py {stock_id}"
 
     with open(path, encoding="utf-8") as f:
         payload = json.load(f)
 
+    payload_stock_id = str(payload.get("stock_id") or "").strip()
+    if payload_stock_id != str(stock_id):
+        return (
+            [],
+            f"{path.name} stock_id mismatch: expected {stock_id}, "
+            f"found {payload_stock_id or 'missing'}",
+        )
+
     # tdcc-data.json accumulates weekly snapshots under history; flatten them so
     # multi-date holder trends become possible.
     history = payload.get("history") or []
     rows = [row for entry in history for row in entry.get("rows", [])]
+    mismatched_stock_ids = sorted(
+        {
+            str(row.get("stock_id")).strip()
+            for row in rows
+            if row.get("stock_id") is not None
+            and str(row.get("stock_id")).strip() != str(stock_id)
+        }
+    )
+    if mismatched_stock_ids:
+        return (
+            [],
+            f"{path.name} history stock_id mismatch: expected {stock_id}, "
+            f"found {', '.join(mismatched_stock_ids)}",
+        )
     return rows, None
 
 
@@ -629,11 +663,14 @@ def build_metadata(
         for dataset in DATASETS
         if not raw_rows_by_dataset.get(dataset)
     ]
+    if not tdcc_holding_distribution_rows:
+        missing_inputs.append("TDCCHoldingDistributionSnapshot")
     failure_reasons = [
         warning
         for warning in warnings
         if " unavailable:" in warning.lower()
         or "request failed" in warning.lower()
+        or "tdcc" in warning.lower()
     ]
 
     return {
@@ -658,7 +695,7 @@ def build_metadata(
     }
 
 
-def fetch_all(stock_id, start_date, end_date, token=None):
+def fetch_all(stock_id, start_date, end_date, token=None, tdcc_data_path=None):
     import requests
 
     raw_rows_by_dataset = {}
@@ -694,7 +731,7 @@ def fetch_all(stock_id, start_date, end_date, token=None):
             warnings.append(f"{dataset} returned no rows")
 
     tdcc_holding_distribution_rows, tdcc_warning = load_tdcc_holding_distribution(
-        stock_id
+        stock_id, tdcc_data_path=tdcc_data_path
     )
     if tdcc_warning:
         warnings.append(tdcc_warning)
@@ -747,7 +784,13 @@ def main(argv=None):
     output_path = (
         Path(args.output) if args.output else default_output_path(args.stock_id)
     )
-    data = fetch_all(args.stock_id, start_date, end_date, token=token)
+    data = fetch_all(
+        args.stock_id,
+        start_date,
+        end_date,
+        token=token,
+        tdcc_data_path=output_path.parent / "tdcc-data.json",
+    )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:

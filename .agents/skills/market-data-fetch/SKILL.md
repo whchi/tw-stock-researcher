@@ -39,8 +39,8 @@ If FinMind needs credentials, provide `FIN_MIND_TOKEN` only in the command envir
 ## Verification
 
 - Confirm both files are in the case folder when TDCC succeeds.
-- Confirm no `<stock_id>_tdcc_data.json` or `<stock_id>_market_data.json` remains in repo root.
-- Confirm the fetchers did not write to repo root because of zero or multiple matching case folders.
+- Confirm the default fetchers found exactly one matching case folder and wrote no case artifact to repo root.
+- Confirm FinMind read `tdcc-data.json` from the selected output case and rejected any payload or history-row stock id that did not match the requested stock.
 - Confirm `market-data.json` contains `derived.egg_theory_read` for `1m`, `3m`, and `6m` when enough price rows exist.
 - Confirm missing holder history caps confidence and is surfaced as a warning or note.
 - Confirm both JSON artifacts contain `metadata.data_availability` and that unavailable evidence is not converted into a directional market signal.

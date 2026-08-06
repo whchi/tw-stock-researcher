@@ -73,7 +73,7 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 # Requires requests. Use the repo-local venv:
 .venv/bin/python scripts/fetch_yahoo.py <stock_id>
 ```
-- **Auto-detection:** The script looks for exactly one `companies/<stock_id>-*/` directory. If found, writes `yahoo-data.json` there. If zero or multiple matches, falls back to repo root (`<stock_id>_yahoo_data.json`) — **avoid this.**
+- **Auto-detection:** The script requires exactly one `companies/<stock_id>-*/` directory and writes `yahoo-data.json` there. With zero or multiple matches, it fails fast; use `--output` only when an explicit destination is intentional.
 - **Market suffix:** Listed stocks default to `.TW`; use `--suffix TWO` for OTC stocks when Yahoo uses the `.TWO` symbol.
 - **Purpose:** `yahoo-data.json` feeds `company-deep-dive` with company profile, industry, market, business scope, revenue trend, margin snapshot, and cash-flow context.
 - **Role:** Yahoo is a profile and supplemental financial source. Goodinfo + MOPS remain the primary financial-analysis source.
@@ -85,7 +85,7 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 # Run the scraper. It auto-detects the case directory and writes raw-data.json there:
 .venv/bin/python scripts/fetch_goodinfo.py <stock_id>
 ```
-- **Auto-detection:** The script looks for exactly one `companies/<stock_id>-*/` directory. If found, writes `raw-data.json` there. If zero or multiple matches, falls back to repo root (`<stock_id>_raw_data.json`) — **avoid this.**
+- **Auto-detection:** The script requires exactly one `companies/<stock_id>-*/` directory and writes `raw-data.json` there. With zero or multiple matches, it fails fast; use `--output` only when an explicit destination is intentional.
 - **Provenance:** `raw-data.json` includes `metadata` with `fetched_at`, Goodinfo URLs, and MOPS links.
 - **Coverage checks:** `raw-data.json` includes `three_statement_coverage` to show whether Goodinfo annual IS / BS / CF fields are sufficient for balance-sheet demand validation and three-statement pattern reads.
 - **Sanity checks:** The script flags gross margin >100%, current ratio <0, debt ratio >100%, ROE >100%, and adjacent-year net margin swings >30pp.
@@ -97,17 +97,14 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 .venv/bin/python scripts/fetch_fundamentals.py <stock_id>
 ```
 - **Datasets:** `TaiwanStockMonthRevenue`, `TaiwanStockFinancialStatements`, `TaiwanStockBalanceSheet`, `TaiwanStockCashFlowsStatement`, `TaiwanStockPER` (5-year window; any dataset failure degrades to a warning).
-- **Auto-detection:** same single-case-folder rule; the repo-root fallback is `<stock_id>_fundamentals_data.json` — **avoid this.**
+- **Auto-detection:** same single-case-folder rule; with zero or multiple matches, the script fails fast instead of writing outside the case folder. Use `--output` only when an explicit destination is intentional.
 - **Derived reads:** `derived.monthly_revenue_6m` (official 6M revenue path with MoM / YoY / cumulative YoY), `derived.quarterly_income_8q` (8 quarters with margins and YoY), `derived.quarterly_balance_key_items`, `derived.quarterly_cash_flow` (CFO / capex / FCF), and `derived.valuation_band` (current P/E / P/B vs 1y / 3y / 5y min / median / max with percentile).
 - **Role:** official monthly + quarterly fundamentals layer. Goodinfo stays the annual baseline, MOPS stays the official cross-check, and `valuation_band` is the required anchor for implied-expectation and pricing-thesis multiples.
 
 ### 3. Writing Files
 - **Always use `write` or `edit` tools** for markdown/JSON files. Do NOT use bash `echo`, `cat`, or `mv` for file creation.
 - **Do NOT replace financial-analysis.md or other source layers with HTML.** Only `research-html-output` may create the derived research summary preview.
-- **Never leave `*_raw_data.json` in repo root.** Fix case-folder detection and rerun with `--output companies/<ticker>-<slug>/raw-data.json` if the script falls back.
-- **Never leave `*_yahoo_data.json` in repo root.** Fix case-folder detection and rerun with `--output companies/<ticker>-<slug>/yahoo-data.json` if the Yahoo script falls back.
-- **Never leave `*_market_data.json` in repo root.** Fix case-folder detection and rerun with `--output companies/<ticker>-<slug>/market-data.json` if the FinMind script falls back.
-- **Never leave `*_fundamentals_data.json` in repo root.** Fix case-folder detection and rerun with `--output companies/<ticker>-<slug>/fundamentals-data.json` if the fundamentals script falls back.
+- **Case output boundary:** Without an explicit `--output`, fetchers fail fast unless exactly one matching case folder exists. Never write case artifacts to repo root.
 
 ### 4. Fetching Market Data
 ```bash
@@ -116,7 +113,7 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 ```
 - **Token:** `FIN_MIND_TOKEN` is required — the script exits with an error without it. Never write the token into repo files.
 - **Datasets:** `TaiwanStockPrice`, `TaiwanStockInstitutionalInvestorsBuySell`, `TaiwanStockMarginPurchaseShortSale`, `TaiwanStockShareholding`, `TaiwanStockDayTrading`, `TaiwanStockHoldingSharesPer`. Optional datasets (margin, shareholding, day trading, holding-shares-per) degrade to warnings instead of failing the run.
-- **Auto-detection:** The script looks for exactly one `companies/<stock_id>-*/` directory. If found, writes `market-data.json` there. If zero or multiple matches, falls back to repo root (`<stock_id>_market_data.json`) — **avoid this.**
+- **Auto-detection:** The script requires exactly one `companies/<stock_id>-*/` directory and writes `market-data.json` there. With zero or multiple matches, it fails fast; use `--output` only when an explicit destination is intentional.
 - **Derived windows:** `market-data.json` includes 1D / 3D / 5D price change, volume change, price-volume read, institutional net buy/sell by investor type, and 1m / 3m / 6m egg-theory reads.
 
 ### 4a. Fetching TDCC Ownership Distribution
@@ -125,8 +122,8 @@ Create one directory per stock under `companies/<ticker>-<slug>/`.
 .venv/bin/python scripts/fetch_tdcc.py <stock_id>
 ```
 - **Source:** TDCC OpenData dataset `id=1-5` is the all-market ownership distribution table, not a stock id.
-- **Auto-detection:** The script looks for exactly one `companies/<stock_id>-*/` directory. If found, writes `tdcc-data.json` there. If zero or multiple matches, falls back to repo root (`<stock_id>_tdcc_data.json`) — **avoid this.**
-- **Purpose:** `tdcc-data.json` stores the requested stock's holding levels (`持股分級`), people count, shares, and TDCC custody percentage. `fetch_finmind.py` reads this local file for egg-theory holder reads; it does not fetch TDCC directly.
+- **Auto-detection:** The script requires exactly one `companies/<stock_id>-*/` directory and writes `tdcc-data.json` there. With zero or multiple matches, it fails fast; use `--output` only when an explicit destination is intentional.
+- **Purpose:** `tdcc-data.json` stores the requested stock's holding levels (`持股分級`), people count, shares, and TDCC custody percentage. `fetch_finmind.py` reads the file next to the selected `market-data.json` output for egg-theory holder reads, rejects payload or history-row stock ids that do not match the requested stock, and does not fetch TDCC directly.
 - **Cache:** the all-market CSV (~2.3MB) is cached at `market/tdcc-holding-distribution.csv` and reused for 72h by default (`--max-age-hours`, `--refresh` to force a re-download), so repeated per-stock runs within a week skip the download.
 - **Trend accumulation:** the endpoint serves only the latest weekly snapshot, but each new snapshot date is appended to `tdcc-data.json` under `history`. After a few weekly runs, `fetch_finmind.py` derives holder-count trends from this history (`holder_trend_from_tdcc_weekly`, confidence capped at medium) when FinMind `TaiwanStockHoldingSharesPer` is not accessible.
 

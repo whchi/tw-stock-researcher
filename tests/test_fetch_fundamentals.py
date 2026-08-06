@@ -102,14 +102,13 @@ class OutputPathTests(unittest.TestCase):
                 repo_root / "companies" / "2330-tsmc" / "fundamentals-data.json",
             )
 
-    def test_default_output_path_falls_back_to_repo_root_without_unique_case(self):
+    def test_default_output_path_requires_unique_case_directory(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo_root = Path(tmp)
             (repo_root / "companies").mkdir()
 
-            output_path = default_output_path("2330", repo_root=repo_root)
-
-            self.assertEqual(output_path, repo_root / "2330_fundamentals_data.json")
+            with self.assertRaisesRegex(RuntimeError, "exactly one case directory"):
+                default_output_path("2330", repo_root=repo_root)
 
 
 class TokenTests(unittest.TestCase):

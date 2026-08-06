@@ -37,6 +37,14 @@ class TdccHoldingDistributionTests(unittest.TestCase):
                 repo_root / "companies" / "6451-shunsin-ky" / "tdcc-data.json",
             )
 
+    def test_default_output_path_requires_unique_case_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            (repo_root / "companies").mkdir()
+
+            with self.assertRaisesRegex(RuntimeError, "exactly one case directory"):
+                fetch_tdcc.default_output_path("6451", repo_root=repo_root)
+
     def test_fetch_all_returns_only_requested_stock_rows(self):
         csv_text = "\ufeff資料日期,證券代號,持股分級,人數,股數,占集保庫存數比例%\n"
         csv_text += "20260605,6451  ,17,19022,113593460,100.00\n"

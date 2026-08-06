@@ -1,11 +1,27 @@
 import contextlib
 import io
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
 from bs4 import BeautifulSoup
 
 import scripts.fetch_goodinfo as goodinfo
 from scripts.fetch_goodinfo import parse_table, pick_key
+
+
+class OutputPathTests(unittest.TestCase):
+    def test_default_output_path_requires_unique_case_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            (repo_root / "companies").mkdir()
+
+            with patch.object(
+                goodinfo, "__file__", str(repo_root / "scripts" / "fetch_goodinfo.py")
+            ):
+                with self.assertRaisesRegex(RuntimeError, "exactly one case directory"):
+                    goodinfo.default_output_path("2330")
 
 
 SAMPLE_AJAX_HTML = """

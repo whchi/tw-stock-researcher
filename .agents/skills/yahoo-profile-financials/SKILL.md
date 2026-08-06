@@ -35,8 +35,7 @@ Use `--suffix TWO` only when Yahoo requires the OTC `.TWO` symbol.
 ## Verification
 
 - Confirm `yahoo-data.json` exists in the case folder.
-- Confirm no `<stock_id>_yahoo_data.json` remains in repo root.
-- Confirm the fetch did not write to repo root because of zero or multiple matching case folders.
+- Confirm the default fetch found exactly one matching case folder and wrote no case artifact to repo root.
 - Confirm any missing profile, revenue, income, or cash-flow fields are surfaced before analysis.
 - Confirm `metadata.data_availability` uses the current schema. `partial` lowers confidence; `unavailable` blocks Yahoo-dependent conclusions and cannot be interpreted as a negative company signal.
 
