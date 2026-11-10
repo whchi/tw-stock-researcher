@@ -1,11 +1,11 @@
 ---
 name: research-html-output
-description: Use when the user asks to output a stock research synthesis, comprehensive result, summary, dashboard, or preview as HTML, or when the standard workflow finishes market-action-read.
+description: Use when the user asks for an HTML research summary or when the standard workflow finishes session-wrap.
 ---
 
 # Research HTML Output
 
-Use this for an explicit HTML output request, or when the standard workflow finishes `market-action-read` and needs the derived summary preview refreshed. Markdown and JSON case files remain the source of truth.
+Use this for an explicit HTML output request, or when the standard workflow finishes `session-wrap` and needs the derived summary preview refreshed. Markdown and JSON case files remain the source of truth.
 
 ## Source Of Truth
 
@@ -14,7 +14,7 @@ Use this for an explicit HTML output request, or when the standard workflow fini
 
 ## Workflow
 
-1. Read the case files needed for the synthesis, especially `investment-memo.md`, `active-decisions.md`, `quality-and-valuation-check.md`, and `market-action-read.md`.
+1. After `session-wrap`, read the completed current case files needed for the synthesis, especially `investment-memo.md`, `active-decisions.md`, `quality-and-valuation-check.md`, and `market-action-read.md`. Never use a stale predecessor when a refresh failed. A current-schema `unavailable` artifact may be shown as unavailable with its dependent conclusions blocked; if a required current artifact or contract block is absent, report the blocker and do not render.
 2. Build a JSON payload whose keys match placeholders in `templates/research-html-summary.html`.
 3. Render with string replacement:
 
@@ -34,7 +34,7 @@ Use this for an explicit HTML output request, or when the standard workflow fini
 - Do not add new placeholders unless you update `templates/research-html-summary.html` and script tests.
 - Use neutral research labels: `Verified Fact`, `Market Inference`, `Speculation To Verify`, `Scenario Analysis`.
 - Explicitly set pricing-stage payload values from `investment-reasoning-framework.md` and `investment-memo.md`: `PRICING_STAGE_LABEL`, `PRICING_STAGE_READ`, and `PRICING_STAGE_ROWS`.
-- `PRICING_STAGE_ROWS` must state whether the case is in Stage 1, Stage 2, Stage 3, or a transition state, and must include the evidence that would move it to the next stage.
+- `PRICING_STAGE_ROWS` must state Stage 1, Stage 2, Stage 3, a transition state, or `Insufficient data`, and include the evidence needed for the next assessment.
 - Build `PRICING_STAGE_GATE_ROWS` from `investment-memo.md` → `Pricing Stage Verification`. Emit one row each for Structure, Quality, and Narrative with current evidence, `Confirmed` / `Not confirmed` / `Insufficient data`, and the missing evidence or next check.
 - Build `CONFIDENCE_CALIBRATION_ROWS` from `investment-memo.md` → `Confidence Calibration`. Emit one row per evidence layer with High / Medium / Low confidence, the reason, and missing or conflicting evidence; preserve the memo's automatic confidence-downgrade rule.
 - Build `CROSS_LAYER_CONFLICT_ROWS` from `investment-memo.md` → `Cross-Layer Conflict Map`. Preserve time horizons and unresolved disagreements; do not collapse the rows into a single direction.

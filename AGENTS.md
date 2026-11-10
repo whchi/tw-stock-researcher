@@ -12,11 +12,14 @@ stock-case-init
   → financial-analysis          # Must run fetch_goodinfo.py + fetch_fundamentals.py FIRST
   → industry-transmission-analysis
   → macro-impact-analysis       # Must run fetch_macro.py FIRST when macro data is stale/missing
-  → quality-and-valuation-check # Business quality, implied expectations, margin of safety
-  → investment-thesis
   → market-data-fetch           # Runs fetch_tdcc.py then fetch_finmind.py (FIN_MIND_TOKEN required)
-  → market-action-read          # Reads market-data.json / tdcc-data.json, then auto-renders summary HTML
+  → market-action-read          # Neutral evidence; does not render or write the memo
+  → quality-and-valuation-check # Business quality, model bridge and conditional valuation
+  → investment-thesis           # Synthesize all current evidence layers
+  → session-wrap                # Persist current stance, open questions and case index
+  → research-html-output        # Render only from completed current case files
 ```
+- Understand the business and financial evidence before assessing market pricing. Set and record the same evidence cutoff for synthesis; report each source's observation date, availability and material later disclosures. An unavailable required input blocks its dependent conclusions and leaves the run incomplete; continue independent work without substituting stale data.
 - **Return visit:** `case-revisit` → `session-wrap`
 - **New event:** `signal-update` (appends to `signal-log.md`, may update `thesis-updates.md`)
 
@@ -144,7 +147,7 @@ companies/**/*.json
 **All case files are git-ignored by default.** This is intentional — case files are session artifacts, not repo source code. Only root-level docs, scripts, templates, and market context are version controlled.
 
 ### 7. HTML Summary Output
-When the user explicitly asks for a comprehensive research result as HTML, or when the standard workflow finishes `market-action-read`, use the `research-html-output` skill from `.agents/skills/research-html-output/SKILL.md`.
+When the user explicitly asks for a comprehensive research result as HTML, or when the standard workflow finishes `session-wrap`, use the `research-html-output` skill from `.agents/skills/research-html-output/SKILL.md`.
 
 - Keep markdown / JSON case files as the source of truth.
 - Use `templates/research-html-summary.html` as the shared template.
@@ -155,7 +158,7 @@ When the user explicitly asks for a comprehensive research result as HTML, or wh
   --output companies/<ticker-slug>/research-summary.html
 ```
 - The output HTML must live in the company folder as `companies/<ticker-slug>/research-summary.html`.
-- The final `market-action-read` step owns the final HTML refresh: after its markdown evidence layer is verified, build `research-summary-data.json` from the completed **current** case files, then run `render_research_html.py`.
+- After `session-wrap`, `research-html-output` owns the final HTML refresh: build `research-summary-data.json` from the completed **current** case files, then run `render_research_html.py`.
 - Do not reuse, patch, or manually reconstruct a prior payload as a substitute for the current case synthesis. If the current payload cannot be built under the template contract, stop and report the blocker; do not change the workflow contract during a stock run.
 - HTML is a derived preview, not a replacement for `investment-memo.md`, `active-decisions.md`, or other case artifacts.
 - Preserve disclaimer discipline and never introduce buy/sell, entry/exit, stop-loss, or target-price language.
@@ -166,7 +169,7 @@ When the user explicitly asks for a comprehensive research result as HTML, or wh
 - `session-wrap` updates `stock-meta.json.updated_at` and `current_status` after persisting the session state.
 - `signal-update` may append `signal-log.md` and make only evidence-linked, narrow updates to affected layers; it must not replace another skill's whole artifact.
 - `case-revisit` may carry forward questions, while `session-wrap` consolidates open and closed questions.
-- `market-action-read` owns `market-action-read.md` and invokes `research-html-output`; it does not edit `investment-memo.md`.
+- `market-action-read` owns `market-action-read.md`; it does not edit `investment-memo.md` or render HTML.
 - `research-html-output` owns `research-summary-data.json` and `research-summary.html`; it derives both from the completed current case files and does not alter source evidence layers.
 - Refreshing an owned generated artifact is allowed. Deleting history or replacing user-authored narrative content still requires explicit approval.
 
@@ -246,8 +249,9 @@ When the user explicitly asks for a comprehensive research result as HTML, or wh
 - **Quality Input:** Read `quality-and-valuation-check.md` before writing scenarios. Use it to separate good-business evidence from already-priced expectations.
 - **Evidence Summary Only:** Do not copy raw 6M revenue, market-action, macro, or quality tables into the memo. Summarize which evidence supports or weakens each scenario.
 - **Expectation Gap:** Separate market belief from verified evidence, narrative-only claims, and the evidence needed to close or invalidate the gap.
+- **Valuation ownership:** `quality-and-valuation-check.md` owns the operating assumptions, conditional reverse valuation, sensitivity and scenario calculations. The memo cites and interprets those calculations rather than independently rebuilding ranges. Missing load-bearing data blocks dependent numbers.
 - **Pricing Stages:** Stage 1 (narrative expansion) → Stage 2 (fundamentals catch up) → Stage 3 (growth slows / valuation contraction).
-- **Scenarios:** Always include Bull / Base / Bear with probability weights, EPS assumptions, and scenario-derived price ranges.
+- **Scenarios:** Record Bull / Base / Bear assumptions and, when load-bearing inputs are sufficient, subjective probability weights, EPS assumptions, and scenario-derived price ranges. Otherwise mark dependent estimates blocked and name the missing inputs.
 - **No unsupported price targets.** Every price range must derive from an explicit scenario.
 
 ## Market Action Read Conventions

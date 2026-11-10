@@ -171,7 +171,7 @@ require_line ".agents/skills/financial-analysis/SKILL.md" "scripts/fetch_fundame
 require_line ".agents/skills/market-data-fetch/SKILL.md" "scripts/fetch_tdcc.py <stock_id>"
 require_line ".agents/skills/market-data-fetch/SKILL.md" "scripts/fetch_finmind.py <stock_id>"
 require_line ".agents/skills/market-action-read/SKILL.md" "egg-theory"
-require_line ".agents/skills/market-action-read/SKILL.md" "automatically run research-html-output"
-require_line ".agents/skills/market-action-read/SKILL.md" "research-summary.html"
+require_line ".agents/skills/market-action-read/SKILL.md" "before quality, valuation, and memo synthesis"
+require_line ".agents/skills/research-html-output/SKILL.md" "After \`session-wrap\`"
 
 printf 'All template structure checks passed.\n'

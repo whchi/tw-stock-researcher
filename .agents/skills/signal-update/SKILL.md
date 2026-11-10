@@ -19,6 +19,7 @@ Record new information without rewriting the whole case unless the evidence trul
 3. Refresh the relevant fetcher only when the signal depends on updated structured data.
 4. Update `thesis-updates.md`, `investment-memo.md`, `active-decisions.md`, or `open-questions.md` only when the signal changes the research stance or follow-up path; update only the affected section and preserve the primary owner's structure.
 5. Label user-provided data as user-provided until fetched or independently verified.
+6. When a signal changes an assumption, use the model-change table in `thesis-updates.md`: identify the prior assumption and new source, whether direction, magnitude, timing or probability changes, whether the evidence was already reflected, and the next verification. Do not count the same evidence twice.
 
 ## Output
 

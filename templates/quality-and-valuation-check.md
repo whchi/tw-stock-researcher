@@ -52,24 +52,45 @@
 
 ## Current Price Implied Expectations
 
+The reverse read is conditional, not a unique measure of market belief. Current price divided by its trailing P/E merely reproduces trailing EPS. State fixed assumptions, solved variable, valuation date, target period, units and accounting basis; show multiple plausible combinations and sensitivity or mark the calculation blocked.
+
 | Input | Current / Assumed Value | Source Or Method | Note |
 | --- | --- | --- | --- |
 | Current price |  |  |  |
 | Shares outstanding |  |  |  |
 | Market cap |  |  |  |
 | Net cash / debt |  |  |  |
-| EPS implied by current P/E |  |  |  |
+| Historical EPS used in trailing P/E (not a future implication) |  |  |  |
 | Revenue growth implied by base margin |  |  |  |
 | Margin implied by base revenue |  |  |  |
 
 ### Valuation Band Anchor
 
-Multiples must come from `fundamentals-data.json` → `derived.valuation_band`, not from memory.
+Use `fundamentals-data.json` → `derived.valuation_band` as historical context, not as a rule that selects the scenario multiple. Explain method, comparability and why any assumption is suitable. If the required current band is unavailable, block dependent estimates rather than reuse an old one.
 
 | Multiple | Current | 1y Min / Median / Max | 3y Min / Median / Max | 5y Min / Median / Max | Current Percentile |
 | --- | --- | --- | --- | --- | --- |
 | P/E |  |  |  |  |  |
 | P/B |  |  |  |  |  |
+
+## Operating Assumptions Bridge
+
+| Driver | Starting period / source | Scenario assumption and rationale | Link to next step | Missing input |
+| --- | --- | --- | --- | --- |
+| Revenue: volume / price / mix |  |  |  |  |
+| Margin / operating costs |  |  |  |  |
+| Tax, dilution and EPS basis |  |  |  |  |
+| Working capital, capex and cash flow |  |  |  |  |
+
+## Reverse Valuation And Sensitivity
+
+- Valuation method and suitability:
+- Valuation date, target period, units and accounting basis:
+- Fixed assumptions and sources (multiple, discount rate, timing and shares where applicable):
+- Solved variable and calculation:
+- Alternative combinations and sensitivity of at least two material assumptions, or reason blocked:
+- What is inferred versus independently sourced market expectation:
+- Scenario calculations in this file are the single source for memo ranges; do not fabricate missing inputs.
 
 ## Margin Of Safety
 

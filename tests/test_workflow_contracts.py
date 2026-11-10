@@ -96,13 +96,38 @@ class WorkflowContractTests(unittest.TestCase):
         template = (ROOT / "templates/investment-memo.md").read_text()
 
         self.assertIn("Stage 1 → Stage 2 驗證門檻", framework)
-        self.assertIn("至少 5 個百分點", framework)
-        self.assertIn("Revenue vs cash conversion 為 Diverging", framework)
-        self.assertIn("至少 3 項有來源的當期成果陳述", framework)
+        self.assertIn("個案核心假設", framework)
+        self.assertIn("基本面兌現程度", framework)
+        self.assertIn("市場定價狀態", framework)
+        self.assertNotIn("提高至少 5 個百分點", framework)
+        self.assertNotIn("至少 3 項有來源的當期成果陳述", framework)
         self.assertIn("Stage 1 → Stage 2 verification gate", skill)
         self.assertIn("## Pricing Stage Verification", template)
         for criterion in ("Structure", "Quality", "Narrative"):
             self.assertIn(f"| {criterion} |", template)
+
+    def test_research_workflow_orders_evidence_before_synthesis_and_render(self):
+        agents = (ROOT / "AGENTS.md").read_text()
+        workflow = agents.split("## Workflow Order (Mandatory)", 1)[1].split("```", 2)[1]
+        steps = ("market-data-fetch", "market-action-read", "quality-and-valuation-check", "investment-thesis", "session-wrap", "research-html-output")
+        positions = [workflow.index(step) for step in steps]
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn("same evidence cutoff", agents)
+        action = (ROOT / ".agents/skills/market-action-read/SKILL.md").read_text()
+        self.assertNotIn("automatically run research-html-output", action)
+        html = (ROOT / ".agents/skills/research-html-output/SKILL.md").read_text()
+        self.assertIn("After `session-wrap`", html)
+
+    def test_valuation_and_signal_contracts_prevent_circular_inference(self):
+        quality = (ROOT / "templates/quality-and-valuation-check.md").read_text()
+        skill = (ROOT / ".agents/skills/quality-and-valuation-check/SKILL.md").read_text()
+        updates = (ROOT / "templates/thesis-updates.md").read_text()
+        self.assertIn("## Operating Assumptions Bridge", quality)
+        self.assertIn("## Reverse Valuation And Sensitivity", quality)
+        self.assertIn("fixed assumptions", quality)
+        self.assertIn("current price / trailing P/E", skill)
+        self.assertIn("already reflected", updates)
+        self.assertIn("timing", updates)
 
     def test_period_comparisons_keep_the_current_period_as_the_subject(self):
         for path in (
@@ -156,7 +181,7 @@ class WorkflowContractTests(unittest.TestCase):
 
         conflict_step = skill.index("Build a cross-layer conflict map")
         review_step = skill.index("Run the adversarial review")
-        scenario_step = skill.index("Include Bull/Base/Bear scenarios")
+        scenario_step = skill.index("Cite Bull/Base/Bear scenario calculations")
         self.assertLess(conflict_step, review_step)
         self.assertLess(review_step, scenario_step)
         self.assertIn("same evidence cutoff", skill)

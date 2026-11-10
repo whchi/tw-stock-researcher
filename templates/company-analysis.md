@@ -17,7 +17,7 @@ Segment definition comparability: Comparable / Changed definition / Insufficient
 - Highest-margin segment share direction:
 - Lowest-margin segment share direction:
 - Do not substitute company-wide gross margin for segment margin.
-- Pricing Stage note: the separate Stage 1 → Stage 2 structure gate uses the 5-point rule in `investment-reasoning-framework.md`.
+- Pricing Stage note: select structure evidence relevant to this case's core assumptions; a segment-share change is useful only where relevant and comparable.
 
 ## Customers And End Markets
 

@@ -17,7 +17,7 @@ uv pip install requests beautifulsoup4
    `requests` is required by the fetch scripts, and `beautifulsoup4` provides `bs4` for Goodinfo scraping.
 3. Pick one stock and create a case.
 4. Run the workflow in this order:
-   stock-case-init -> yahoo-profile-financials -> company-deep-dive -> financial-analysis -> industry-transmission-analysis -> macro-impact-analysis -> quality-and-valuation-check -> investment-thesis -> market-data-fetch -> market-action-read -> automatic research-html-output
+   stock-case-init -> yahoo-profile-financials -> company-deep-dive -> financial-analysis -> industry-transmission-analysis -> macro-impact-analysis -> market-data-fetch -> market-action-read -> quality-and-valuation-check -> investment-thesis -> session-wrap -> research-html-output
 5. Before `market-data-fetch`, set `FIN_MIND_TOKEN` in the environment when FinMind access is required.
 6. Use `signal-update` for new events.
 7. Use `case-revisit` when you return to an existing case.

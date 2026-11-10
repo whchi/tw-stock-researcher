@@ -14,12 +14,12 @@ Synthesize the case without collapsing evidence, judgment, and market pricing in
 
 ## Workflow
 
-1. Read the current company, financial, industry, macro, and quality layers.
+1. Read the current company, financial, industry, macro, market-action and quality layers. Record the same evidence cutoff, each source's actual observation date and all missing or later material evidence; do not mix a failed refresh with a stale result.
 2. Write the dual framework: Business Thesis and Pricing Thesis.
 3. Build a cross-layer conflict map across business, financial, industry, macro, quality / valuation, and market-action evidence. Preserve every material disagreement, identify the time horizon behind each signal, state only sourced reconciliations, name the evidence that would resolve the conflict, and apply the result to confidence.
 4. Run the adversarial review before assigning Bull/Base/Bear probabilities. The Bull Researcher states the strongest supported positive case, the Bear Researcher states the strongest counterevidence and failure conditions, and the Risk Reviewer audits data dates, missing inputs, causal leaps, conflicting definitions, and valuation assumptions. All three reviewers must use the same evidence cutoff.
-5. Apply the Stage 1 → Stage 2 verification gate from `investment-reasoning-framework.md`: assess structure, quality, and narrative separately from sourced evidence; do not infer a passed gate from price action alone.
-6. Include Bull/Base/Bear scenarios with probability weights, EPS or driver assumptions, and scenario-derived price ranges; anchor scenario multiples to the `fundamentals-data.json` valuation band rather than remembered multiples. Assign the weights only after recording how the adversarial review changed them.
+5. Apply the Stage 1 → Stage 2 verification gate from `investment-reasoning-framework.md`: select case-specific tests of core assumptions, assess structure, quality, and narrative separately, and distinguish fundamental realization from market pricing; do not infer a passed gate from price action alone.
+6. Cite Bull/Base/Bear scenario calculations from `quality-and-valuation-check.md`, including EPS or driver assumptions, period and method. Assign subjective probability weights only after adversarial review, with reasons for changes; if load-bearing inputs are unavailable, explicitly block dependent ranges and weights. Use the historical valuation band as context, not an automatic multiple.
 7. Explain expectation gaps: market belief, verified evidence, narrative-only claims, and verification needed.
 8. Identify an information edge only when a sourced, decision-relevant observation is plausibly underemphasized by the current market narrative; otherwise state that no defensible edge was identified.
 9. Calibrate each required evidence layer as High, Medium, or Low confidence. Any Low layer must automatically lower overall memo confidence to no higher than Medium; two or more Low layers, or one missing load-bearing input, lower it to Low.

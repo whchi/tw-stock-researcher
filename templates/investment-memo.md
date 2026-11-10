@@ -96,11 +96,15 @@ Complete this review from the same evidence cutoff before assigning Bull/Base/Be
 
 Current pricing stage:
 
+- Evidence cutoff and actual observation dates:
+- 基本面兌現程度:
+- 市場定價狀態:
+
 | Criterion | Verification Rule | Current Evidence | Result | Missing Evidence / Next Check |
 | --- | --- | --- | --- | --- |
-| Structure | Higher-margin segment revenue share rises at least 5 percentage points across two comparable fiscal years |  | Confirmed / Not confirmed / Insufficient data |  |
-| Quality | Three-statement checks have more Confirming than Diverging signals, no Diverging signal, and no revenue-vs-cash divergence |  | Confirmed / Not confirmed / Insufficient data |  |
-| Narrative | At least 3 sourced current-period outcome statements verify prior commitments |  | Confirmed / Not confirmed / Insufficient data |  |
+| Structure | Case-specific core operating assumption and comparable indicator |  | Confirmed / Not confirmed / Insufficient data |  |
+| Quality | Earnings and cash conversion with material conflicts preserved |  | Confirmed / Not confirmed / Insufficient data |  |
+| Narrative | Economically material sourced outcome versus prior commitment |  | Confirmed / Not confirmed / Insufficient data |  |
 
 - Overall Stage 1 → Stage 2 gate:
 - Evidence preventing a stronger stage conclusion:
@@ -132,6 +136,8 @@ Current pricing stage:
 | Accounting / governance risk |  |  |
 
 ## Bull Case
+
+Scenario ranges cite the calculations in `quality-and-valuation-check.md`. Probabilities are subjective research weights, with reasons and changes; if load-bearing data is missing, mark dependent weights and ranges blocked.
 
 - Probability weight:
 - Assumptions:

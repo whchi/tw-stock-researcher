@@ -22,13 +22,14 @@ This repository is a markdown-first workspace template for researching one stock
 4. Run financial analysis with `financial-analysis` (Goodinfo annual via `fetch_goodinfo.py` plus official monthly revenue, quarterly statements, and valuation band via `fetch_fundamentals.py`).
 5. Map industry drivers with `industry-transmission-analysis`.
 6. Filter macro variables with `macro-impact-analysis`.
-7. Add the value-investor quality layer with `quality-and-valuation-check`.
-8. Write the current thesis with `investment-thesis`.
-9. Refresh TDCC and FinMind market data with `market-data-fetch`.
-10. Add the market-state layer with `market-action-read`; after this final evidence layer is complete, automatically refresh the derived HTML summary with `research-html-output`.
-11. Use `signal-update` for new filings, revenue releases, or news.
-12. Use `case-revisit` when returning to the case later.
-13. Use `session-wrap` before ending a session to record expected evidence, thesis kill criteria, and tracking triggers in `active-decisions.md`.
+7. Refresh TDCC and FinMind market data with `market-data-fetch`.
+8. Add the neutral market-state evidence layer with `market-action-read`.
+9. Add the quality and valuation layer with `quality-and-valuation-check`.
+10. Synthesize all current evidence with `investment-thesis`.
+11. Run `session-wrap` to record expected evidence, thesis kill criteria, tracking triggers and the case index.
+12. Render the derived HTML with `research-html-output` from the completed current files.
+
+Use `signal-update` for new events and `case-revisit` on return visits. A failed current source blocks its dependent conclusions; continue independent work and report the incomplete run.
 
 ### Research Run Boundary
 
@@ -40,7 +41,7 @@ The workspace keeps shared market context under `market/`, reusable templates un
 
 ## HTML Summary Output
 
-Markdown and JSON files remain the source of truth. When the user explicitly asks for a comprehensive research result as HTML, or when the standard workflow finishes `market-action-read`, use the `research-html-output` skill and render a derived preview from `templates/research-html-summary.html`.
+Markdown and JSON files remain the source of truth. When the user explicitly asks for a comprehensive research result as HTML, or when the standard workflow finishes `session-wrap`, use the `research-html-output` skill and render a derived preview from `templates/research-html-summary.html`.
 
 The HTML output is produced by string replacement, not by changing the canonical case files:
 
@@ -50,7 +51,7 @@ The HTML output is produced by string replacement, not by changing the canonical
   --output companies/<ticker-slug>/research-summary.html
 ```
 
-After the `market-action-read.md` evidence layer is verified, build the JSON payload from the completed **current** case files, then let `scripts/render_research_html.py` replace the template placeholders. The HTML output stays in that company folder as `companies/<ticker-slug>/research-summary.html`.
+After `session-wrap`, build the JSON payload from the completed **current** case files, then let `scripts/render_research_html.py` replace the template placeholders. The HTML output stays in that company folder as `companies/<ticker-slug>/research-summary.html`.
 
 Do not reuse, patch, or manually reconstruct a prior payload as a substitute for the current case synthesis. If the current payload cannot satisfy the template contract, stop and report the blocker; do not change the workflow contract during a stock research run. The shared template includes the research snapshot, expectation gap, pricing-stage verification, confidence calibration, cross-layer conflicts, adversarial review, data availability, evidence timeline, scenario summary, watch items, and source quality.
 
@@ -73,7 +74,7 @@ These project-local workflow skills live under `.agents/skills/<skill-name>/SKIL
 - `quality-and-valuation-check`: assess ROIC, owner earnings, working-capital quality, capital allocation, implied expectations, and margin of safety.
 - `investment-thesis`: produce the current memo with assumptions and disconfirming evidence.
 - `market-data-fetch`: refresh TDCC ownership distribution and FinMind market data for the requested stock id.
-- `market-action-read`: summarize market state, institutional flow, and egg-theory evidence without trading instructions, then automatically render the summary HTML preview.
+- `market-action-read`: summarize market state, institutional flow, and egg-theory evidence without trading instructions.
 - `research-html-output`: derive the current HTML payload and preview from completed case files using `templates/research-html-summary.html` and `scripts/render_research_html.py`; it does not alter source evidence layers.
 - `signal-update`: append new events and decide whether the thesis changed.
 - `case-revisit`: re-enter an existing case with a file-grounded summary.
@@ -96,20 +97,19 @@ These project-local workflow skills live under `.agents/skills/<skill-name>/SKIL
 **What happens:**
 1. `stock-case-init` creates `companies/3105-awsc/` directory
 2. `yahoo-profile-financials` runs `scripts/fetch_yahoo.py 3105` → saves `yahoo-data.json` in the case directory
-3. Fetches Yahoo profile + financials (revenue, margins, cash flow) for the company deep-dive input
+3. Writes `company-analysis.md` from the Yahoo profile and verified business evidence
 4. `financial-analysis` runs `scripts/fetch_goodinfo.py 3105` → saves `raw-data.json` in the case directory
-5. Uses Goodinfo data with MOPS cross-check links for financial-analysis primary evidence
-6. Writes `company-analysis.md` with business model, product mix, margin analysis
-7. Writes `financial-analysis.md` with 3D analysis (經營/獲利/財務健全度) using Goodinfo data
+5. Runs `scripts/fetch_fundamentals.py 3105` for monthly and quarterly data
+6. Checks source availability and includes MOPS cross-check links
+7. Writes `financial-analysis.md` with 3D analysis (經營/獲利/財務健全度), blocking conclusions that lack their required inputs
 8. Writes `industry-transmission.md` mapping the industry chain
 9. Writes `macro-map.md` filtering relevant macro variables
-10. Writes `quality-and-valuation-check.md` with business quality, implied expectations, and margin-of-safety evidence
-11. Writes `investment-memo.md` with Bull/Base/Bear scenarios using the `investment-reasoning-framework.md` pricing framework
-12. `market-data-fetch` runs TDCC then FinMind with `FIN_MIND_TOKEN` when needed → saves `tdcc-data.json` and `market-data.json` in the case directory
-13. Writes `market-action-read.md` with 1D/3D/5D price-volume, institutional flow, holder distribution, and egg-theory evidence
-14. Refreshes `research-summary-data.json` and renders `research-summary.html`
-15. Records expected evidence timeline and thesis kill criteria in `active-decisions.md`
-16. Updates `stock-meta.json` with all file references
+10. `market-data-fetch` runs TDCC then FinMind with `FIN_MIND_TOKEN` → saves market data in the case directory
+11. Writes `market-action-read.md` with available neutral market evidence
+12. Writes `quality-and-valuation-check.md` with business quality, the operating bridge and conditional valuation
+13. Writes `investment-memo.md` from all current evidence and scenario calculations
+14. Runs `session-wrap` to record evidence, triggers and file references
+15. Refreshes `research-summary-data.json` and renders `research-summary.html` only when the current payload contract is satisfied
 
 **Files created:**
 ```
